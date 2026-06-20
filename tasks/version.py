@@ -41,6 +41,23 @@ def _render_checksums_version(version: str) -> str:
     return json.dumps(data, indent=2) + "\n"
 
 
+_PRERELEASE_IDENTIFIER = "pre"
+
+
+def _bump_to_next_prerelease(version: semver.Version) -> semver.Version:
+    """Advance to the next prerelease, opening a fresh line off a stable cut.
+
+    Bumping a finalised release's prerelease directly would re-cut
+    `<x.y.z>-pre.1`, colliding with the prerelease tags that led up to that
+    release; advancing to the next minor's first prerelease avoids the clash.
+    An in-progress prerelease simply increments.
+    """
+    already_in_prerelease = version.prerelease is not None
+    if already_in_prerelease:
+        return version.bump_prerelease(token=_PRERELEASE_IDENTIFIER)
+    return version.bump_minor().bump_prerelease(token=_PRERELEASE_IDENTIFIER)
+
+
 @task
 def read(_context: Context, print_to_stdout: bool = True) -> semver.Version:
     """Read plugin version."""
@@ -68,9 +85,6 @@ def bump(
     _context: Context, bump_type: list[BumpType] | None = None
 ) -> semver.Version:
     """Bump plugin version."""
-    # "pre" is the semver pre-release token (e.g. 1.2.3-pre.4), not a secret —
-    # S105's "token"-named-string heuristic is a false positive here.
-    prerelease_token = "pre"  # noqa: S105
     current_version = read(_context, print_to_stdout=False)
     new_version = current_version
 
@@ -84,24 +98,12 @@ def bump(
             case BumpType.PATCH:
                 new_version = new_version.bump_patch()
             case BumpType.PRE:
-                # A finalised release has no prerelease component. Bumping its
-                # prerelease directly would re-cut <x.y.z>-pre.1, colliding
-                # with the prerelease tags that led up to that release. Advance
-                # to the next minor's first prerelease so the post-stable cut
-                # opens a fresh line; an in-progress prerelease just increments.
-                if new_version.prerelease is None:
-                    new_version = new_version.bump_minor().bump_prerelease(
-                        token=prerelease_token
-                    )
-                else:
-                    new_version = new_version.bump_prerelease(
-                        token=prerelease_token
-                    )
+                new_version = _bump_to_next_prerelease(new_version)
             case BumpType.FINALISE:
                 new_version = new_version.finalize_version()
             case BumpType.NEXT_MINOR:
                 new_version = new_version.next_version(
-                    part="minor", prerelease_token=prerelease_token
+                    part="minor", prerelease_token=_PRERELEASE_IDENTIFIER
                 )
 
     write(_context, str(new_version))

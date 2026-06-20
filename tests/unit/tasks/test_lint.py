@@ -26,19 +26,21 @@ def _command(ctx: MagicMock) -> str:
     return ctx.run.call_args.args[0]
 
 
+_FLAGS_NOW_OWNED_BY_SHELLCHECKRC = ("-x", "--severity")
+
+
 class TestShellcheckTask:
-    def test_command(self, ctx: MagicMock, mocker: MockerFixture):
+    def test_invokes_shellcheck_with_no_inline_flags(
+        self, ctx: MagicMock, mocker: MockerFixture
+    ):
         mocker.patch.object(
             lint, "shell_sources", return_value=["a.sh", "b.sh"]
         )
         lint.shellcheck(ctx)
         cmd = _command(ctx)
-        # Flag ownership moved to .shellcheckrc: the invocation is now bare.
         assert cmd.startswith("shellcheck ")
-        # Explicit absence checks — a startswith-only assertion would still pass
-        # if a stray flag survived later in the command string.
-        assert "-x" not in cmd
-        assert "--severity" not in cmd
+        for flag in _FLAGS_NOW_OWNED_BY_SHELLCHECKRC:
+            assert flag not in cmd
         assert "a.sh" in cmd
         assert "b.sh" in cmd
 
@@ -48,11 +50,9 @@ class TestShellcheckTask:
         with pytest.raises(Exit):
             lint.shellcheck(ctx)
 
-    def test_raises_on_empty_source_set(
+    def test_raises_when_source_discovery_is_empty(
         self, ctx: MagicMock, mocker: MockerFixture
     ):
-        # Fail-closed: an empty match set means scope discovery broke, not that
-        # there is nothing to lint — the task must raise, not pass green.
         mocker.patch.object(lint, "shell_sources", return_value=[])
         with pytest.raises(Exit):
             lint.shellcheck(ctx)
@@ -71,10 +71,9 @@ class TestBashismsTask:
         with pytest.raises(Exit):
             lint.bashisms(ctx)
 
-    def test_raises_on_empty_source_set(
+    def test_raises_when_source_discovery_is_empty(
         self, ctx: MagicMock, mocker: MockerFixture
     ):
-        # Fail-closed, as for shellcheck.
         mocker.patch.object(lint, "shell_sources", return_value=[])
         with pytest.raises(Exit):
             lint.bashisms(ctx)
@@ -90,77 +89,62 @@ def _run_lint(path: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-class TestBashismsScript:
-    """Behavioural coverage of scripts/lint-bashisms.sh itself."""
+def _lint_shell_body(
+    tmp_path: Path, body: str
+) -> subprocess.CompletedProcess[str]:
+    script = tmp_path / "x.sh"
+    script.write_text(f"#!/usr/bin/env bash\n{body}")
+    return _run_lint(script)
 
+
+def _flagged(result: subprocess.CompletedProcess[str]) -> bool:
+    return result.returncode != 0
+
+
+class TestBashismsScript:
     def test_flags_associative_array(self, tmp_path: Path):
-        f = tmp_path / "x.sh"
-        f.write_text("#!/usr/bin/env bash\ndeclare -A MAP\n")
-        result = _run_lint(f)
-        assert result.returncode != 0
+        result = _lint_shell_body(tmp_path, "declare -A MAP\n")
+        assert _flagged(result)
         assert "associative array" in result.stdout
 
-    def test_flags_nameref(self, tmp_path: Path):
-        # local -n / declare -n namerefs are bash 4.3+ — invalid on the
-        # bash-3.2 floor, where `local: -n: invalid option` is fatal.
-        f = tmp_path / "x.sh"
-        f.write_text('#!/usr/bin/env bash\nf() { local -n ref="$1"; }\n')
-        result = _run_lint(f)
-        assert result.returncode != 0
+    def test_flags_bash_4_nameref(self, tmp_path: Path):
+        result = _lint_shell_body(tmp_path, 'f() { local -n ref="$1"; }\n')
+        assert _flagged(result)
         assert "nameref" in result.stdout
 
     def test_flags_escaped_brace_in_expansion_default(self, tmp_path: Path):
-        # ${x:-{\}} yields "{}" on bash 4+ but "{\}" on the bash-3.2 floor,
-        # which kept the literal backslash — a silent data-corruption bug.
-        f = tmp_path / "x.sh"
-        f.write_text('#!/usr/bin/env bash\nv="${1:-{\\}}"\n')
-        result = _run_lint(f)
-        assert result.returncode != 0
+        # `${x:-{\}}` keeps the literal backslash ("{\}") on the bash-3.2 floor
+        # but yields "{}" on bash 4+ — a silent data-corruption divergence.
+        result = _lint_shell_body(tmp_path, 'v="${1:-{\\}}"\n')
+        assert _flagged(result)
         assert "escaped brace" in result.stdout
 
     def test_unescaped_braces_in_default_are_not_flagged(self, tmp_path: Path):
-        # ${x:-{}} is a plain empty-object default — identical on 3.2 and 4+.
-        f = tmp_path / "x.sh"
-        f.write_text('#!/usr/bin/env bash\nv="${1:-{}}"\necho "$v"\n')
-        result = _run_lint(f)
-        assert result.returncode == 0, result.stdout
+        result = _lint_shell_body(tmp_path, 'v="${1:-{}}"\necho "$v"\n')
+        assert not _flagged(result), result.stdout
 
     def test_substitution_with_escaped_brace_not_flagged(self, tmp_path: Path):
-        # ${var//\}/x} is a pattern substitution, not a default — no false hit.
-        f = tmp_path / "x.sh"
-        f.write_text('#!/usr/bin/env bash\nv="${var//\\}/x}"\necho "$v"\n')
-        result = _run_lint(f)
-        assert result.returncode == 0, result.stdout
+        result = _lint_shell_body(tmp_path, 'v="${var//\\}/x}"\necho "$v"\n')
+        assert not _flagged(result), result.stdout
 
     def test_comment_naming_a_construct_is_not_flagged(self, tmp_path: Path):
-        # A comment that mentions a forbidden construct must not trip the lint.
-        f = tmp_path / "x.sh"
-        f.write_text(
-            "#!/usr/bin/env bash\n# do not use declare -A here\necho ok\n"
+        result = _lint_shell_body(
+            tmp_path, "# do not use declare -A here\necho ok\n"
         )
-        result = _run_lint(f)
-        assert result.returncode == 0, result.stdout
+        assert not _flagged(result), result.stdout
 
     def test_inline_opt_out_marker(self, tmp_path: Path):
-        f = tmp_path / "x.sh"
-        f.write_text(
-            "#!/usr/bin/env bash\ndeclare -A MAP # lint-bashisms: ignore\n"
+        result = _lint_shell_body(
+            tmp_path, "declare -A MAP # lint-bashisms: ignore\n"
         )
-        result = _run_lint(f)
-        assert result.returncode == 0, result.stdout
+        assert not _flagged(result), result.stdout
 
     def test_parameter_expansion_strip_is_not_a_case_mod(self, tmp_path: Path):
-        # ${x#prefix} is a bash-3.2 prefix strip, not a ${x^^} case
-        # modification.
-        f = tmp_path / "x.sh"
-        f.write_text('#!/usr/bin/env bash\necho "${x#prefix}"\n')
-        result = _run_lint(f)
-        assert result.returncode == 0, result.stdout
+        result = _lint_shell_body(tmp_path, 'echo "${x#prefix}"\n')
+        assert not _flagged(result), result.stdout
 
     def test_clean_file_passes(self, tmp_path: Path):
-        f = tmp_path / "x.sh"
-        f.write_text(
-            '#!/usr/bin/env bash\nfor i in 1 2 3; do echo "$i"; done\n'
+        result = _lint_shell_body(
+            tmp_path, 'for i in 1 2 3; do echo "$i"; done\n'
         )
-        result = _run_lint(f)
-        assert result.returncode == 0, result.stdout
+        assert not _flagged(result), result.stdout

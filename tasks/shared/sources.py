@@ -1,21 +1,3 @@
-"""Shared source-file discovery for the format and lint task families.
-
-Both families scan an identical set of shell files (`*.sh`, minus `workspaces/`
-(jj checkouts), plus the explicitly-listed extensionless CLI script) so format
-and lint never disagree about what is in scope.
-
-Discovery is a filesystem walk that honours the repository-root `.gitignore`,
-deliberately VCS-agnostic: `git ls-files` is blind inside a jj workspace (git
-resolves to the parent repo, whose index does not track the workspace), which
-silently emptied the scan and let unformatted scripts reach CI. A plain walk
-behaves identically under git checkouts (CI) and jj workspaces (local).
-
-Only the root `.gitignore` is honoured, not nested ones — sufficient here
-because every ignored shell script lives under a root-ignored tree (e.g.
-`node_modules/`). Revisit with per-directory spec layering if a nested
-`.gitignore` ever needs to hide a `.sh` file.
-"""
-
 import os
 from pathlib import Path
 
@@ -26,72 +8,81 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def _keep(rel: str) -> bool:
-    """Return True if a repo-relative shell path should be formatted/linted."""
+def _is_under_workspaces(rel: str) -> bool:
+    return rel.split("/", maxsplit=1)[0] == "workspaces"
+
+
+def _is_in_scope(rel: str) -> bool:
     if not rel:
         return False
-    parts = rel.split("/")
-    # workspaces/ holds jj workspace checkouts — full copies of the repo.
-    # Linting them would re-lint every tracked script N times over, and they
-    # are never edited directly, so they are the one permanent exclusion.
-    return parts[0] != "workspaces"
+    return not _is_under_workspaces(rel)
+
+
+_VCS_METADATA_DIRS = (".git/", ".jj/")
 
 
 def _ignore_spec(repo: Path) -> pathspec.GitIgnoreSpec:
-    """Gitignore matcher from the repo `.gitignore`, plus VCS metadata dirs.
-
-    `.git`/`.jj` are never listed in `.gitignore` but must never be walked.
-    """
+    # Only the root .gitignore is honoured, not nested ones — sufficient
+    # because every ignored shell script lives under a root-ignored tree (e.g.
+    # node_modules/); revisit with per-directory spec layering if a nested
+    # .gitignore ever needs to hide a .sh file.
     gitignore = repo / ".gitignore"
     lines = gitignore.read_text().splitlines() if gitignore.is_file() else []
-    lines += [".git/", ".jj/"]
-    return pathspec.GitIgnoreSpec.from_lines(lines)
+    return pathspec.GitIgnoreSpec.from_lines([*lines, *_VCS_METADATA_DIRS])
 
 
-# Extensionless bash scripts (no `.sh`) that the walk's `.sh` filter never
-# matches, listed here so they are linted/formatted like any other script.
-# None at present.
-_EXTRA_SHELL_SOURCES: tuple[str, ...] = ()
+_EXTENSIONLESS_SHELL_SOURCES: tuple[str, ...] = ()
 
 
-def shell_sources(root: Path | None = None) -> list[str]:
-    """`.sh` files (repo-relative, sorted) with the exclusion set applied.
+def _is_ignored_dir(
+    spec: pathspec.GitIgnoreSpec, rel_dir: Path, name: str
+) -> bool:
+    path = f"{name}/" if rel_dir == Path() else f"{rel_dir / name}/"
+    return spec.match_file(path)
 
-    Walks the tree, pruning gitignored directories in place so large ignored
-    trees (e.g. `node_modules`) are never descended into, then keeps `.sh`
-    files that are neither gitignored nor excluded by `_keep`. The extensionless
-    extras in `_EXTRA_SHELL_SOURCES` are appended afterwards (the walk's `.sh`
-    filter never matches them).
-    """
-    repo = root or repo_root()
-    spec = _ignore_spec(repo)
-    out: list[str] = []
+
+def _walk_for_shell_files(
+    repo: Path, spec: pathspec.GitIgnoreSpec
+) -> list[str]:
+    # A filesystem walk, not `git ls-files`: git ls-files is blind inside a jj
+    # workspace (git resolves to the parent repo, whose index does not track
+    # the workspace), which silently emptied the scan and let unformatted
+    # scripts reach CI. A walk behaves identically under git (CI) and jj.
+    found: list[str] = []
     for dirpath, dirnames, filenames in os.walk(repo):
         rel_dir = Path(dirpath).relative_to(repo)
         dirnames[:] = [
-            d
-            for d in dirnames
-            if not spec.match_file(
-                f"{d}/" if rel_dir == Path() else f"{rel_dir / d}/"
-            )
+            d for d in dirnames if not _is_ignored_dir(spec, rel_dir, d)
         ]
         for filename in filenames:
             if not filename.endswith(".sh"):
                 continue
             rel = filename if rel_dir == Path() else str(rel_dir / filename)
-            if spec.match_file(rel):
-                continue
-            if _keep(rel):
-                out.append(rel)
-    # Append the extensionless CLI script(s) — they escape the `.sh` walk
-    # filter.
-    # Gate on existence under `repo` (so a tmp_path test root that lacks them
-    # does not pick up the literal) and still respect gitignore + _keep
-    # (defensive: a future workspaces-relative extra would be filtered, though
-    # the current literal never is).
-    out.extend(
-        s
-        for s in _EXTRA_SHELL_SOURCES
-        if (repo / s).is_file() and _keep(s) and not spec.match_file(s)
-    )
-    return sorted(out)
+            if not spec.match_file(rel) and _is_in_scope(rel):
+                found.append(rel)
+    return found
+
+
+def _present_extensionless_sources(
+    repo: Path, spec: pathspec.GitIgnoreSpec
+) -> list[str]:
+    return [
+        source
+        for source in _EXTENSIONLESS_SHELL_SOURCES
+        if (repo / source).is_file()
+        and _is_in_scope(source)
+        and not spec.match_file(source)
+    ]
+
+
+def shell_sources(root: Path | None = None) -> list[str]:
+    """In-scope shell sources, repo-relative and sorted.
+
+    Gitignored directories are pruned during the walk so large ignored trees
+    (e.g. `node_modules`) are never descended into.
+    """
+    repo = root or repo_root()
+    spec = _ignore_spec(repo)
+    walked = _walk_for_shell_files(repo, spec)
+    extras = _present_extensionless_sources(repo, spec)
+    return sorted([*walked, *extras])

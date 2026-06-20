@@ -53,9 +53,12 @@ def _no_approval_gated_job_holds_the_release_lock(
 
 
 def _release_runs_only_after_approval(jobs: dict[str, Any]) -> None:
-    # Checked by name, not structurally: prerelease and release carry identical
-    # write permissions, so nothing but the names tells them apart. The
-    # name-agnostic lock invariant above backstops a careless rename.
+    """Assert the approval topology by job name.
+
+    prerelease and release carry identical write permissions, so nothing but
+    the names tells them apart; the name-agnostic lock invariant above
+    backstops a careless rename.
+    """
     assert jobs[APPROVAL_GATE_JOB].get("environment") == RELEASE_ENVIRONMENT
     assert APPROVAL_GATE_JOB in _needs(jobs[RELEASE_JOB])
     assert PRERELEASE_JOB in _needs(jobs[APPROVAL_GATE_JOB])

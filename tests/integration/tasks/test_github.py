@@ -75,9 +75,6 @@ def _setup_upload_and_verify(
             ).write_bytes(b"\x00" * 8)
 
 
-# ── create_release() ─────────────────────────────────────────────────
-
-
 class TestCreateRelease:
     def test_stable_version_no_prerelease_flag(self, ctx: MagicMock):
         create_release(ctx, target_version="1.20.0")
@@ -104,9 +101,6 @@ class TestCreateRelease:
         ctx.run.assert_not_called()
 
 
-# ── upload_release_asset() ────────────────────────────────────────────
-
-
 class TestUploadReleaseAsset:
     def test_runs_gh_release_upload(self, ctx: MagicMock, tmp_path: Path):
         path = tmp_path / "binary"
@@ -115,9 +109,6 @@ class TestUploadReleaseAsset:
         ctx.run.assert_called_once()
         assert "gh release upload" in ctx.run.call_args.args[0]
         assert "v1.20.0" in ctx.run.call_args.args[0]
-
-
-# ── download_release_asset() ──────────────────────────────────────────
 
 
 class TestDownloadReleaseAsset:
@@ -153,9 +144,6 @@ class TestDownloadReleaseAsset:
                 download_release_asset(ctx, "v1.20.0", "binary", out)
 
 
-# ── verify_release_asset() ────────────────────────────────────────────
-
-
 class TestVerifyReleaseAsset:
     def test_matching_hash_passes(self, ctx: MagicMock, tmp_path: Path):
         path = tmp_path / "f"
@@ -170,9 +158,6 @@ class TestVerifyReleaseAsset:
         path.write_bytes(b"hello\n")
         with pytest.raises(AssetVerificationError, match="expected sha256"):
             verify_release_asset(ctx, path, "b" * 64)
-
-
-# ── download_and_verify() ─────────────────────────────────────────────
 
 
 class TestDownloadAndVerify:
@@ -263,9 +248,6 @@ class TestDownloadAndVerify:
             download_and_verify(ctx, "v1.20.0", "binary", "b" * 64)
         assert len(created) == 1
         assert not created[0].exists()
-
-
-# ── upload_and_verify() ───────────────────────────────────────────────
 
 
 class TestUploadAndVerify:
@@ -440,9 +422,6 @@ class TestUploadAndVerify:
         )
         with pytest.raises(subprocess.CalledProcessError, match="gh upload"):
             upload_and_verify(ctx, "1.20.0")
-
-
-# ── is_prerelease_version() ───────────────────────────────────────────
 
 
 class TestIsPreReleaseVersion:

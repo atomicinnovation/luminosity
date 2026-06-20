@@ -28,9 +28,6 @@ def ctx():
     return m
 
 
-# ── _refuse_under_ci() ────────────────────────────────────────────────
-
-
 class TestRefuseUnderCi:
     def test_raises_when_github_actions_set(
         self, monkeypatch: pytest.MonkeyPatch
@@ -55,17 +52,14 @@ class TestRefuseUnderCi:
     def test_silent_outside_ci(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
         monkeypatch.delenv("CI", raising=False)
-        _refuse_under_ci("prerelease")  # must not raise
+        _refuse_under_ci("prerelease")
 
     def test_empty_string_treated_as_unset(
         self, monkeypatch: pytest.MonkeyPatch
     ):
         monkeypatch.setenv("GITHUB_ACTIONS", "")
         monkeypatch.setenv("CI", "")
-        _refuse_under_ci("prerelease")  # must not raise
-
-
-# ── prerelease_prepare() ─────────────────────────────────────────────
+        _refuse_under_ci("prerelease")
 
 
 class TestPrereleasePrepare:
@@ -75,9 +69,8 @@ class TestPrereleasePrepare:
         mocker.patch.object(tv, "bump")
         mock_read = mocker.patch.object(tv, "read", return_value=MagicMock())
         mock_read.return_value.__str__ = lambda _: "1.21.0-pre.1"
-        # update_prerelease_version writes to the real
-        # .claude-plugin/marketplace-prerelease.json — must be mocked or every
-        # test run mutates the repo file.
+        # Mocked so tests never mutate the real on-disk
+        # .claude-plugin/marketplace-prerelease.json.
         mocker.patch.object(tm, "update_prerelease_version")
 
     def test_calls_configure_and_pull(
@@ -92,9 +85,6 @@ class TestPrereleasePrepare:
         self._setup(mocker)
         prerelease_prepare(ctx)
         tv.bump.assert_called_once()
-
-
-# ── prerelease_finalise() ────────────────────────────────────────────
 
 
 class TestPrereleaseFinalise:
@@ -129,9 +119,6 @@ class TestPrereleaseFinalise:
 
         assert mock_create.called
         assert mock_upload.called
-
-
-# ── Local-dev guard and composition ──────────────────────────────────
 
 
 class TestLocalDevGuards:

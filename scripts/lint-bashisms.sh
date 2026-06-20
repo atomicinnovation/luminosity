@@ -3,45 +3,28 @@
 # migration framework's bash-3.2 floor (ADR-0016) is not silently regressed by
 # a CI runner that ships bash 5.x.
 #
-# KNOWN-INCOMPLETE: this catches only the *enumerated* bash-4 constructs listed
-# in the scanner below. It cannot prove bash-3.2 compatibility — a bash-4-only
-# feature outside the list (e.g. the ${x@Q} transformation) would pass. The
-# manual bash-3.2 replay remains the behavioural backstop; this lint is the
-# regression gate for the known set. Heredoc bodies are a known minor
-# false-positive surface (documented, not worked around).
+# KNOWN-INCOMPLETE: this catches only the *enumerated* bash-4 constructs in the
+# scanner below. It cannot prove bash-3.2 compatibility — a bash-4 feature
+# outside the list (e.g. the ${x@Q} transformation) would pass. The manual
+# bash-3.2 replay remains the behavioural backstop; this lint is the regression
+# gate for the known set. Heredoc bodies are a known minor false-positive
+# surface.
 #
-# Usage: lint-bashisms.sh [FILE...]
-#   With file arguments: scans exactly those files.
-#   With none: scans tracked *.sh files, excluding fixtures, workspaces, and
-#   test-helpers.sh.
+# Usage: lint-bashisms.sh [FILE...]   (no args: scans tracked *.sh files)
 # Per-line opt-out: append `# lint-bashisms: ignore` to a deliberate exception.
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-files=()
-if [[ "${#}" -gt 0 ]]; then
-  files=("$@")
-else
-  while IFS= read -r f; do
-    case "${f}" in
-      */test-fixtures/* | workspaces/* | */test-helpers.sh) continue ;;
-      *) ;;
-    esac
-    [[ -f "${REPO_ROOT}/${f}" ]] && files+=("${REPO_ROOT}/${f}")
-    # `|| true`: git ls-files' exit status is intentionally not propagated out
-    # of the process substitution — a failure yields an empty list and a clean
-    # exit, the acceptable fallback for this opt-in default scan.
-  done < <(git -C "${REPO_ROOT}" ls-files '*.sh' || true)
-fi
+is_excluded_from_default_scan() {
+  case "$1" in
+    */test-fixtures/* | workspaces/* | */test-helpers.sh) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
-[[ "${#files[@]}" -eq 0 ]] && exit 0
-
-status=0
-for f in "${files[@]}"; do
-  # awk scans each line: skip opt-out lines, strip an unquoted trailing comment,
-  # then test the remaining code against the bash-4 denylist. Exits 1 on any hit.
-  if ! awk '
+scan_for_bash4_constructs() {
+  awk '
     /# lint-bashisms: ignore([[:space:]]|$)/ { next }
     {
       code = $0
@@ -61,9 +44,26 @@ for f in "${files[@]}"; do
       }
     }
     END { exit (found ? 1 : 0) }
-  ' "${f}"; then
-    status=1
-  fi
+  ' "$1"
+}
+
+files=()
+if [[ "${#}" -gt 0 ]]; then
+  files=("$@")
+else
+  while IFS= read -r f; do
+    is_excluded_from_default_scan "${f}" && continue
+    [[ -f "${REPO_ROOT}/${f}" ]] && files+=("${REPO_ROOT}/${f}")
+    # git ls-files' exit status is deliberately dropped: a failure yields an
+    # empty list and a clean exit, the acceptable fallback for a default scan.
+  done < <(git -C "${REPO_ROOT}" ls-files '*.sh' || true)
+fi
+
+[[ "${#files[@]}" -eq 0 ]] && exit 0
+
+status=0
+for f in "${files[@]}"; do
+  scan_for_bash4_constructs "${f}" || status=1
 done
 
 exit "${status}"
