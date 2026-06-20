@@ -1,0 +1,212 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+
+jobs:
+  test-unit:
+    name: Run unit tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Run unit tests
+        run: mise run test:unit
+
+  test-integration:
+    name: Run integration tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Run integration tests
+        run: mise run test:integration
+
+  check-scripts:
+    name: Check scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Run script checks
+        run: mise run scripts:check
+
+  check-build-system:
+    name: Check build system
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Run build system checks
+        run: mise run build-system:check
+
+  prerelease:
+    name: Create prerelease
+    runs-on: macos-latest
+    needs:
+      - test-unit
+      - test-integration
+      - check-scripts
+      - check-build-system
+    if: github.event_name == 'push'
+    # Serialise all release pipelines so they can't bump to the same version and
+    # race their pushes: cancel-in-progress: false queues runs instead of
+    # aborting, and queue: max FIFO-queues them instead of dropping any (and
+    # requires cancel-in-progress: false). Keep identical to the other
+    # luminosity-release block below.
+    concurrency:
+      group: luminosity-release
+      cancel-in-progress: false
+      queue: max
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Prepare prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mise run prerelease:prepare
+
+      - name: Attest binary provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "cli/bin/luminosity-*"
+
+      - name: Finalise prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mise run prerelease:finalise
+
+  approve-release:
+    name: Approve release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    needs: prerelease
+    environment: release
+    steps:
+      - name: Approval gate (no-op; the gate is the environment, not this step)
+        run: echo "Stable release approved"
+
+  release:
+    name: Create release
+    runs-on: macos-latest
+    if: github.event_name == 'push'
+    needs: approve-release
+    # The lock lives HERE, deliberately WITHOUT `environment`: it must not
+    # enclose the approval gate (see approve-release), whose Waiting job would
+    # hold the group and block every prerelease. This job is locked only after
+    # approval, covering just the commit/tag/push window. Keep identical to the
+    # other luminosity-release block above.
+    concurrency:
+      group: luminosity-release
+      cancel-in-progress: false
+      queue: max
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Prepare stable release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mise run release:prepare
+
+      - name: Attest stable binary provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "cli/bin/luminosity-*"
+
+      - name: Finalise stable release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mise run release:finalise
+
+      - name: Prepare post-stable prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mise run prerelease:prepare
+
+      - name: Attest post-stable binary provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "cli/bin/luminosity-*"
+
+      - name: Finalise post-stable prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mise run prerelease:finalise

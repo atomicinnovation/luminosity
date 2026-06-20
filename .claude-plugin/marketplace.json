@@ -1,0 +1,20 @@
+{
+  "name": "atomic-innovation",
+  "owner": {
+    "name": "Atomic Innovation",
+    "email": "toby@go-atomic.io"
+  },
+  "metadata": {
+    "description": "Plugins by Atomic Innovation"
+  },
+  "plugins": [
+    {
+      "name": "luminosity",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/atomicinnovation/luminosity.git",
+        "ref": "v0.1.0"
+      }
+    }
+  ]
+}

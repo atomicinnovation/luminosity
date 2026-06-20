@@ -1,0 +1,1 @@
+A Claude Code plugin for marketing automation

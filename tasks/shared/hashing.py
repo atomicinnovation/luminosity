@@ -1,0 +1,13 @@
+import hashlib
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+def compute_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(64 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()

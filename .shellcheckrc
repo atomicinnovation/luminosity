@@ -1,0 +1,17 @@
+# Authoritative ShellCheck configuration. Because this rc lives at the repo
+# root, a bare `shellcheck` invocation picks it up everywhere (editors, CI,
+# ad-hoc runs) — the single source of truth for shell linting.
+
+# Strict mandate: enable every optional check.
+enable=all
+
+# Analyse `source`d files in context (replaces the `-x` CLI flag).
+external-sources=true
+
+# Resolve `source`d libraries (and any `# shellcheck source=` directive) relative
+# to each script's OWN directory. The repo sources shared libraries with the
+# `source "$SCRIPT_DIR/<lib>.sh"` idiom; this lets ShellCheck extract the literal
+# basename, follow the chain, and see the variables those libs define — clearing
+# the referenced-but-unassigned (SC2154) false positives AT THE ROOT while keeping
+# SC2154 enabled to catch a genuinely-undefined variable in a non-sourcing script.
+source-path=SCRIPTDIR

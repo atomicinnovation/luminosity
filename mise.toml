@@ -1,0 +1,190 @@
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+[tools]
+uv = "0.11.6"
+python = "3.14.4"
+gh = "2.89.0"
+rust = { version = "1.90.0", components = "rustfmt,clippy" }
+node = "22.22.2"
+shellcheck = "0.11.0"
+shfmt = "3.13.1"
+jj = "0.36.0"
+"aqua:rhysd/actionlint" = "1.7.12"
+
+[settings]
+experimental = true
+
+[hooks]
+postinstall = "uv sync --only-group build --frozen"
+
+[tasks."deps:install:python"]
+description = "Install all Python dependencies"
+run = "invoke deps.install-python"
+
+[tasks."deps:install:rust-targets"]
+description = "Install Rust cross-compile targets required for release builds"
+run = "invoke deps.install-rust-targets"
+
+[tasks."test:unit:tasks"]
+description = "Run pytest unit tests for invoke tasks"
+depends = ["deps:install:python"]
+run = "uv run pytest tests/unit/tasks -v"
+
+[tasks."test:integration:tasks"]
+description = "Run pytest integration tests for invoke tasks"
+depends = ["deps:install:python"]
+run = "uv run pytest tests/integration/tasks -v"
+
+[tasks."test:unit"]
+description = "Run all unit tests in parallel"
+depends = ["test:unit:tasks"]
+
+[tasks."test:integration"]
+description = "Run all integration tests in parallel"
+depends = ["test:integration:tasks"]
+
+[tasks.test]
+description = "Run all tests in parallel"
+depends = ["test:unit", "test:integration"]
+
+[tasks."format:scripts:check"]
+description = "Check shell formatting with shfmt (read-only; fails on drift)"
+run = "invoke format.scripts.check"
+
+[tasks."format:scripts:fix"]
+description = "Format shell scripts in place with shfmt"
+run = "invoke format.scripts.fix"
+
+[tasks."format:check"]
+description = "Run all format checks (read-only)"
+depends = ["format:build-system:check", "format:scripts:check"]
+
+[tasks."format:fix"]
+description = "Apply all formatters in place"
+depends = ["format:build-system:fix", "format:scripts:fix"]
+
+[tasks."lint:scripts:shellcheck:check"]
+description = "Lint shell scripts with ShellCheck (config in .shellcheckrc)"
+run = "invoke lint.scripts.shellcheck"
+
+[tasks."lint:scripts:bashisms:check"]
+description = "Guard the bash-3.2 floor (denylist of bash-4 constructs)"
+run = "invoke lint.scripts.bashisms"
+
+[tasks."lint:scripts:check"]
+description = "Run all shell lint checks"
+depends = ["lint:scripts:shellcheck:check", "lint:scripts:bashisms:check"]
+
+[tasks."scripts:check"]
+description = "Run all shell format and lint checks (shfmt + ShellCheck + bashisms)"
+depends = ["format:scripts:check", "lint:scripts:check"]
+
+[tasks."format:build-system:check"]
+description = "Check Python formatting with ruff (read-only; fails on drift)"
+depends = ["deps:install:python"]
+run = "invoke format.build-system.check"
+
+[tasks."format:build-system:fix"]
+description = "Format Python in place with ruff"
+depends = ["deps:install:python"]
+run = "invoke format.build-system.fix"
+
+[tasks."lint:build-system:check"]
+description = "Lint Python with ruff (select = ALL)"
+depends = ["deps:install:python"]
+run = "invoke lint.build-system.check"
+
+[tasks."lint:build-system:fix"]
+description = "Apply ruff's safe lint fixes to Python"
+depends = ["deps:install:python"]
+run = "invoke lint.build-system.fix"
+
+[tasks."types:build-system:check"]
+description = "Type-check Python with pyrefly (strict preset)"
+depends = ["deps:install:python"]
+run = "invoke types.build-system.check"
+
+[tasks."lint:workflows:check"]
+description = "Lint GitHub Actions workflows with actionlint (general syntax hygiene; the queue/gate-placement invariants are guarded by tests/unit/tasks/test_workflows.py)"
+run = "invoke lint.workflows.actionlint"
+
+[tasks."lint:workflows"]
+description = "Lint GitHub Actions workflows with actionlint"
+depends = ["lint:workflows:check"]
+
+[tasks."build-system:check"]
+description = "Run all Python format, lint, and type checks plus workflow lint (ruff + pyrefly + actionlint)"
+depends = ["format:build-system:check", "lint:build-system:check", "types:build-system:check", "lint:workflows:check"]
+
+[tasks."lint:check"]
+description = "Run all lint checks"
+depends = ["lint:build-system:check", "lint:scripts:check"]
+
+[tasks."lint:fix"]
+description = "Apply all safe lint fixes (shell has no autofixer — run `mise run scripts:check` for remaining shell findings)"
+depends = ["lint:build-system:fix"]
+
+[tasks."types:check"]
+description = "Run all type checks (tsc + pyrefly)"
+depends = ["types:build-system:check"]
+
+[tasks.fix]
+description = "Apply all formatters + safe lint fixes (MECHANICAL only — no type-checks, and shell has no autofixer; still run `mise run check` before pushing)"
+depends = ["format:fix", "lint:fix"]
+
+[tasks.check]
+description = "Run all read-only format, lint, and type checks (what CI runs)"
+depends = ["build-system:check", "scripts:check"]
+
+[tasks.default]
+description = "Full local CI mirror: build, format-fix, lint, type-check, test (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
+depends = ["format:fix", "lint:check", "types:check", "test"]
+
+[tasks."version:read"]
+description = "Read plugin version"
+run = "invoke version.read"
+
+[tasks."version:write"]
+description = "Write plugin version"
+run = "invoke version.write"
+
+[tasks."version:bump"]
+description = "Bump plugin version"
+run = "invoke version.bump"
+
+[tasks."github:check-auth"]
+description = "Verify the GitHub CLI is authenticated"
+run = "invoke github.check-auth"
+
+[tasks."git:check-clean"]
+description = "Abort if the working tree has any uncommitted changes"
+run = "invoke git.check-clean"
+
+[tasks."prerelease:prepare"]
+description = "CI prerelease halve 1: bump version, build binaries, compute checksums"
+depends = ["deps:install:rust-targets", "github:check-auth", "git:check-clean"]
+run = "invoke prerelease.prepare"
+
+[tasks."prerelease:finalise"]
+description = "CI prerelease halve 2: commit, tag, push, create release, upload, publish"
+run = "invoke prerelease.finalise"
+
+[tasks."release:prepare"]
+description = "CI stable release halve 1: finalise version, update marketplace and changelog, build binaries"
+depends = ["deps:install:rust-targets", "github:check-auth", "git:check-clean"]
+run = "invoke release.prepare"
+
+[tasks."release:finalise"]
+description = "CI stable release halve 2: commit, tag, push, create release, upload, publish"
+run = "invoke release.finalise"
+
+[tasks."prerelease"]
+description = "Local dev only: full prerelease flow without SLSA attestation"
+depends = ["deps:install:rust-targets", "github:check-auth", "git:check-clean"]
+run = "invoke prerelease"
+
+[tasks."release"]
+description = "Local dev only: full stable release flow without SLSA attestation"
+depends = ["deps:install:rust-targets", "github:check-auth", "git:check-clean"]
+run = "invoke release"

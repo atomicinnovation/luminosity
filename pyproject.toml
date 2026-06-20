@@ -1,0 +1,91 @@
+[project]
+name = "luminosity"
+dynamic = ["version"]
+description = "A Claude Code plugin for marketing automation."
+readme = "README.md"
+requires-python = ">=3.14"
+authors = [{ name = "Toby Clemson", email = "toby@go-atomic.io" }]
+license = "MIT"
+
+[dependency-groups]
+build = [
+    "invoke>=2.2.1",
+    "keepachangelog>=2.0.0",
+    "rich>=14.2.0",
+    "semver>=3.0.4,<4",
+    "ziglang>=0.16.0",
+    "cargo-zigbuild>=0.22.3",
+    "tomlkit>=0.13.2",
+    "pathspec>=0.12.1"
+]
+dev = [
+    "pytest>=8",
+    "pytest-mock>=3.14",
+    "pyyaml>=6",
+    "ruff==0.15.16",
+    "pyrefly==1.0.0",
+]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+pythonpath = ["."]
+
+[tool.uv]
+prerelease = "allow"
+
+[tool.setuptools]
+packages = []
+
+[tool.ruff]
+line-length = 80
+target-version = "py314"
+extend-exclude = [
+    "workspaces"
+]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    # Formatter-conflicting rules (Astral docs recommend disabling under the
+    # formatter — they fight `ruff format`'s own decisions):
+    "COM812", "COM819", "ISC001",
+    "Q000", "Q001", "Q002", "Q003",
+    "D206", "D300", "W191",
+    # Mutually-exclusive docstring conventions (keep D211 / D212):
+    "D203", "D213",
+    # Docstring *presence* on every symbol is not mandated (the format rules
+    # D2xx/D4xx stay enabled, so docstrings that exist must be well-formed):
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
+    "TRY003", # allow inline exception messages (pairs with EM below)
+    "EM101", "EM102", # ditto: raw/f-string literals passed straight to exceptions are idiomatic here
+    "T201", # build tooling writes user-facing progress/output to stdout via print
+    "ARG001", "ARG002", # framework/interface-mandated params (invoke's `context`, callbacks) are often unused
+    "ARG005", # unused lambda args in callbacks/sort-keys
+    "S603", "S607", # we invoke known dev tools (cargo/npm/shfmt/git) by name via PATH/mise, never untrusted input
+    "FBT001", "FBT002", # boolean flags in task/helper signatures are idiomatic and read clearly at call sites
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are held to a looser standard: asserts are the point, fixtures/mocks skip
+# annotations + docstrings, security lints (S) are noise on test code, and the
+# test tree deliberately has no __init__.py (pytest importlib mode) so
+# implicit-namespace-package never applies.
+"tests/**" = ["S", "ANN", "D", "PLR2004", "SLF001", "INP001"]
+
+[tool.pyrefly]
+preset = "strict"
+python-version = "3.14"
+project-includes = [
+    "tasks/**/*.py",
+    "tests/**/*.py"
+]
+replace-imports-with-any = [
+    "invoke.*",
+    "keepachangelog.*",
+    "pathspec.*",
+    "semver.*",
+]
+
+[project.urls]
+Homepage = "https://github.com/atomicinnovation/luminosity"
+Repository = "https://github.com/atomicinnovation/luminosity"
