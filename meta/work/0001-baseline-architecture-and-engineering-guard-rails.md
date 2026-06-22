@@ -9,7 +9,7 @@ status: ready
 kind: epic
 priority: high
 tags: [architecture, tooling, rust, foundations, adr]
-last_updated: "2026-06-20T23:22:11+00:00"
+last_updated: "2026-06-22T20:03:08+00:00"
 last_updated_by: Toby Clemson
 schema_version: 1
 ---
@@ -82,10 +82,15 @@ evaluation approaches — hence two spikes are included.
 High-level themes. Each theme will be decomposed into the child work items
 listed below.
 
-**1. Record the baseline architecture as ADRs** (using the accelerator
-`create-adr` / `extract-adrs` / `review-adr` skills). The closed set of
-decisions to record — ten in total, numbered 1–10: eight recordable immediately
-(1–8) and two spike-dependent (9–10) — by title:
+**1. Record the baseline architecture as ADRs.** Each ADR follows the project's
+ADR template — frontmatter (`type: adr`; quoted `id` `"ADR-NNNN"`; `title`;
+`date`; `author`; `status` from `proposed | accepted | rejected | superseded |
+deprecated`; `decision_makers`; `tags`; `schema_version`) plus body sections
+Context · Decision Drivers · Considered Options · Decision (active voice) ·
+Consequences (Positive / Negative / Neutral) · References — and is immutable once
+`accepted`. The implementer chooses how to produce ADRs matching this shape. The
+closed set of decisions to record — eleven in total, numbered 1–11: eight
+recordable immediately (1–8) and three spike-dependent (9–11) — by title:
 
 *Recordable immediately (decided; no spike dependency):*
 
@@ -101,10 +106,11 @@ decisions to record — ten in total, numbered 1–10: eight recordable immediat
    an Open Question below; this ADR records the pattern and is finalised once
    the directory is settled.)*
 
-*Dependent on the architecture spike (recorded after it concludes):*
+*Dependent on a spike (recorded after it concludes):*
 
-9. Thin CLI over a hexagonal ports-and-adapters core.
-10. Git-style modular CLI of on-demand static binaries.
+9. Thin CLI over a hexagonal ports-and-adapters core. *(architecture spike)*
+10. Git-style modular CLI of on-demand static binaries. *(architecture spike)*
+11. Skill evaluation framework selection. *(eval spike)*
 
 The acceptance criterion for theme 1 counts one accepted ADR per numbered title
 above.
@@ -158,7 +164,7 @@ sequencing:
 - Story: Record existing/implicit architecture decisions as ADRs *(theme 1
   decisions 1–8; recordable immediately)*
 - Story: Record spike-dependent architecture decisions as ADRs *(theme 1
-  decisions 9–10; after the architecture spike concludes)*
+  decisions 9–11; 9–10 after the architecture spike, 11 after the eval spike)*
 - Story: Establish Rust toolchain guard rails in `mise` + CI *(paired with the
   scaffold story)*
 - Story: Scaffold the hexagonal Rust workspace with a `version` subcommand
@@ -182,10 +188,10 @@ sequencing:
 
 ## Acceptance Criteria
 
-- [ ] An accepted ADR exists for each of the ten numbered decision titles in
-      theme 1, authored via the accelerator ADR skills; each has non-empty
-      Context, Options, and Consequences sections and status `accepted`. (Deeper
-      quality is the remit of the `review-adr` skill, not this criterion.)
+- [ ] An accepted ADR exists for each of the eleven numbered decision titles in
+      theme 1, each following the ADR template with non-empty Context, Considered
+      Options, and Consequences sections and status `accepted`. (Deeper quality
+      is the remit of an ADR review, not this criterion.)
 - [ ] Both spikes are completed, each producing a written recommendation with a
       decision at a stated path under the knowledge directory, and the resulting
       ADR(s) cite that document.
@@ -206,10 +212,13 @@ sequencing:
       fetches the correct per-platform binary on demand (approach ported from
       accelerator).
 - [ ] The eval suite for the `configure` skill contains at least three tasks
-      (provisional floor), runs in CI, and records a `configure` pass-rate of at
-      least 80% (provisional floor); the eval spike may raise these thresholds
-      and records the final minimum task count and baseline at a stated path,
-      against which this criterion is then evaluated.
+      (provisional floor), is run during development, and the resulting
+      `configure` pass-rate of at least 80% (provisional floor) is committed to
+      the repository as a version-controlled benchmark result. The eval spike may
+      raise these thresholds and records the final minimum task count and
+      baseline at a stated path, against which this criterion is then evaluated.
+      Evals are deliberately not wired to run on every CI build, to control token
+      cost.
 - [ ] `mise run` (the bare default task) exits 0 end-to-end with the Rust
       component included.
 
@@ -217,7 +226,8 @@ sequencing:
 
 - Which directory serves as the filesystem message bus / knowledge corpus for
   this plugin (the accelerator uses `meta/`; this plugin's choice is undecided)?
-  To be settled by the relevant ADR.
+  Settled within the existing/implicit ADR story (child 0004) as part of
+  recording decision 8.
 - Which eval framework is adopted — `skill-creator` vs an external harness — is
   the explicit output of the eval spike.
 
