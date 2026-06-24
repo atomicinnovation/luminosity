@@ -91,55 +91,6 @@ is optional, not required.
 - [ ] The spike-dependent ADR(s) for decisions 9–10 cite this work item, and the
       scaffold and distribution stories reference it when implemented.
 
-## Open Questions
-
-- Whether the hexagonal split starts multi-crate or begins single-crate
-  (hexarch-style) and splits later — to be decided by the recommendation.
-
-## Dependencies
-
-- Blocks: scaffold story (0007), distribution story (0008), spike-dependent ADR
-  story (0005).
-- Blocked by: none.
-- Parent: epic 0001.
-
-## Assumptions
-
-- The hexagonal split is crate-level, not module-level (per the epic's Technical
-  Notes) — though the spike may recommend a single-crate start, given the leading
-  reference (hexarch) does hexagonal well within one crate.
-
-## Technical Notes
-
-- clap 4.x external-subcommand support is stable and ergonomic; ignore older
-  clap 2/3 `AppSettings` workarounds in stale articles.
-- rustls + webpki-roots keeps the launcher independent of the host cert store and
-  statically linkable; audit the dep tree so no transitive dep re-enables
-  `default-tls`.
-- `self_update` is steady but low-velocity and oriented at self-replacement; for
-  a multi-sub-binary launcher, compose download/verify/cache primitives directly
-  and use `self-replace` only for the launcher's own update.
-
-## Drafting Notes
-
-- Kind set to `spike` because the epic frames this as resolving an unknown via
-  research with a written recommendation, not a deliverable.
-- Latitude set to genuine evaluation of alternatives (per the author); the
-  accelerator is one input, not the default.
-- Output framed so the recommendation is recorded in this spike work item itself
-  (per the author); dependent stories and ADRs reference this work item rather
-  than the decisions being copied into them.
-- Enriched with web research (clap 4.x dispatch, rustls launcher, hexarch,
-  cargo-zigbuild/dist) current as of mid-2026.
-
-## References
-
-- Source: `meta/work/0001-baseline-architecture-and-engineering-guard-rails.md`
-- Research: clap external subcommands (docs.rs/clap 4.6.x); rustup proxy/shim
-  model; uv tool caching; howtocodeit/hexarch (hexagonal in Rust); cargo-zigbuild
-  v0.23; dist (formerly cargo-dist) v0.32; self_update / self-replace; rustls vs
-  native-tls.
-
 ## Spike Outcome
 
 - **Date**: 2026-06-23
@@ -370,3 +321,52 @@ jdx/sigstore-verification archival; GitHub offline-attestation docs.
   depend on `config` core only).
 - **Exact cache/bin directory path** for fetched sub-binaries (XDG data dir vs
   plugin `bin/`) is deferred to distribution story 0008.
+
+## Open Questions
+
+- Whether the hexagonal split starts multi-crate or begins single-crate
+  (hexarch-style) and splits later — to be decided by the recommendation.
+
+## Dependencies
+
+- Blocks: scaffold story (0007), distribution story (0008), spike-dependent ADR
+  story (0005).
+- Blocked by: none.
+- Parent: epic 0001.
+
+## Assumptions
+
+- The hexagonal split is crate-level, not module-level (per the epic's Technical
+  Notes) — though the spike may recommend a single-crate start, given the leading
+  reference (hexarch) does hexagonal well within one crate.
+
+## Technical Notes
+
+- clap 4.x external-subcommand support is stable and ergonomic; ignore older
+  clap 2/3 `AppSettings` workarounds in stale articles.
+- rustls + webpki-roots keeps the launcher independent of the host cert store and
+  statically linkable; audit the dep tree so no transitive dep re-enables
+  `default-tls`.
+- `self_update` is steady but low-velocity and oriented at self-replacement; for
+  a multi-sub-binary launcher, compose download/verify/cache primitives directly
+  and use `self-replace` only for the launcher's own update.
+
+## Drafting Notes
+
+- Kind set to `spike` because the epic frames this as resolving an unknown via
+  research with a written recommendation, not a deliverable.
+- Latitude set to genuine evaluation of alternatives (per the author); the
+  accelerator is one input, not the default.
+- Output framed so the recommendation is recorded in this spike work item itself
+  (per the author); dependent stories and ADRs reference this work item rather
+  than the decisions being copied into them.
+- Enriched with web research (clap 4.x dispatch, rustls launcher, hexarch,
+  cargo-zigbuild/dist) current as of mid-2026.
+
+## References
+
+- Source: `meta/work/0001-baseline-architecture-and-engineering-guard-rails.md`
+- Research: clap external subcommands (docs.rs/clap 4.6.x); rustup proxy/shim
+  model; uv tool caching; howtocodeit/hexarch (hexagonal in Rust); cargo-zigbuild
+  v0.23; dist (formerly cargo-dist) v0.32; self_update / self-replace; rustls vs
+  native-tls.
