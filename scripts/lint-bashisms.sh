@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # lint-bashisms.sh — fail on a denylist of bash-4-only constructs so the
-# migration framework's bash-3.2 floor (ADR-0016) is not silently regressed by
-# a CI runner that ships bash 5.x.
+# bash-3.2 floor is not silently regressed by a CI runner that ships bash 5.x.
 #
 # KNOWN-INCOMPLETE: this catches only the *enumerated* bash-4 constructs in the
 # scanner below. It cannot prove bash-3.2 compatibility — a bash-4 feature
