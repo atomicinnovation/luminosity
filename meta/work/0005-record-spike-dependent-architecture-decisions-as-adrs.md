@@ -5,7 +5,7 @@ title: "Record Spike-Dependent Architecture Decisions as ADRs"
 date: "2026-06-22T20:03:08+00:00"
 author: Toby Clemson
 producer: extract-work-items
-status: draft
+status: done
 kind: story
 priority: high
 parent: "work-item:0001"
@@ -18,7 +18,7 @@ schema_version: 1
 # 0005: Record Spike-Dependent Architecture Decisions as ADRs
 
 **Kind**: Story
-**Status**: Draft
+**Status**: Done
 **Priority**: High
 **Author**: Toby Clemson
 
