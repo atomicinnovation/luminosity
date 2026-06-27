@@ -10,9 +10,9 @@ kind: story
 priority: high
 parent: "work-item:0001"
 blocks: ["work-item:0010", "work-item:0011"]
-relates_to: ["work-item:0011", "adr:ADR-0003"]
-tags: [story, configuration, cli, skills]
-last_updated: "2026-06-24T16:17:54+00:00"
+relates_to: ["work-item:0006", "work-item:0011", "adr:ADR-0003", "adr:ADR-0010"]
+tags: [story, configuration, cli, skills, architecture-enforcement]
+last_updated: "2026-06-27T11:51:56+00:00"
 last_updated_by: Toby Clemson
 schema_version: 1
 ---
@@ -51,6 +51,13 @@ from the accelerator's userspace configuration approach.
   parsing — this is exactly the deterministic work the CLI owns). The resolution
   logic lives in the hexagonal core and is exposed through a CLI command (e.g.
   `luminosity config get` / `set`).
+- Realise the config hexagon as the `config` / `config-adapters` crate split
+  (ADR-0010): the `config` core holds resolution (domain + application + ports)
+  and depends on no serde / toml / filesystem crate; those concerns live in
+  `config-adapters`, wired at the composition root. This is the workspace's first
+  multi-crate hexagon, so the inward dependency direction is enforced here for the
+  first time — by the Cargo graph and the cargo-deny ban-list from the toolchain
+  story (0006).
 - Ensure `.luminosity/config.local.md` is gitignored so personal config is never
   committed (mirroring how the accelerator's `init` handles `.local.md`).
 - Provide a thin `configure` skill that orchestrates by invoking the CLI command;
@@ -66,8 +73,11 @@ from the accelerator's userspace configuration approach.
 - [ ] Setting and inspecting the same key via the `configure` skill yields the
       same result as the CLI command (the skill drives the CLI).
 - [ ] `.luminosity/config.local.md` is gitignored; the team file is committed.
-- [ ] The precedence resolution lives in `core` and is covered by tests written
-      test-first.
+- [ ] The precedence resolution lives in the `config` core crate and is covered by
+      tests written test-first.
+- [ ] The `config` core crate has no serde / toml / filesystem crate in its
+      dependency closure (those live in `config-adapters`); a violation fails to
+      compile and/or trips the cargo-deny ban-list.
 - [ ] The `configure` skill contains orchestration only — no configuration logic
       that belongs in the CLI.
 
@@ -80,6 +90,9 @@ from the accelerator's userspace configuration approach.
 
 - Blocked by: the scaffold story (0007, the config command lives in the
   workspace).
+- Relies on: the toolchain story (0006) for the cargo-deny ban-list that enforces
+  the `config` core's clean dependency closure — this is the first crate split
+  where that ban-list does real work.
 - Blocks: the eval-application story (0010, the `configure` skill is its eval
   target); the configuration-parity epic (0011, builds on this base model).
 - Relates to: the configuration-parity epic (0011).
@@ -103,6 +116,11 @@ from the accelerator's userspace configuration approach.
   directory location and the model are fixed by ADR-0003.
 - Precedence is personal-over-team (last-writer-wins, personal last), matching the
   accelerator's two-tier model.
+- Per ADR-0010 the config domain is the `config` crate and its outbound readers
+  (serde/toml/fs) are the `config-adapters` crate; "core" in this story means the
+  `config` crate. Keeping infrastructure out of `config`'s closure is enforced by
+  the cargo-deny ban-list (toolchain story 0006), and this is the first place that
+  cross-crate enforcement is exercised.
 
 ## Drafting Notes
 
@@ -121,7 +139,17 @@ from the accelerator's userspace configuration approach.
   item (0011, "Configuration Feature Parity with Accelerator") rather than
   expanding this proof slice.
 
+- Added 2026-06-27 (from codebase research
+  `meta/research/codebase/2026-06-27-0006-rust-toolchain-guard-rails.md`): the
+  `config` / `config-adapters` split is the workspace's first multi-crate hexagon,
+  so the inward-dependency cargo-deny ban-list enforcement (designed in ADR-0009,
+  mechanism in 0006) first becomes live and verifiable here — captured as an
+  explicit requirement and acceptance criterion. Later per-subdomain enforcement
+  is tracked in work item 0012.
+
 ## References
 
 - Source: `meta/work/0001-baseline-architecture-and-engineering-guard-rails.md`
 - Related: `meta/work/0011-configuration-feature-parity-with-accelerator.md`
+- Toolchain: `meta/work/0006-establish-rust-toolchain-guard-rails-in-mise-and-ci.md`
+- `meta/decisions/ADR-0010-git-style-modular-cli-of-on-demand-static-binaries.md`
