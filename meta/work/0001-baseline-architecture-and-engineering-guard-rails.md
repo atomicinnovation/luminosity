@@ -188,11 +188,11 @@ sequencing:
 
 ## Acceptance Criteria
 
-- [ ] An accepted ADR exists for each of the eleven numbered decision titles in
+- [x] An accepted ADR exists for each of the eleven numbered decision titles in
       theme 1, each following the ADR template with non-empty Context, Considered
       Options, and Consequences sections and status `accepted`. (Deeper quality
       is the remit of an ADR review, not this criterion.)
-- [ ] Both spikes are completed, each producing a written recommendation with a
+- [x] Both spikes are completed, each producing a written recommendation with a
       decision at a stated path under the knowledge directory, and the resulting
       ADR(s) cite that document.
 - [ ] Given the Rust toolchain tasks, when `mise run check` is run, then it

@@ -70,27 +70,27 @@ the `configure` skill" story references this spike.
 
 ## Acceptance Criteria
 
-- [ ] When the spike concludes, this work item contains a Recommendation section
+- [x] When the spike concludes, this work item contains a Recommendation section
       naming the chosen framework (or hybrid) and the rationale, including any
       longevity risks. The rationale addresses each weighing dimension (fit with
       the skills-as-product model, dev-time and CI usage, task/assertion
       authoring effort, variance reporting, maintenance/longevity risk) for each
       surveyed framework — e.g. as a comparison table or per-dimension note.
-- [ ] The Recommendation lists every framework considered — at least
+- [x] The Recommendation lists every framework considered — at least
       skill-creator, promptfoo, and DeepEval, plus any surfaced during the
       survey — each with a one-line reason for inclusion or dismissal.
-- [ ] The recommendation defines how a `configure` pass-rate / benchmark result
+- [x] The recommendation defines how a `configure` pass-rate / benchmark result
       is produced and run during development with results committed to the repo
       (not on every CI build). The definition names the command / entry point
       used to run the eval, the repo path where committed benchmark results live,
       and the result file format.
-- [ ] The recommendation states an explicit final floor (task count and
+- [x] The recommendation states an explicit final floor (task count and
       pass-rate) with a written rationale, referencing the 2025–2026 guidance
       (20–50 real-failure-derived tasks with multi-trial variance) for why the
       epic's provisional floor (≥ 3 tasks, ≥ 80% pass-rate) was kept or changed.
       The 20–50 figure is the external benchmark the provisional floor is
       reconsidered against, not a competing requirement.
-- [ ] The eval-framework ADR (decision 11 in epic 0001's architecture-decision
+- [x] The eval-framework ADR (decision 11 in epic 0001's architecture-decision
       set) cites this work item.
 
 ## Spike Outcome

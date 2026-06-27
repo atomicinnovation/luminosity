@@ -56,12 +56,12 @@ recommendation recorded in its feeding spike's work item.
 
 ## Acceptance Criteria
 
-- [ ] An accepted ADR exists for each of decisions 9–11, each following the ADR
+- [x] An accepted ADR exists for each of decisions 9–11, each following the ADR
       template with non-empty Context, Considered Options, and Consequences
       sections; each transitions proposed → accepted by author acceptance.
-- [ ] Each ADR's Decision is stated in active voice and its Consequences cover
+- [x] Each ADR's Decision is stated in active voice and its Consequences cover
       Positive, Negative, and Neutral.
-- [ ] The ADRs for decisions 9 and 10 cite the architecture spike's
+- [x] The ADRs for decisions 9 and 10 cite the architecture spike's
       Recommendation (0002); the ADR for decision 11 cites the eval spike's
       Recommendation (0003).
 
