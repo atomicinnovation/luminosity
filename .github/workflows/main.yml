@@ -11,6 +11,11 @@ on:
       - edited
       - synchronize
 
+# Least-privilege by default: every job is read-only unless it opts up. The
+# release jobs below keep their explicit elevated block.
+permissions:
+  contents: read
+
 jobs:
   test-unit:
     name: Run unit tests
@@ -22,14 +27,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
-        uses: jdx/mise-action@v4.1.0
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
           cache: true
           experimental: true
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Run unit tests
         run: mise run test:unit
@@ -44,14 +52,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
-        uses: jdx/mise-action@v4.1.0
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
           cache: true
           experimental: true
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Run integration tests
         run: mise run test:integration
@@ -62,10 +73,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
-        uses: jdx/mise-action@v4.1.0
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
           cache: true
@@ -80,10 +91,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
-        uses: jdx/mise-action@v4.1.0
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
           cache: true
@@ -91,6 +102,126 @@ jobs:
 
       - name: Run build system checks
         run: mise run build-system:check
+
+  check-cli:
+    name: Check cli
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      - name: Run cli checks
+        run: mise run cli:check
+
+  build-cli:
+    name: Build cli
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      # This x86_64 Linux runner builds BOTH musl triples. x86_64-musl links
+      # via the host `cc` self-contained, but aarch64-musl's default linker is
+      # still that x86_64 `cc` — it cannot link arm64 objects ("file in wrong
+      # format"), even for the pure-Rust bootstrap. So an aarch64 cross-linker
+      # is needed now, not (as previously assumed) only once 0007 lands the
+      # C-FFI stack. musl-tools covers x86_64-musl; gcc-aarch64-linux-gnu is the
+      # arm64 link driver wired in via the build step's env below.
+      - name: Install musl cross-linkers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools gcc-aarch64-linux-gnu
+
+      - name: Install dependencies
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      # The linker env must live on the BUILD step (not the apt step above): a
+      # step's `env:` is scoped to that step alone. Harmless on macOS, which
+      # never builds the aarch64-musl triple and so never consults it.
+      - name: Release-build host-native triples
+        run: mise run build:cli
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-gnu-gcc
+
+  check-supply-chain:
+    name: Check supply chain
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      # The RustSec advisory DB must be fetched fresh each run (never cached
+      # stale) so newly-disclosed advisories are caught; cargo-deny fails (not
+      # warns) if the DB is unavailable.
+      - name: Run supply-chain checks
+        run: mise run deny:check
+
+  check-architecture:
+    name: Check architecture
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      # No built-binary cache for cargo-pup: a trustworthy out-of-band per-OS
+      # checksum cannot be maintained from the dev environment, so per the
+      # plan's fallback we rebuild from source every run (correctness over
+      # speed for a compiler plugin). pup:check self-provisions the nightly +
+      # cargo-pup via its deps:install:pup dependency on the clean runner.
+      - name: Run architecture check (self-provisions the nightly lane)
+        run: mise run pup:check
+
+      - name: Run cargo-pup behavioural regression
+        run: mise run test:integration:pup
 
   prerelease:
     name: Create prerelease
@@ -100,6 +231,10 @@ jobs:
       - test-integration
       - check-scripts
       - check-build-system
+      - check-cli
+      - build-cli
+      - check-supply-chain
+      - check-architecture
     if: github.event_name == 'push'
     # Serialise all release pipelines so they can't bump to the same version and
     # race their pushes: cancel-in-progress: false queues runs instead of
@@ -117,10 +252,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
-        uses: jdx/mise-action@v4.1.0
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
           cache: true
@@ -132,7 +267,7 @@ jobs:
         run: mise run prerelease:prepare
 
       - name: Attest binary provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-path: "cli/bin/luminosity-*"
 
@@ -172,10 +307,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
-        uses: jdx/mise-action@v4.1.0
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
           cache: true
@@ -187,7 +322,7 @@ jobs:
         run: mise run release:prepare
 
       - name: Attest stable binary provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-path: "cli/bin/luminosity-*"
 
@@ -202,7 +337,7 @@ jobs:
         run: mise run prerelease:prepare
 
       - name: Attest post-stable binary provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-path: "cli/bin/luminosity-*"
 

@@ -1,0 +1,7 @@
+// cargo-pup architecture lint config (RON). Intentionally empty in the
+// bootstrap — there are no hexagonal layers to constrain yet. Story 0007 adds
+// the inward-direction restrict_imports module rules once the kernel/cli split
+// lands.
+(
+    lints: [],
+)

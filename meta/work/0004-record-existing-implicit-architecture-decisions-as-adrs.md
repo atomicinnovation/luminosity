@@ -61,12 +61,12 @@ concretely and is accepted here — not left pending.
 
 ## Acceptance Criteria
 
-- [ ] An accepted ADR exists for each of decisions 1–8, each following the ADR
+- [x] An accepted ADR exists for each of decisions 1–8, each following the ADR
       template with non-empty Context, Considered Options, and Consequences
       sections; each transitions proposed → accepted by author acceptance.
-- [ ] Each ADR's Decision is stated in active voice and its Consequences cover
+- [x] Each ADR's Decision is stated in active voice and its Consequences cover
       Positive, Negative, and Neutral.
-- [ ] The message-bus / knowledge-corpus directory is decided within this story,
+- [x] The message-bus / knowledge-corpus directory is decided within this story,
       and decision 8's ADR records that directory concretely with status
       `accepted` (no pending placeholder, no deferred superseding ADR).
 

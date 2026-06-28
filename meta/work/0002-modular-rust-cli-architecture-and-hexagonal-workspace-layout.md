@@ -81,14 +81,14 @@ is optional, not required.
 
 ## Acceptance Criteria
 
-- [ ] Given the 3-day time-box, when the spike concludes, then this work item
+- [x] Given the 3-day time-box, when the spike concludes, then this work item
       contains a Recommendation section naming a chosen crate split, dispatch
       mechanism, launcher pipeline, and cross-compile/distribution toolchain,
       each with the alternatives considered and the rationale for the choice.
-- [ ] The Recommendation explicitly states whether the multi-crate
+- [x] The Recommendation explicitly states whether the multi-crate
       core/adapters/cli split is adopted now or deferred, and how the inward
       dependency direction is enforced.
-- [ ] The spike-dependent ADR(s) for decisions 9–10 cite this work item, and the
+- [x] The spike-dependent ADR(s) for decisions 9–10 cite this work item, and the
       scaffold and distribution stories reference it when implemented.
 
 ## Spike Outcome

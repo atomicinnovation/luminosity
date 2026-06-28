@@ -5,7 +5,10 @@ _.python.venv = { path = ".venv", create = true }
 uv = "0.11.6"
 python = "3.14.4"
 gh = "2.89.0"
-rust = { version = "1.90.0", components = "rustfmt,clippy" }
+rust = { version = "1.90.0", components = "rustfmt,clippy,llvm-tools-preview" }
+"aqua:nextest-rs/nextest/cargo-nextest" = "0.9.138"
+"aqua:taiki-e/cargo-llvm-cov" = "0.8.7"
+"aqua:EmbarkStudios/cargo-deny" = "0.19.8"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
 "aqua:rhysd/actionlint" = "1.7.12"
@@ -24,23 +27,45 @@ run = "invoke deps.install-python"
 description = "Install Rust cross-compile targets required for release builds"
 run = "invoke deps.install-rust-targets"
 
+[tasks."deps:install:rust-components"]
+description = "Install the rustfmt + clippy rustup components the cli checks need (mise [tools] `components` is not honoured for an already-present toolchain)"
+run = "invoke deps.install-rust-components"
+
+[tasks."deps:install:pup"]
+description = "Provision the cargo-pup nightly toolchain + pinned cargo-pup (rustup-managed, not a mise [tool])"
+run = "invoke deps.install-pup"
+
 [tasks."test:unit:tasks"]
 description = "Run pytest unit tests for invoke tasks"
 depends = ["deps:install:python"]
-run = "uv run pytest tests/unit/tasks -v"
+run = "invoke test.unit.tasks"
 
 [tasks."test:integration:tasks"]
 description = "Run pytest integration tests for invoke tasks"
 depends = ["deps:install:python"]
-run = "uv run pytest tests/integration/tasks -v"
+run = "invoke test.integration.tasks"
+
+[tasks."test:integration:deny"]
+description = "Run the cargo-deny ban-violation regression suite"
+depends = ["deps:install:python"]
+run = "invoke test.integration.deny"
+
+[tasks."test:integration:pup"]
+description = "Run the cargo-pup behavioural regression (requires the nightly lane; check-architecture only, not the test roll-up)"
+depends = ["deps:install:python", "deps:install:pup"]
+run = "invoke test.integration.pup"
+
+[tasks."test:unit:cli"]
+description = "Run cli-crate unit tests (instrumented coverage unless LUMINOSITY_COVERAGE=off)"
+run = "invoke test.cli.run"
 
 [tasks."test:unit"]
 description = "Run all unit tests in parallel"
-depends = ["test:unit:tasks"]
+depends = ["test:unit:tasks", "test:unit:cli"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"
-depends = ["test:integration:tasks"]
+depends = ["test:integration:tasks", "test:integration:deny"]
 
 [tasks.test]
 description = "Run all tests in parallel"
@@ -54,13 +79,23 @@ run = "invoke format.scripts.check"
 description = "Format shell scripts in place with shfmt"
 run = "invoke format.scripts.fix"
 
+[tasks."format:cli:check"]
+description = "Check Rust formatting with rustfmt (read-only; fails on drift)"
+depends = ["deps:install:rust-components"]
+run = "invoke format.cli.check"
+
+[tasks."format:cli:fix"]
+description = "Format Rust in place with rustfmt"
+depends = ["deps:install:rust-components"]
+run = "invoke format.cli.fix"
+
 [tasks."format:check"]
 description = "Run all format checks (read-only)"
-depends = ["format:build-system:check", "format:scripts:check"]
+depends = ["format:build-system:check", "format:scripts:check", "format:cli:check"]
 
 [tasks."format:fix"]
 description = "Apply all formatters in place"
-depends = ["format:build-system:fix", "format:scripts:fix"]
+depends = ["format:build-system:fix", "format:scripts:fix", "format:cli:fix"]
 
 [tasks."lint:scripts:shellcheck:check"]
 description = "Lint shell scripts with ShellCheck (config in .shellcheckrc)"
@@ -77,6 +112,34 @@ depends = ["lint:scripts:shellcheck:check", "lint:scripts:bashisms:check"]
 [tasks."scripts:check"]
 description = "Run all shell format and lint checks (shfmt + ShellCheck + bashisms)"
 depends = ["format:scripts:check", "lint:scripts:check"]
+
+[tasks."lint:cli:check"]
+description = "Lint Rust with clippy (pedantic + nursery + restriction, -D warnings)"
+depends = ["deps:install:rust-components"]
+run = "invoke lint.cli.check"
+
+[tasks."lint:cli:fix"]
+description = "Apply clippy's machine-applicable fixes"
+depends = ["deps:install:rust-components"]
+run = "invoke lint.cli.fix"
+
+[tasks."cli:check"]
+description = "Run all cli-crate format and lint checks (read-only; no tests)"
+depends = ["format:cli:check", "lint:cli:check"]
+
+[tasks."build:cli"]
+description = "Release-build the host-native triples (link/arch guard; in `mise run` default, not `check`)"
+depends = ["deps:install:rust-targets"]
+run = "invoke build.cli"
+
+[tasks."deny:check"]
+description = "Check the workspace dependency graph with cargo-deny (advisories, licenses, bans, sources)"
+run = "invoke deny.check"
+
+[tasks."pup:check"]
+description = "Enforce intra-crate module-import rules with cargo-pup (blocking nightly lane; LUMINOSITY_PUP_MODE=warn downgrades to advisory)"
+depends = ["deps:install:pup"]
+run = "invoke pup.check"
 
 [tasks."format:build-system:check"]
 description = "Check Python formatting with ruff (read-only; fails on drift)"
@@ -117,11 +180,11 @@ depends = ["format:build-system:check", "lint:build-system:check", "types:build-
 
 [tasks."lint:check"]
 description = "Run all lint checks"
-depends = ["lint:build-system:check", "lint:scripts:check"]
+depends = ["lint:build-system:check", "lint:scripts:check", "lint:cli:check"]
 
 [tasks."lint:fix"]
 description = "Apply all safe lint fixes (shell has no autofixer — run `mise run scripts:check` for remaining shell findings)"
-depends = ["lint:build-system:fix"]
+depends = ["lint:build-system:fix", "lint:cli:fix"]
 
 [tasks."types:check"]
 description = "Run all type checks (tsc + pyrefly)"
@@ -132,12 +195,12 @@ description = "Apply all formatters + safe lint fixes (MECHANICAL only — no ty
 depends = ["format:fix", "lint:fix"]
 
 [tasks.check]
-description = "Run all read-only format, lint, and type checks (what CI runs)"
-depends = ["build-system:check", "scripts:check"]
+description = "Read-only format, lint, and type checks plus the cargo-deny/cargo-pup static checks (test-free, build-free; the subset CI mirrors)"
+depends = ["build-system:check", "scripts:check", "cli:check", "deny:check", "pup:check"]
 
 [tasks.default]
-description = "Full local CI mirror: build, format-fix, lint, type-check, test (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
-depends = ["format:fix", "lint:check", "types:check", "test"]
+description = "Full local CI mirror: format-fix, lint, type-check, the whole test roll-up (cli tests carry coverage), the build:cli host-native release build, and the deny/pup static checks (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
+depends = ["format:fix", "lint:check", "types:check", "test", "build:cli", "deny:check", "pup:check"]
 
 [tasks."version:read"]
 description = "Read plugin version"

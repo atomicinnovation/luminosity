@@ -1,3 +1,3 @@
-from . import build_system, scripts
+from . import build_system, cli, scripts
 
-__all__ = ["build_system", "scripts"]
+__all__ = ["build_system", "cli", "scripts"]

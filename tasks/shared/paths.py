@@ -1,6 +1,7 @@
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+WORKSPACE_MANIFEST = REPO_ROOT / "Cargo.toml"
 CLI_DIR = REPO_ROOT / "cli"
 BIN_DIR = CLI_DIR / "bin"
 CHECKSUMS = BIN_DIR / "checksums.json"

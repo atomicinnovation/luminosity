@@ -152,3 +152,84 @@ def test_topology_assertions_reject_each_known_bad_shape(
     introduce_violation(bad["jobs"])
     with pytest.raises(AssertionError):
         _assert_release_topology(bad)
+
+
+# --- Rust CI job presence ---------------------------------------------------
+#
+# This guard verifies CI *job topology* — that the jobs exist, run the right
+# `mise run` targets, and gate the release via `needs:`. It does NOT (and
+# cannot) verify branch-protection mergeability, which lives in repo settings
+# (see CONTRIBUTING.md). A job present in YAML but absent from the
+# branch-protection required checks would let a red build merge with this test
+# still green — so this is a necessary backstop, not sufficient enforcement.
+
+PRERELEASE_GATE_JOB = "prerelease"
+TEST_UNIT_JOB = "test-unit"
+TEST_INTEGRATION_JOB = "test-integration"
+
+
+def _run_commands(job: dict[str, Any]) -> list[str]:
+    return [
+        step["run"]
+        for step in job.get("steps", [])
+        if isinstance(step, dict) and "run" in step
+    ]
+
+
+def _matrix_os(job: dict[str, Any]) -> list[Any]:
+    matrix = job.get("strategy", {}).get("matrix", {})
+    return _as_list(matrix.get("os"))
+
+
+def _job_runs_target(job: dict[str, Any], target: str) -> bool:
+    return any(target in command for command in _run_commands(job))
+
+
+def test_check_cli_job_runs_cli_check_and_gates_release(
+    wf: dict[str, Any],
+) -> None:
+    jobs = wf["jobs"]
+    assert _job_runs_target(jobs["check-cli"], "mise run cli:check")
+    assert "check-cli" in _needs(jobs[PRERELEASE_GATE_JOB])
+
+
+def test_build_cli_job_is_a_dual_os_matrix_and_gates_release(
+    wf: dict[str, Any],
+) -> None:
+    jobs = wf["jobs"]
+    build_cli = jobs["build-cli"]
+    assert _job_runs_target(build_cli, "mise run build:cli")
+    assert set(_matrix_os(build_cli)) == {"ubuntu-latest", "macos-latest"}
+    assert "build-cli" in _needs(jobs[PRERELEASE_GATE_JOB])
+
+
+def test_check_supply_chain_job_runs_deny_and_gates_release(
+    wf: dict[str, Any],
+) -> None:
+    jobs = wf["jobs"]
+    assert _job_runs_target(jobs["check-supply-chain"], "mise run deny:check")
+    assert "check-supply-chain" in _needs(jobs[PRERELEASE_GATE_JOB])
+
+
+def test_check_architecture_job_runs_pup_and_the_regression(
+    wf: dict[str, Any],
+) -> None:
+    jobs = wf["jobs"]
+    architecture = jobs["check-architecture"]
+    assert _job_runs_target(architecture, "mise run pup:check")
+    # The cargo-pup behavioural regression cannot be silently dropped from the
+    # one job that provisions its nightly. It runs via the test:integration:pup
+    # mise task (which filters to -m requires_pup), not pytest directly.
+    assert _job_runs_target(architecture, "mise run test:integration:pup")
+    assert "check-architecture" in _needs(jobs[PRERELEASE_GATE_JOB])
+
+
+def test_existing_test_jobs_still_gate_release(wf: dict[str, Any]) -> None:
+    jobs = wf["jobs"]
+    assert _job_runs_target(jobs[TEST_UNIT_JOB], "mise run test:unit")
+    assert _job_runs_target(
+        jobs[TEST_INTEGRATION_JOB], "mise run test:integration"
+    )
+    needs = _needs(jobs[PRERELEASE_GATE_JOB])
+    assert TEST_UNIT_JOB in needs
+    assert TEST_INTEGRATION_JOB in needs

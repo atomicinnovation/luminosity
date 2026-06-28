@@ -1,0 +1,4 @@
+# max_width duplicated by hand from .editorconfig (rustfmt does not read it);
+# keep in sync on any line-width change.
+max_width = 80
+edition = "2021"
