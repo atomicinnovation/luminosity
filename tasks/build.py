@@ -15,10 +15,21 @@ def is_statically_linked(
     The native-tls ban is necessary-but-not-sufficient (other system-C `*-sys`
     crates link dynamically too), so the static guarantee is turned into a
     checked fact rather than inferred.
+
+    Accepts both the plain-static and static-PIE phrasings each tool emits: the
+    aarch64 musl build links non-PIE static ("statically linked"), while the
+    modern x86_64 musl default links static-PIE, which `file` reports as
+    "static-pie linked" and `ldd` reports as "statically linked" (not "not a
+    dynamic executable"). All denote a binary with no dynamic dependencies.
     """
-    if "statically linked" in file_output:
+    if "statically linked" in file_output or "static-pie linked" in file_output:
         return True
-    return ldd_output is not None and "not a dynamic executable" in ldd_output
+    if ldd_output is None:
+        return False
+    return (
+        "not a dynamic executable" in ldd_output
+        or "statically linked" in ldd_output
+    )
 
 
 def has_expected_arch(triple: str, arch_output: str) -> bool:

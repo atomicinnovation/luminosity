@@ -44,6 +44,25 @@ class TestCliCheckWiring:
     def test_check_includes_cli_check(self, mise: Mise):
         assert "cli:check" in _depends(mise, "check")
 
+    @pytest.mark.parametrize(
+        "leaf",
+        [
+            "format:cli:check",
+            "format:cli:fix",
+            "lint:cli:check",
+            "lint:cli:fix",
+        ],
+    )
+    def test_cli_leaves_provision_rustfmt_and_clippy(
+        self, mise: Mise, leaf: str
+    ):
+        # mise's [tools] rust `components` is silently skipped for an
+        # already-present toolchain (a cached CI stable), so each cli leaf must
+        # self-provision rustfmt/clippy — the same convention as pup:check <->
+        # deps:install:pup. Attached to the leaves (not the cli:check roll-up)
+        # so format:fix / lint:fix provision them too.
+        assert "deps:install:rust-components" in _depends(mise, leaf)
+
 
 class TestBuildCliWiring:
     def test_build_cli_is_in_default(self, mise: Mise):

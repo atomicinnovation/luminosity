@@ -34,6 +34,14 @@ def ctx() -> MagicMock:
     return m
 
 
+class TestInstallRustComponents:
+    def test_adds_rustfmt_and_clippy_to_the_active_toolchain(
+        self, ctx: MagicMock
+    ):
+        deps.install_rust_components(ctx)
+        assert "rustup component add rustfmt clippy" in _commands(ctx)
+
+
 class TestInstallPup:
     def test_installs_the_pinned_nightly_with_all_components(
         self, ctx: MagicMock

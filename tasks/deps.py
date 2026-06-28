@@ -22,6 +22,19 @@ def install_rust_targets(context: Context) -> None:
     context.run(f"rustup target add {' '.join(_CROSS_TARGETS)}")
 
 
+@task
+def install_rust_components(context: Context) -> None:
+    """Install the rustfmt + clippy components the cli checks need.
+
+    Not trusted to mise's [tools] rust `components` field: that is silently
+    skipped when the toolchain is already present (a cached/pre-installed
+    stable on a CI runner), so the components must be provisioned explicitly —
+    mirroring deps:install:rust-targets and deps:install:pup. Adds to the
+    active (RUSTUP_TOOLCHAIN-pinned) toolchain, the one cli:check runs against.
+    """
+    context.run("rustup component add rustfmt clippy")
+
+
 def _pup_already_installed(context: Context) -> bool:
     # Token equality on the version line, not a substring match (0.1.80 would
     # false-match 0.1.8) and not a whole-line match (cargo-pup colourises its

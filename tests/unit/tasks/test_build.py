@@ -45,6 +45,21 @@ class TestIsStaticallyLinked:
             "ELF 64-bit", "not a dynamic executable"
         )
 
+    def test_file_reporting_static_pie_passes(self):
+        # The modern x86_64-unknown-linux-musl default links static-pie, which
+        # `file` reports as "static-pie linked" — a genuinely static binary
+        # whose phrasing omits the literal "statically linked" substring.
+        assert build.is_statically_linked(
+            "ELF 64-bit LSB pie executable, x86-64, static-pie linked"
+        )
+
+    def test_ldd_reporting_statically_linked_passes(self):
+        # ldd describes a static-pie binary as "statically linked" rather than
+        # "not a dynamic executable"; both mean no dynamic dependencies.
+        assert build.is_statically_linked(
+            "ELF 64-bit LSB pie executable", "statically linked"
+        )
+
     def test_dynamic_binary_fails(self):
         assert not build.is_statically_linked(
             "ELF 64-bit, dynamically linked", "libc.so => ..."

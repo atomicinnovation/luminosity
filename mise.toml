@@ -27,6 +27,10 @@ run = "invoke deps.install-python"
 description = "Install Rust cross-compile targets required for release builds"
 run = "invoke deps.install-rust-targets"
 
+[tasks."deps:install:rust-components"]
+description = "Install the rustfmt + clippy rustup components the cli checks need (mise [tools] `components` is not honoured for an already-present toolchain)"
+run = "invoke deps.install-rust-components"
+
 [tasks."deps:install:pup"]
 description = "Provision the cargo-pup nightly toolchain + pinned cargo-pup (rustup-managed, not a mise [tool])"
 run = "invoke deps.install-pup"
@@ -77,10 +81,12 @@ run = "invoke format.scripts.fix"
 
 [tasks."format:cli:check"]
 description = "Check Rust formatting with rustfmt (read-only; fails on drift)"
+depends = ["deps:install:rust-components"]
 run = "invoke format.cli.check"
 
 [tasks."format:cli:fix"]
 description = "Format Rust in place with rustfmt"
+depends = ["deps:install:rust-components"]
 run = "invoke format.cli.fix"
 
 [tasks."format:check"]
@@ -109,10 +115,12 @@ depends = ["format:scripts:check", "lint:scripts:check"]
 
 [tasks."lint:cli:check"]
 description = "Lint Rust with clippy (pedantic + nursery + restriction, -D warnings)"
+depends = ["deps:install:rust-components"]
 run = "invoke lint.cli.check"
 
 [tasks."lint:cli:fix"]
 description = "Apply clippy's machine-applicable fixes"
+depends = ["deps:install:rust-components"]
 run = "invoke lint.cli.fix"
 
 [tasks."cli:check"]

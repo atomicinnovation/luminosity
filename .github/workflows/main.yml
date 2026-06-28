@@ -140,17 +140,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      # The bootstrap crate is pure Rust and links via rust-lld, so no external
-      # cross-linker is needed yet. Story 0007 lands the C-FFI stack
-      # (reqwest/rustls/tokio) which needs musl cross-linkers on this Linux leg
-      # — both the x86_64 musl-gcc AND the aarch64 cross-linker, since this
-      # x86_64 runner also builds the arm64 musl triple. Enable when 0007 merges
-      # or this matrix leg goes red:
-      # - name: Install musl cross-linkers (enable with 0007's C-FFI stack)
-      #   if: runner.os == 'Linux'
-      #   run: sudo apt-get update && sudo apt-get install -y musl-tools gcc-aarch64-linux-gnu
-      #   env:
-      #     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-gnu-gcc
+      # This x86_64 Linux runner builds BOTH musl triples. x86_64-musl links
+      # via the host `cc` self-contained, but aarch64-musl's default linker is
+      # still that x86_64 `cc` — it cannot link arm64 objects ("file in wrong
+      # format"), even for the pure-Rust bootstrap. So an aarch64 cross-linker
+      # is needed now, not (as previously assumed) only once 0007 lands the
+      # C-FFI stack. musl-tools covers x86_64-musl; gcc-aarch64-linux-gnu is the
+      # arm64 link driver wired in via the build step's env below.
+      - name: Install musl cross-linkers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools gcc-aarch64-linux-gnu
 
       - name: Install dependencies
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
@@ -162,8 +161,13 @@ jobs:
       - name: Cache cargo build
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
+      # The linker env must live on the BUILD step (not the apt step above): a
+      # step's `env:` is scoped to that step alone. Harmless on macOS, which
+      # never builds the aarch64-musl triple and so never consults it.
       - name: Release-build host-native triples
         run: mise run build:cli
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-gnu-gcc
 
   check-supply-chain:
     name: Check supply chain
