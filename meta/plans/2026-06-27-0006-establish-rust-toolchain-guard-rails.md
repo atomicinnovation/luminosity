@@ -969,18 +969,18 @@ roll-up is caught automatically.
 
 #### Automated Verification
 
-- [ ] `mise run test:unit:cli` runs the instrumented `cargo llvm-cov nextest`,
+- [x] `mise run test:unit:cli` runs the instrumented `cargo llvm-cov nextest`,
       passes, and prints a coverage summary
-- [ ] `LUMINOSITY_COVERAGE=off mise run test:unit:cli` runs the plain
+- [x] `LUMINOSITY_COVERAGE=off mise run test:unit:cli` runs the plain
       `cargo nextest run` (no coverage), passes
-- [ ] `mise run cli:check` stays `format:cli:check` + `lint:cli:check` only — it
+- [x] `mise run cli:check` stays `format:cli:check` + `lint:cli:check` only — it
       runs **no** tests and no coverage (`check` stays read-only/fast)
-- [ ] `mise run test:unit` and `mise run test` both include the cli unit tests
+- [x] `mise run test:unit` and `mise run test` both include the cli unit tests
       (with coverage)
-- [ ] `mise run check` runs **no** cli tests and **no** coverage
-- [ ] There is no `coverage:check` / `coverage:cli:check` task at all
-- [ ] Task unit tests pass: `uv run pytest tests/unit/tasks/test_test.py -v`
-- [ ] `mise run check` and `mise run` both exit 0
+- [x] `mise run check` runs **no** cli tests and **no** coverage
+- [x] There is no `coverage:check` / `coverage:cli:check` task at all
+- [x] Task unit tests pass: `uv run pytest tests/unit/tasks/test_test.py -v`
+- [x] `mise run check` and `mise run` both exit 0
 
 #### Manual Verification
 

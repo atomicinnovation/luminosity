@@ -5,7 +5,9 @@ _.python.venv = { path = ".venv", create = true }
 uv = "0.11.6"
 python = "3.14.4"
 gh = "2.89.0"
-rust = { version = "1.90.0", components = "rustfmt,clippy" }
+rust = { version = "1.90.0", components = "rustfmt,clippy,llvm-tools-preview" }
+"aqua:nextest-rs/nextest/cargo-nextest" = "0.9.138"
+"aqua:taiki-e/cargo-llvm-cov" = "0.8.7"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
 "aqua:rhysd/actionlint" = "1.7.12"
@@ -34,9 +36,13 @@ description = "Run pytest integration tests for invoke tasks"
 depends = ["deps:install:python"]
 run = "uv run pytest tests/integration/tasks -v"
 
+[tasks."test:unit:cli"]
+description = "Run cli-crate unit tests (instrumented coverage unless LUMINOSITY_COVERAGE=off)"
+run = "invoke test.cli.run"
+
 [tasks."test:unit"]
 description = "Run all unit tests in parallel"
-depends = ["test:unit:tasks"]
+depends = ["test:unit:tasks", "test:unit:cli"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"

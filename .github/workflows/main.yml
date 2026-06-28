@@ -36,6 +36,9 @@ jobs:
           cache: true
           experimental: true
 
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
       - name: Run unit tests
         run: mise run test:unit
 
@@ -57,6 +60,9 @@ jobs:
           install: true
           cache: true
           experimental: true
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Run integration tests
         run: mise run test:integration

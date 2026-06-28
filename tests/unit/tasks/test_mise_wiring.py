@@ -59,6 +59,22 @@ class TestBuildCliWiring:
         assert "deps:install:rust-targets" in _depends(mise, "build:cli")
 
 
+class TestTestUnitCliWiring:
+    def test_test_unit_cli_is_folded_into_test_unit(self, mise: Mise):
+        assert "test:unit:cli" in _depends(mise, "test:unit")
+
+    def test_test_unit_cli_is_not_in_cli_check(self, mise: Mise):
+        assert "test:unit:cli" not in _depends(mise, "cli:check")
+
+    def test_no_coverage_task_exists(self, mise: Mise):
+        names = set(_tasks(mise))
+        assert "coverage:check" not in names
+        assert "coverage:cli:check" not in names
+
+    def test_no_coverage_edge_on_default(self, mise: Mise):
+        assert "coverage:check" not in _depends(mise, "default")
+
+
 class TestToolchainCoherence:
     """The clippy msrv and rustfmt edition mirror the mise rust pin by hand.
 
