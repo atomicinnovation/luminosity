@@ -8,6 +8,7 @@ gh = "2.89.0"
 rust = { version = "1.90.0", components = "rustfmt,clippy,llvm-tools-preview" }
 "aqua:nextest-rs/nextest/cargo-nextest" = "0.9.138"
 "aqua:taiki-e/cargo-llvm-cov" = "0.8.7"
+"aqua:EmbarkStudios/cargo-deny" = "0.19.8"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
 "aqua:rhysd/actionlint" = "1.7.12"
@@ -109,6 +110,10 @@ description = "Release-build the host-native triples (link/arch guard; in `mise 
 depends = ["deps:install:rust-targets"]
 run = "invoke build.cli"
 
+[tasks."deny:check"]
+description = "Check the workspace dependency graph with cargo-deny (advisories, licenses, bans, sources)"
+run = "invoke deny.check"
+
 [tasks."format:build-system:check"]
 description = "Check Python formatting with ruff (read-only; fails on drift)"
 depends = ["deps:install:python"]
@@ -164,11 +169,11 @@ depends = ["format:fix", "lint:fix"]
 
 [tasks.check]
 description = "Run all read-only format, lint, and type checks (what CI runs)"
-depends = ["build-system:check", "scripts:check", "cli:check"]
+depends = ["build-system:check", "scripts:check", "cli:check", "deny:check"]
 
 [tasks.default]
 description = "Full local CI mirror: build, format-fix, lint, type-check, test (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
-depends = ["format:fix", "lint:check", "types:check", "test", "build:cli"]
+depends = ["format:fix", "lint:check", "types:check", "test", "build:cli", "deny:check"]
 
 [tasks."version:read"]
 description = "Read plugin version"

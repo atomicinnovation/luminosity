@@ -1182,14 +1182,14 @@ phase appends its own tool), per the docs-land-with-the-surface principle.
 
 #### Automated Verification
 
-- [ ] `cargo deny --version` reports `0.19.8`, and `mise run deny:check` exits 0
+- [x] `cargo deny --version` reports `0.19.8`, and `mise run deny:check` exits 0
       against the bootstrap workspace — the clean exit also **validates the
       `[advisories]` schema** (`unmaintained`/`yanked` keys), since a wrong/removed
       key makes cargo-deny error on the config rather than evaluate it
-- [ ] `cargo deny check` confirms the four sections run (advisories, licenses,
+- [x] `cargo deny check` confirms the four sections run (advisories, licenses,
       bans, sources)
-- [ ] Task unit test passes: `uv run pytest tests/unit/tasks/test_deny.py -v`
-- [ ] `mise run check` and `mise run` both exit 0
+- [x] Task unit test passes: `uv run pytest tests/unit/tasks/test_deny.py -v`
+- [x] `mise run check` and `mise run` both exit 0
 
 #### Manual Verification
 

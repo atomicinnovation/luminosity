@@ -165,6 +165,29 @@ jobs:
       - name: Release-build host-native triples
         run: mise run build:cli
 
+  check-supply-chain:
+    name: Check supply chain
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      # The RustSec advisory DB must be fetched fresh each run (never cached
+      # stale) so newly-disclosed advisories are caught; cargo-deny fails (not
+      # warns) if the DB is unavailable.
+      - name: Run supply-chain checks
+        run: mise run deny:check
+
   prerelease:
     name: Create prerelease
     runs-on: macos-latest
@@ -175,6 +198,7 @@ jobs:
       - check-build-system
       - check-cli
       - build-cli
+      - check-supply-chain
     if: github.event_name == 'push'
     # Serialise all release pipelines so they can't bump to the same version and
     # race their pushes: cancel-in-progress: false queues runs instead of

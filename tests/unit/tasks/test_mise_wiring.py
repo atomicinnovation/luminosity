@@ -75,6 +75,14 @@ class TestTestUnitCliWiring:
         assert "coverage:check" not in _depends(mise, "default")
 
 
+class TestDenyWiring:
+    def test_deny_check_is_in_check(self, mise: Mise):
+        assert "deny:check" in _depends(mise, "check")
+
+    def test_deny_check_is_in_default(self, mise: Mise):
+        assert "deny:check" in _depends(mise, "default")
+
+
 class TestToolchainCoherence:
     """The clippy msrv and rustfmt edition mirror the mise rust pin by hand.
 

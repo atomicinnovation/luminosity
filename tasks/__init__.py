@@ -3,6 +3,7 @@ from invoke import Collection
 from . import (
     build,
     changelog,
+    deny,
     deps,
     git,
     github,
@@ -31,6 +32,7 @@ ns.add_collection(ns_release)
 
 ns.add_collection(Collection.from_module(build))
 ns.add_collection(Collection.from_module(changelog))
+ns.add_collection(Collection.from_module(deny))
 ns.add_collection(Collection.from_module(deps))
 ns.add_collection(Collection.from_module(git))
 ns.add_collection(Collection.from_module(github))
