@@ -54,13 +54,21 @@ run = "invoke format.scripts.check"
 description = "Format shell scripts in place with shfmt"
 run = "invoke format.scripts.fix"
 
+[tasks."format:cli:check"]
+description = "Check Rust formatting with rustfmt (read-only; fails on drift)"
+run = "invoke format.cli.check"
+
+[tasks."format:cli:fix"]
+description = "Format Rust in place with rustfmt"
+run = "invoke format.cli.fix"
+
 [tasks."format:check"]
 description = "Run all format checks (read-only)"
-depends = ["format:build-system:check", "format:scripts:check"]
+depends = ["format:build-system:check", "format:scripts:check", "format:cli:check"]
 
 [tasks."format:fix"]
 description = "Apply all formatters in place"
-depends = ["format:build-system:fix", "format:scripts:fix"]
+depends = ["format:build-system:fix", "format:scripts:fix", "format:cli:fix"]
 
 [tasks."lint:scripts:shellcheck:check"]
 description = "Lint shell scripts with ShellCheck (config in .shellcheckrc)"
@@ -77,6 +85,23 @@ depends = ["lint:scripts:shellcheck:check", "lint:scripts:bashisms:check"]
 [tasks."scripts:check"]
 description = "Run all shell format and lint checks (shfmt + ShellCheck + bashisms)"
 depends = ["format:scripts:check", "lint:scripts:check"]
+
+[tasks."lint:cli:check"]
+description = "Lint Rust with clippy (pedantic + nursery + restriction, -D warnings)"
+run = "invoke lint.cli.check"
+
+[tasks."lint:cli:fix"]
+description = "Apply clippy's machine-applicable fixes"
+run = "invoke lint.cli.fix"
+
+[tasks."cli:check"]
+description = "Run all cli-crate format and lint checks (read-only; no tests)"
+depends = ["format:cli:check", "lint:cli:check"]
+
+[tasks."build:cli"]
+description = "Release-build the host-native triples (link/arch guard; in `mise run` default, not `check`)"
+depends = ["deps:install:rust-targets"]
+run = "invoke build.cli"
 
 [tasks."format:build-system:check"]
 description = "Check Python formatting with ruff (read-only; fails on drift)"
@@ -117,11 +142,11 @@ depends = ["format:build-system:check", "lint:build-system:check", "types:build-
 
 [tasks."lint:check"]
 description = "Run all lint checks"
-depends = ["lint:build-system:check", "lint:scripts:check"]
+depends = ["lint:build-system:check", "lint:scripts:check", "lint:cli:check"]
 
 [tasks."lint:fix"]
 description = "Apply all safe lint fixes (shell has no autofixer — run `mise run scripts:check` for remaining shell findings)"
-depends = ["lint:build-system:fix"]
+depends = ["lint:build-system:fix", "lint:cli:fix"]
 
 [tasks."types:check"]
 description = "Run all type checks (tsc + pyrefly)"
@@ -133,11 +158,11 @@ depends = ["format:fix", "lint:fix"]
 
 [tasks.check]
 description = "Run all read-only format, lint, and type checks (what CI runs)"
-depends = ["build-system:check", "scripts:check"]
+depends = ["build-system:check", "scripts:check", "cli:check"]
 
 [tasks.default]
 description = "Full local CI mirror: build, format-fix, lint, type-check, test (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
-depends = ["format:fix", "lint:check", "types:check", "test"]
+depends = ["format:fix", "lint:check", "types:check", "test", "build:cli"]
 
 [tasks."version:read"]
 description = "Read plugin version"

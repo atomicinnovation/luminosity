@@ -1,6 +1,7 @@
 from invoke import Collection
 
 from . import (
+    build,
     changelog,
     deps,
     git,
@@ -28,6 +29,7 @@ ns_release.add_task(release.release_prepare, name="prepare")
 ns_release.add_task(release.release_finalise, name="finalise")
 ns.add_collection(ns_release)
 
+ns.add_collection(Collection.from_module(build))
 ns.add_collection(Collection.from_module(changelog))
 ns.add_collection(Collection.from_module(deps))
 ns.add_collection(Collection.from_module(git))
@@ -39,12 +41,14 @@ ns.add_collection(Collection.from_module(version))
 ns_format = Collection("format")
 ns_format.add_collection(Collection.from_module(format_.scripts))
 ns_format.add_collection(Collection.from_module(format_.build_system))
+ns_format.add_collection(Collection.from_module(format_.cli))
 ns.add_collection(ns_format)
 
 ns_lint = Collection("lint")
 ns_lint.add_collection(Collection.from_module(lint.scripts))
 ns_lint.add_collection(Collection.from_module(lint.build_system))
 ns_lint.add_collection(Collection.from_module(lint.workflows))
+ns_lint.add_collection(Collection.from_module(lint.cli))
 ns.add_collection(ns_lint)
 
 ns_types = Collection("types")

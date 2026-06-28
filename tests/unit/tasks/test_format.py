@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from invoke import Context, Exit
 
+from tasks.format import cli as fmt_cli
 from tasks.format import scripts as fmt
 
 if TYPE_CHECKING:
@@ -57,3 +58,20 @@ class TestFormatFix:
         mocker.patch.object(fmt, "shell_sources", return_value=["a.sh"])
         fmt.fix(ctx)
         assert _command(ctx).startswith("shfmt -l -w ")
+
+
+class TestFormatCliCheck:
+    def test_runs_cargo_fmt_all_check(self, ctx: MagicMock):
+        fmt_cli.check(ctx)
+        assert _command(ctx) == "cargo fmt --all --check"
+
+    def test_raises_on_drift(self, ctx: MagicMock):
+        ctx.run.return_value = MagicMock(exited=1)
+        with pytest.raises(Exit):
+            fmt_cli.check(ctx)
+
+
+class TestFormatCliFix:
+    def test_runs_cargo_fmt_all(self, ctx: MagicMock):
+        fmt_cli.fix(ctx)
+        assert _command(ctx) == "cargo fmt --all"

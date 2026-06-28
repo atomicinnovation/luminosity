@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from invoke import Context, Exit
 
+from tasks.lint import cli as lint_cli
 from tasks.lint import scripts as lint
 
 if TYPE_CHECKING:
@@ -148,3 +149,33 @@ class TestBashismsScript:
             tmp_path, 'for i in 1 2 3; do echo "$i"; done\n'
         )
         assert not _flagged(result), result.stdout
+
+
+class TestLintCliCheck:
+    def test_runs_clippy_with_deny_warnings(self, ctx: MagicMock):
+        lint_cli.check(ctx)
+        assert _command(ctx) == (
+            "cargo clippy --workspace --all-targets --all-features "
+            "-- -D warnings"
+        )
+
+    def test_raises_on_findings(self, ctx: MagicMock):
+        ctx.run.return_value = MagicMock(exited=1)
+        with pytest.raises(Exit):
+            lint_cli.check(ctx)
+
+
+class TestLintCliFix:
+    def test_runs_clippy_fix_rewriting_dirty_tree(self, ctx: MagicMock):
+        lint_cli.fix(ctx)
+        assert _command(ctx) == (
+            "cargo clippy --workspace --all-targets --all-features "
+            "--fix --allow-dirty --allow-staged"
+        )
+
+    def test_warns_when_autofix_fails(
+        self, ctx: MagicMock, capsys: pytest.CaptureFixture[str]
+    ):
+        ctx.run.return_value = MagicMock(exited=1)
+        lint_cli.fix(ctx)
+        assert "WARNING" in capsys.readouterr().out

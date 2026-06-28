@@ -763,17 +763,17 @@ different stable than CI provisions.
 
 #### Automated Verification
 
-- [ ] Workspace builds: `cargo build --workspace`
-- [ ] Release build of host-native triples: `mise run build:cli` (the two musl
+- [x] Workspace builds: `cargo build --workspace`
+- [x] Release build of host-native triples: `mise run build:cli` (the two musl
       triples on Linux, the two darwin triples on macOS)
-- [ ] rustfmt clean: `mise run format:cli:check`
-- [ ] clippy clean with `-D warnings`: `mise run lint:cli:check`
-- [ ] Roll-up green: `mise run cli:check`
-- [ ] Task unit tests pass: `uv run pytest tests/unit/tasks/test_format.py tests/unit/tasks/test_lint.py tests/unit/tasks/test_build.py tests/unit/tasks/test_mise_wiring.py -v`
-- [ ] Aggregate still green: `mise run check`
-- [ ] Python/shell checks unaffected: `mise run build-system:check && mise run scripts:check`
-- [ ] Docs lint clean after CLAUDE.md/README edits: `mise run build-system:check`
-- [ ] Workflow lint passes: `mise run lint:workflows:check`
+- [x] rustfmt clean: `mise run format:cli:check`
+- [x] clippy clean with `-D warnings`: `mise run lint:cli:check`
+- [x] Roll-up green: `mise run cli:check`
+- [x] Task unit tests pass: `uv run pytest tests/unit/tasks/test_format.py tests/unit/tasks/test_lint.py tests/unit/tasks/test_build.py tests/unit/tasks/test_mise_wiring.py -v`
+- [x] Aggregate still green: `mise run check`
+- [x] Python/shell checks unaffected: `mise run build-system:check && mise run scripts:check`
+- [x] Docs lint clean after CLAUDE.md/README edits: `mise run build-system:check`
+- [x] Workflow lint passes: `mise run lint:workflows:check`
 
 #### Manual Verification
 
