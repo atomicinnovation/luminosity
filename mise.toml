@@ -27,15 +27,29 @@ run = "invoke deps.install-python"
 description = "Install Rust cross-compile targets required for release builds"
 run = "invoke deps.install-rust-targets"
 
+[tasks."deps:install:pup"]
+description = "Provision the cargo-pup nightly toolchain + pinned cargo-pup (rustup-managed, not a mise [tool])"
+run = "invoke deps.install-pup"
+
 [tasks."test:unit:tasks"]
 description = "Run pytest unit tests for invoke tasks"
 depends = ["deps:install:python"]
-run = "uv run pytest tests/unit/tasks -v"
+run = "invoke test.unit.tasks"
 
 [tasks."test:integration:tasks"]
 description = "Run pytest integration tests for invoke tasks"
 depends = ["deps:install:python"]
-run = "uv run pytest tests/integration/tasks -v"
+run = "invoke test.integration.tasks"
+
+[tasks."test:integration:deny"]
+description = "Run the cargo-deny ban-violation regression suite"
+depends = ["deps:install:python"]
+run = "invoke test.integration.deny"
+
+[tasks."test:integration:pup"]
+description = "Run the cargo-pup behavioural regression (requires the nightly lane; check-architecture only, not the test roll-up)"
+depends = ["deps:install:python", "deps:install:pup"]
+run = "invoke test.integration.pup"
 
 [tasks."test:unit:cli"]
 description = "Run cli-crate unit tests (instrumented coverage unless LUMINOSITY_COVERAGE=off)"
@@ -47,7 +61,7 @@ depends = ["test:unit:tasks", "test:unit:cli"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"
-depends = ["test:integration:tasks"]
+depends = ["test:integration:tasks", "test:integration:deny"]
 
 [tasks.test]
 description = "Run all tests in parallel"
@@ -114,6 +128,11 @@ run = "invoke build.cli"
 description = "Check the workspace dependency graph with cargo-deny (advisories, licenses, bans, sources)"
 run = "invoke deny.check"
 
+[tasks."pup:check"]
+description = "Enforce intra-crate module-import rules with cargo-pup (blocking nightly lane; LUMINOSITY_PUP_MODE=warn downgrades to advisory)"
+depends = ["deps:install:pup"]
+run = "invoke pup.check"
+
 [tasks."format:build-system:check"]
 description = "Check Python formatting with ruff (read-only; fails on drift)"
 depends = ["deps:install:python"]
@@ -169,11 +188,11 @@ depends = ["format:fix", "lint:fix"]
 
 [tasks.check]
 description = "Run all read-only format, lint, and type checks (what CI runs)"
-depends = ["build-system:check", "scripts:check", "cli:check", "deny:check"]
+depends = ["build-system:check", "scripts:check", "cli:check", "deny:check", "pup:check"]
 
 [tasks.default]
 description = "Full local CI mirror: build, format-fix, lint, type-check, test (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
-depends = ["format:fix", "lint:check", "types:check", "test", "build:cli", "deny:check"]
+depends = ["format:fix", "lint:check", "types:check", "test", "build:cli", "deny:check", "pup:check"]
 
 [tasks."version:read"]
 description = "Read plugin version"

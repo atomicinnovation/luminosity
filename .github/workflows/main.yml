@@ -188,6 +188,37 @@ jobs:
       - name: Run supply-chain checks
         run: mise run deny:check
 
+  check-architecture:
+    name: Check architecture
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install dependencies
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          install: true
+          cache: true
+          experimental: true
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      # No built-binary cache for cargo-pup: a trustworthy out-of-band per-OS
+      # checksum cannot be maintained from the dev environment, so per the
+      # plan's fallback we rebuild from source every run (correctness over
+      # speed for a compiler plugin). pup:check self-provisions the nightly +
+      # cargo-pup via its deps:install:pup dependency on the clean runner.
+      - name: Run architecture check (self-provisions the nightly lane)
+        run: mise run pup:check
+
+      - name: Run cargo-pup behavioural regression
+        run: mise run test:integration:pup
+
   prerelease:
     name: Create prerelease
     runs-on: macos-latest
@@ -199,6 +230,7 @@ jobs:
       - check-cli
       - build-cli
       - check-supply-chain
+      - check-architecture
     if: github.event_name == 'push'
     # Serialise all release pipelines so they can't bump to the same version and
     # race their pushes: cancel-in-progress: false queues runs instead of

@@ -31,7 +31,16 @@ to a plain `cargo nextest run`). There is no separate coverage task.
 `cargo-pup` nightly lane (intra-crate module-import rules) span the whole
 dependency/module graph, so they are top-level `deny:check` / `pup:check`
 roll-ups with no `-p` and no per-crate notion — modelled on
-`lint:workflows:check` rather than the per-component pattern.
+`lint:workflows:check` rather than the per-component pattern. Both are static
+analysis, not tests, so they belong in `check`.
+
+`pup:check` runs **blocking** on a pinned nightly (everything else is stable)
+and **`depends` on `deps:install:pup`** — the rustup-managed nightly + cargo-pup
+are not mise `[tools]`, so the check provisions them itself, mirroring how every
+Python check `depends` on `deps:install:python`. `deps:install:pup` is
+idempotent, so the steady-state cost is small. `LUMINOSITY_PUP_MODE=warn`
+downgrades the lane to advisory without a source edit (the documented fallback
+for a nightly/cargo-pup break).
 
 ## The `build:*` artifact namespace
 

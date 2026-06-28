@@ -75,12 +75,71 @@ class TestTestUnitCliWiring:
         assert "coverage:check" not in _depends(mise, "default")
 
 
+class TestPytestSuiteWiring:
+    """The pytest suites run via invoke tasks, not pytest invoked directly.
+
+    Suites are separated by directory (tests/integration/{tasks,deny,pup}),
+    not pytest markers. The actual pytest command strings are asserted in
+    test_test.py.
+    """
+
+    def test_unit_tasks_wraps_an_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["test:unit:tasks"]["run"] == "invoke test.unit.tasks"
+        )
+
+    def test_integration_tasks_wraps_an_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["test:integration:tasks"]["run"]
+            == "invoke test.integration.tasks"
+        )
+
+    def test_integration_deny_wraps_an_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["test:integration:deny"]["run"]
+            == "invoke test.integration.deny"
+        )
+
+    def test_integration_roll_up_includes_tasks_and_deny(self, mise: Mise):
+        # The deny ban regression rides the general test-integration job; the
+        # nightly-only pup suite does not (asserted in TestPupWiring).
+        assert _depends(mise, "test:integration") == [
+            "test:integration:tasks",
+            "test:integration:deny",
+        ]
+
+
 class TestDenyWiring:
     def test_deny_check_is_in_check(self, mise: Mise):
         assert "deny:check" in _depends(mise, "check")
 
     def test_deny_check_is_in_default(self, mise: Mise):
         assert "deny:check" in _depends(mise, "default")
+
+
+class TestPupWiring:
+    def test_pup_check_is_in_check(self, mise: Mise):
+        assert "pup:check" in _depends(mise, "check")
+
+    def test_pup_check_is_in_default(self, mise: Mise):
+        assert "pup:check" in _depends(mise, "default")
+
+    def test_pup_check_depends_on_its_provisioning_task(self, mise: Mise):
+        # Mirrors the Python-check <-> deps:install:python convention: a check
+        # provisions the non-[tools] it needs (here the rustup-managed nightly +
+        # cargo-pup), so a fresh checkout's pup:check self-provisions.
+        assert "deps:install:pup" in _depends(mise, "pup:check")
+
+    def test_integration_pup_task_wraps_an_invoke_task(self, mise: Mise):
+        # The check-architecture job runs the regression via this mise task
+        # (not pytest directly); it self-provisions the nightly lane.
+        pup_task = _tasks(mise)["test:integration:pup"]
+        assert pup_task["run"] == "invoke test.integration.pup"
+        assert "deps:install:pup" in pup_task.get("depends", [])
+
+    def test_integration_pup_is_not_in_the_test_roll_up(self, mise: Mise):
+        # It needs the nightly, so it must not ride the general aggregate.
+        assert "test:integration:pup" not in _depends(mise, "test:integration")
 
 
 class TestToolchainCoherence:

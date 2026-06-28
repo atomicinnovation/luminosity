@@ -18,3 +18,4 @@ __pycache__/
 workspaces/
 node_modules/
 target/
+.pup/

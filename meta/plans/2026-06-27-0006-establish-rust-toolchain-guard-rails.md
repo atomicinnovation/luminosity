@@ -1578,17 +1578,17 @@ docs-land-with-the-surface principle; this phase only adds the cargo-pup excepti
 
 #### Automated Verification
 
-- [ ] `mise run deps:install:pup` provisions the nightly + pinned cargo-pup, and
+- [x] `mise run deps:install:pup` provisions the nightly + pinned cargo-pup, and
       `cargo +nightly-2026-01-22 pup` resolves (rustup `+toolchain` override works
       under mise-pinned stable)
-- [ ] `mise run pup:check` exits 0 against the bootstrap (minimal `pup.ron`), and
+- [x] `mise run pup:check` exits 0 against the bootstrap (minimal `pup.ron`), and
       from a clean checkout it **self-provisions** via its `deps:install:pup`
       dependency (no separate manual install needed) — `test_mise_wiring.py` asserts
       the `depends` edge
-- [ ] Task unit tests pass: `uv run pytest tests/unit/tasks/test_pup.py tests/unit/tasks/test_deps.py -v`
+- [x] Task unit tests pass: `uv run pytest tests/unit/tasks/test_pup.py tests/unit/tasks/test_deps.py -v`
       (including the `PUP_MODE` deny/warn toggle and the exact install-step
       composition)
-- [ ] `mise run check` and `mise run` both exit 0, with the product build still
+- [x] `mise run check` and `mise run` both exit 0, with the product build still
       on stable (`cargo build --workspace` uses 1.90.0)
 
 #### Manual Verification

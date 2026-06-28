@@ -9,6 +9,7 @@ from . import (
     github,
     lint,
     marketplace,
+    pup,
     release,
     test,
     types,
@@ -37,6 +38,7 @@ ns.add_collection(Collection.from_module(deps))
 ns.add_collection(Collection.from_module(git))
 ns.add_collection(Collection.from_module(github))
 ns.add_collection(Collection.from_module(marketplace))
+ns.add_collection(Collection.from_module(pup))
 ns.add_collection(Collection.from_module(test))
 ns.add_collection(Collection.from_module(version))
 
