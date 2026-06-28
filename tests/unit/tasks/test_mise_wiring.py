@@ -142,6 +142,40 @@ class TestPupWiring:
         assert "test:integration:pup" not in _depends(mise, "test:integration")
 
 
+class TestFinalEnumeratedArrays:
+    """Pin the complete top-level arrays the plan enumerates.
+
+    Together with test_workflows.py these are the automated backstop for the
+    whole mise + CI wiring.
+    """
+
+    def test_check_array(self, mise: Mise):
+        assert _depends(mise, "check") == [
+            "build-system:check",
+            "scripts:check",
+            "cli:check",
+            "deny:check",
+            "pup:check",
+        ]
+
+    def test_default_array(self, mise: Mise):
+        assert _depends(mise, "default") == [
+            "format:fix",
+            "lint:check",
+            "types:check",
+            "test",
+            "build:cli",
+            "deny:check",
+            "pup:check",
+        ]
+
+    def test_test_unit_array(self, mise: Mise):
+        assert _depends(mise, "test:unit") == [
+            "test:unit:tasks",
+            "test:unit:cli",
+        ]
+
+
 class TestToolchainCoherence:
     """The clippy msrv and rustfmt edition mirror the mise rust pin by hand.
 

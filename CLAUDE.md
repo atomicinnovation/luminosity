@@ -17,7 +17,7 @@ These are non-negotiable. They override convenience.
 All dev tasks run through **`mise run <task>`** (declared in `mise.toml`, implemented as [invoke](https://www.pyinvoke.org/) tasks under `tasks/`). Run
 `mise tasks` for the full leaf list; `tasks/README.md` documents the *shape* of the task tree (learn it once).
 
-**"Done" means `mise run` (the bare default task) exits 0 end-to-end.** That is the full local CI mirror: it applies all formatters and safe lint fixes, runs every lint and type-check, and runs the entire test suite. It is heavy (reformats in place, compiles Rust several times). A change is not finished until this is green.
+**"Done" means `mise run` (the bare default task) exits 0 end-to-end.** That is the full local CI mirror: it applies all formatters and safe lint fixes, runs every lint and type-check, runs the entire test suite (the cli unit tests carry coverage by default — `cargo llvm-cov nextest`), the `build:cli` host-native release build, and the `deny:check` / `pup:check` static checks. It is heavy (reformats in place, compiles Rust several times). A change is not finished until this is green.
 
 Two faster entry points exist and should be your inner loop:
 
@@ -29,6 +29,11 @@ Two faster entry points exist and should be your inner loop:
 
 Enforcement is **CI-only — there are no pre-commit hooks.** Run `mise run fix &&
 mise run check` yourself before pushing.
+
+PR mergeability is gated by GitHub branch-protection *required checks* (repo
+settings, not the workflow YAML); when a CI job is added or renamed, its
+required-check name must be registered manually — see the runbook in
+`CONTRIBUTING.md`.
 
 ### Running a single test
 

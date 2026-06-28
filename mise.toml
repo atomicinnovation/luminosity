@@ -187,11 +187,11 @@ description = "Apply all formatters + safe lint fixes (MECHANICAL only — no ty
 depends = ["format:fix", "lint:fix"]
 
 [tasks.check]
-description = "Run all read-only format, lint, and type checks (what CI runs)"
+description = "Read-only format, lint, and type checks plus the cargo-deny/cargo-pup static checks (test-free, build-free; the subset CI mirrors)"
 depends = ["build-system:check", "scripts:check", "cli:check", "deny:check", "pup:check"]
 
 [tasks.default]
-description = "Full local CI mirror: build, format-fix, lint, type-check, test (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
+description = "Full local CI mirror: format-fix, lint, type-check, the whole test roll-up (cli tests carry coverage), the build:cli host-native release build, and the deny/pup static checks (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
 depends = ["format:fix", "lint:check", "types:check", "test", "build:cli", "deny:check", "pup:check"]
 
 [tasks."version:read"]

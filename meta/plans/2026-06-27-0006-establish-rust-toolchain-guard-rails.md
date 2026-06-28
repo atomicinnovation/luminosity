@@ -1699,16 +1699,16 @@ file a contributor may not know exists.
 
 #### Automated Verification
 
-- [ ] `mise run check` exits 0 and includes `cli:check`, `deny:check`,
+- [x] `mise run check` exits 0 and includes `cli:check`, `deny:check`,
       `pup:check`
-- [ ] `mise run` (bare default) exits 0 end-to-end including all Rust checks, the
+- [x] `mise run` (bare default) exits 0 end-to-end including all Rust checks, the
       cli tests with coverage, and the `build:cli` host-native release build
-- [ ] Full task suite passes: `uv run pytest tests/unit/tasks -v`
-- [ ] `test_mise_wiring.py` + `test_workflows.py` assert the complete final
+- [x] Full task suite passes: `uv run pytest tests/unit/tasks -v`
+- [x] `test_mise_wiring.py` + `test_workflows.py` assert the complete final
       `check`/`default`/`cli:check` arrays and the Rust CI jobs — `check-cli`,
       `build-cli` (matrix, both legs), `check-supply-chain`, `check-architecture`
       (+ their `needs:` edges) — the automated backstop for the whole wiring
-- [ ] `mise run build-system:check` passes (docs/workflow + SHA-pin changes lint
+- [x] `mise run build-system:check` passes (docs/workflow + SHA-pin changes lint
       clean; `actionlint` green)
 
 #### Manual Verification
