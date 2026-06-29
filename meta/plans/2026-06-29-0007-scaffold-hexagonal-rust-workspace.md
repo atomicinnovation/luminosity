@@ -896,19 +896,26 @@ is rejected by default.
 
 #### Automated Verification
 
-- [ ] Real `pup.ron` loads and the inward rule is active:
+- [x] Real `pup.ron` loads and the inward rule is active:
       `mise run pup:check`
-- [ ] The enforcer is proven live (violation rejected, removal passes) **and the
+- [x] The enforcer is proven live (violation rejected, removal passes) **and the
       real rule is proven attached to the real core** (the binding test):
-      `mise run test:integration:pup`
-- [ ] Full local CI mirror green: `mise run`
+      `mise run test:integration:pup` (4 tests pass). NOTE: the binding test
+      asserts the rule appears on the `::version::core` line of
+      `print-modules`, and the `allowed_only` patterns match the LITERAL
+      `use`-path text (`crate::version::core`, not the resolved
+      `luminosity::version::core`) — a correction to the plan's snippet, since
+      cargo-pup matches use-path segments verbatim while the module `matches`
+      regex uses the resolved path.
+- [x] Full local CI mirror green: `mise run`
 
 #### Manual Verification
 
-- [ ] Temporarily add `use crate::version::outbound::build_metadata;` (unused)
-      into `version/core.rs`, run `mise run pup:check`, observe it **fails**,
-      then revert and observe it **passes** — the AC3 behaviour, confirmed by
-      hand against the real tree once before relying on the automated test.
+- [x] Temporarily add `use crate::version::outbound::build_metadata;` into
+      `version/core.rs`, run `mise run pup:check`, observe it **fails** ("Use of
+      module 'crate::version::outbound::build_metadata' is not allowed"), then
+      revert and observe it **passes** — AC3 confirmed by hand against the real
+      tree.
 
 ---
 
