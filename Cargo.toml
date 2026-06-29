@@ -2,6 +2,15 @@
 resolver = "2"
 members = ["cli", "kernel"]
 
+[workspace.dependencies]
+# Versions are MSRV-first (rust-version <= 1.90) and frozen in Cargo.lock.
+clap = { version = "4.6", features = ["derive"] }
+# vergen pinned EXACTLY: 9.1.0's vergen-lib bump is incompatible with
+# vergen-gitcl 1.0.8 (two vergen-lib versions break the Emitter); 10.x needs 1.95.
+vergen = { version = "=9.0.6", default-features = false }
+vergen-gitcl = { version = "1", features = ["build", "cargo"] }
+time = { version = "0.3", features = ["parsing"] }  # dev-only
+
 [workspace.lints.rust]
 # In-manifest equivalent of `-D warnings`; CI also passes it explicitly.
 warnings = "deny"

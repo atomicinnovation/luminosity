@@ -1,28 +1,6 @@
-//! Bootstrap placeholder crate. The real hexagonal `version` subcommand
-//! replaces this in story 0007; it exists now only so the format, lint, test,
-//! and coverage toolchain has real code (with a branch) to exercise.
+//! The luminosity CLI library crate. Each built-in subcommand is realised as a
+//! hexagon under its own module; the binary entry point (`main.rs`) is the
+//! composition root that wires the concrete adapters to the ports and
+//! dispatches the parsed command.
 
-/// Names a release channel from whether it is a prerelease.
-#[must_use]
-pub const fn describe_release(prerelease: bool) -> &'static str {
-    if prerelease {
-        "prerelease"
-    } else {
-        "stable"
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::describe_release;
-
-    #[test]
-    fn describes_a_stable_release() {
-        assert_eq!(describe_release(false), "stable");
-    }
-
-    #[test]
-    fn describes_a_prerelease() {
-        assert_eq!(describe_release(true), "prerelease");
-    }
-}
+pub mod version;
