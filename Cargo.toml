@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["cli"]
+members = ["cli", "kernel"]
 
 [workspace.lints.rust]
 # In-manifest equivalent of `-D warnings`; CI also passes it explicitly.

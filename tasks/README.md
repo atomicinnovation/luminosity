@@ -12,6 +12,15 @@ Each component has a `<component>:check` roll-up that folds that component's for
 | Python tooling | `build-system:check` | format + lint + types (ruff, pyrefly)        |
 | Shell          | `scripts:check`      | format + lint (shfmt, ShellCheck + bashisms) |
 | Rust cli crate | `cli:check`          | format + lint (rustfmt, clippy `-D warnings`); **no tests** |
+| Rust kernel crate | `kernel:check`    | format + lint (`-p kernel` rustfmt + clippy); **no tests** |
+
+`kernel:check` is the one deliberate departure from the
+"`<component>:check` folds into `check`" pattern: it is a **targeted,
+single-crate** (`-p kernel`) roll-up for ad-hoc runs and is **kept out of the
+aggregate `check`**. The aggregate covers `kernel` through the single
+workspace-wide rustfmt + clippy pass that `cli:check` already runs (plus
+`deny:check` / `pup:check`), so adding `kernel:check` to `check` would only pay
+a second per-crate tool startup for no extra coverage.
 
 `build-system` is the repo-root Python automation toolchain (this `tasks/`
 package + its tests). It is the *component* `build-system:check`, distinct from

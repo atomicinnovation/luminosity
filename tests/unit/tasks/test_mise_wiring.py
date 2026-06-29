@@ -64,6 +64,49 @@ class TestCliCheckWiring:
         assert "deps:install:rust-components" in _depends(mise, leaf)
 
 
+class TestKernelCheckWiring:
+    def test_kernel_check_folds_format_and_lint_only(self, mise: Mise):
+        assert _depends(mise, "kernel:check") == [
+            "format:kernel:check",
+            "lint:kernel:check",
+        ]
+
+    def test_kernel_check_is_deliberately_excluded_from_check(self, mise: Mise):
+        assert "kernel:check" not in _depends(mise, "check")
+
+    @pytest.mark.parametrize(
+        "leaf",
+        [
+            "format:kernel:check",
+            "format:kernel:fix",
+            "lint:kernel:check",
+            "lint:kernel:fix",
+        ],
+    )
+    def test_kernel_leaves_provision_rustfmt_and_clippy(
+        self, mise: Mise, leaf: str
+    ):
+        assert "deps:install:rust-components" in _depends(mise, leaf)
+
+    def test_test_unit_kernel_wraps_an_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["test:unit:kernel"]["run"] == "invoke test.kernel.run"
+        )
+
+    def test_test_unit_kernel_is_folded_into_test_unit(self, mise: Mise):
+        assert "test:unit:kernel" in _depends(mise, "test:unit")
+
+    def test_test_unit_kernel_is_not_in_kernel_check(self, mise: Mise):
+        assert "test:unit:kernel" not in _depends(mise, "kernel:check")
+
+    def test_test_unit_kernel_provisions_llvm_tools(self, mise: Mise):
+        # Provision llvm-tools-preview up front so parallel cli/kernel llvm-cov
+        # runs don't race on `rustup component add`.
+        assert "deps:install:rust-components" in _depends(
+            mise, "test:unit:kernel"
+        )
+
+
 class TestBuildCliWiring:
     def test_build_cli_is_in_default(self, mise: Mise):
         assert "build:cli" in _depends(mise, "default")
@@ -84,6 +127,11 @@ class TestTestUnitCliWiring:
 
     def test_test_unit_cli_is_not_in_cli_check(self, mise: Mise):
         assert "test:unit:cli" not in _depends(mise, "cli:check")
+
+    def test_test_unit_cli_provisions_llvm_tools(self, mise: Mise):
+        # Provision llvm-tools-preview up front so parallel cli/kernel llvm-cov
+        # runs don't race on `rustup component add`.
+        assert "deps:install:rust-components" in _depends(mise, "test:unit:cli")
 
     def test_no_coverage_task_exists(self, mise: Mise):
         names = set(_tasks(mise))
@@ -192,6 +240,7 @@ class TestFinalEnumeratedArrays:
         assert _depends(mise, "test:unit") == [
             "test:unit:tasks",
             "test:unit:cli",
+            "test:unit:kernel",
         ]
 
 

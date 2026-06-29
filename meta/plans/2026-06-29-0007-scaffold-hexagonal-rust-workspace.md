@@ -425,21 +425,23 @@ exact command string" convention.
 
 #### Automated Verification
 
-- [ ] Targeted kernel check passes: `mise run kernel:check`
-- [ ] The kernel test task is wired and green: `mise run test:unit:kernel`
-      (it runs zero Rust tests in Phase 1 — the empty enum has nothing to test —
-      and nextest exits 0 on an empty set; the task's existence and wiring are
-      what this verifies, alongside its Python command-string unit test)
-- [ ] Wiring + command-string unit tests pass:
+- [x] Targeted kernel check passes: `mise run kernel:check`
+- [x] The kernel test task is wired and green: `mise run test:unit:kernel`
+      (it runs zero Rust tests in Phase 1 — the empty enum has nothing to test.
+      NOTE: this nextest (0.9.138) treats an empty test set as a hard error
+      (exit 4), NOT exit 0 as the plan assumed — so the kernel test task carries
+      `--no-tests=pass` to stay green with no tests. The flag is inert once the
+      first real kernel test lands.)
+- [x] Wiring + command-string unit tests pass:
       `uv run pytest tests/unit/tasks/test_mise_wiring.py -v` and the new
-      `test_kernel.py` (or equivalent) suites
-- [ ] Workspace-wide checks still green and now cover `kernel`:
+      `test_kernel.py` suite
+- [x] Workspace-wide checks still green and now cover `kernel`:
       `mise run cli:check` and `mise run check`
-- [ ] Full local CI mirror green: `mise run`
+- [x] Full local CI mirror green: `mise run`
 
 #### Manual Verification
 
-- [ ] `cargo metadata` (or `cargo tree`) shows exactly two members, `cli` and
+- [x] `cargo metadata` (or `cargo tree`) shows exactly two members, `cli` and
       `kernel`, with `kernel` carrying no dependencies.
 
 ---
