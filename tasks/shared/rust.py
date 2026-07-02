@@ -1,6 +1,7 @@
 import os
 
 CLI_CRATE = "luminosity"  # must equal cli/Cargo.toml [package] name
+KERNEL_CRATE = "kernel"  # must equal kernel/Cargo.toml [package] name
 # PUP_NIGHTLY + PUP_VERSION are a matched pair (cargo-pup's rustc-driver only
 # loads under the nightly it was built against); bump them together.
 PUP_NIGHTLY = "nightly-2026-01-22"  # cargo-pup v0.1.8 rust-toolchain.toml

@@ -46,6 +46,8 @@ confidence-threshold = 0.8
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Exempt local path deps (cli -> kernel); registry wildcards stay denied.
+allow-wildcard-paths = true
 # ADR-0010: rustls only — no transitive dep may re-enable default-tls and break
 # the musl-static build. This covers the TLS vector only; other system-C
 # linkers (libgit2-sys, curl-sys, libsqlite3-sys w/o bundled, libz-sys) can

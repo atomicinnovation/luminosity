@@ -57,11 +57,17 @@ run = "invoke test.integration.pup"
 
 [tasks."test:unit:cli"]
 description = "Run cli-crate unit tests (instrumented coverage unless LUMINOSITY_COVERAGE=off)"
+depends = ["deps:install:rust-components"]
 run = "invoke test.cli.run"
+
+[tasks."test:unit:kernel"]
+description = "Run kernel-crate unit tests (instrumented coverage unless LUMINOSITY_COVERAGE=off)"
+depends = ["deps:install:rust-components"]
+run = "invoke test.kernel.run"
 
 [tasks."test:unit"]
 description = "Run all unit tests in parallel"
-depends = ["test:unit:tasks", "test:unit:cli"]
+depends = ["test:unit:tasks", "test:unit:cli", "test:unit:kernel"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"
@@ -88,6 +94,16 @@ run = "invoke format.cli.check"
 description = "Format Rust in place with rustfmt"
 depends = ["deps:install:rust-components"]
 run = "invoke format.cli.fix"
+
+[tasks."format:kernel:check"]
+description = "Check kernel-crate Rust formatting with rustfmt (read-only; fails on drift)"
+depends = ["deps:install:rust-components"]
+run = "invoke format.kernel.check"
+
+[tasks."format:kernel:fix"]
+description = "Format the kernel crate in place with rustfmt"
+depends = ["deps:install:rust-components"]
+run = "invoke format.kernel.fix"
 
 [tasks."format:check"]
 description = "Run all format checks (read-only)"
@@ -123,9 +139,23 @@ description = "Apply clippy's machine-applicable fixes"
 depends = ["deps:install:rust-components"]
 run = "invoke lint.cli.fix"
 
+[tasks."lint:kernel:check"]
+description = "Lint the kernel crate with clippy (pedantic + nursery + restriction, -D warnings)"
+depends = ["deps:install:rust-components"]
+run = "invoke lint.kernel.check"
+
+[tasks."lint:kernel:fix"]
+description = "Apply clippy's machine-applicable fixes to the kernel crate"
+depends = ["deps:install:rust-components"]
+run = "invoke lint.kernel.fix"
+
 [tasks."cli:check"]
 description = "Run all cli-crate format and lint checks (read-only; no tests)"
 depends = ["format:cli:check", "lint:cli:check"]
+
+[tasks."kernel:check"]
+description = "Targeted kernel rustfmt+clippy for ad-hoc runs; deliberately excluded from aggregate `check`, which covers kernel via the single workspace-wide `cli:check` pass"
+depends = ["format:kernel:check", "lint:kernel:check"]
 
 [tasks."build:cli"]
 description = "Release-build the host-native triples (link/arch guard; in `mise run` default, not `check`)"

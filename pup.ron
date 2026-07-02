@@ -1,7 +1,22 @@
-// cargo-pup architecture lint config (RON). Intentionally empty in the
-// bootstrap — there are no hexagonal layers to constrain yet. Story 0007 adds
-// the inward-direction restrict_imports module rules once the kernel/cli split
-// lands.
+// cargo-pup inward-dependency rule: the `version` core may import only
+// std / kernel / its own subtree — the sole enforcer while single-crate.
+// Note `matches` is the RESOLVED module path; `allowed_only` is LITERAL use-path.
 (
-    lints: [],
+    lints: [
+        Module((
+            name: "version_core_imports_only_permitted",
+            matches: Module("^luminosity::version::core($|::)"),
+            rules: [
+                RestrictImports(
+                    allowed_only: Some([
+                        "^(std|core|alloc)(::|$)",
+                        "^kernel(::|$)",
+                        "^crate::version::core(::|$)",
+                    ]),
+                    denied: None,
+                    severity: Error,
+                ),
+            ],
+        )),
+    ],
 )
