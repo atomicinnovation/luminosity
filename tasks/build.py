@@ -2,8 +2,8 @@ import platform
 
 from invoke import Context, Exit, task
 
-from tasks.shared.paths import REPO_ROOT
-from tasks.shared.rust import CLI_CRATE
+from tasks.shared.paths import WORKSPACE_ROOT
+from tasks.shared.rust import LAUNCHER_CRATE
 from tasks.shared.targets import host_targets
 
 
@@ -44,7 +44,7 @@ def has_expected_arch(triple: str, arch_output: str) -> bool:
 
 
 def _binary(triple: str) -> str:
-    return f"target/{triple}/release/{CLI_CRATE}"
+    return f"target/{triple}/release/{LAUNCHER_CRATE}"
 
 
 def _verify_output(context: Context, triple: str) -> None:
@@ -66,18 +66,19 @@ def _verify_output(context: Context, triple: str) -> None:
 
 
 @task
-def cli(context: Context) -> None:
+def launcher(context: Context) -> None:
     """Release-build the host-native triples, checking link/arch invariants.
 
     Host-native only (the two musl triples on Linux, the two darwin triples on
-    macOS); CI's `build-cli` matrix covers all four across both OSes. Builds
-    the binary (`--bin`, not just `-p`) so the link step — the whole point of a
-    per-triple build — is always exercised.
+    macOS); CI's `build-launcher` matrix covers all four across both OSes.
+    Builds the binary (`--bin`, not just `-p`) so the link step — the whole
+    point of a per-triple build — is always exercised.
     """
-    with context.cd(str(REPO_ROOT)):
+    with context.cd(str(WORKSPACE_ROOT)):
         for triple in host_targets(platform.system()):
             result = context.run(
-                f"cargo build --release --bin {CLI_CRATE} --target {triple}",
+                f"cargo build --release --bin {LAUNCHER_CRATE} "
+                f"--target {triple}",
                 warn=True,
                 pty=False,
             )

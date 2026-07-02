@@ -38,6 +38,9 @@ jobs:
 
       - name: Cache cargo build
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # The Cargo workspace root is cli/, so Cargo.lock + target live there.
+          workspaces: cli
 
       - name: Run unit tests
         run: mise run test:unit
@@ -63,6 +66,9 @@ jobs:
 
       - name: Cache cargo build
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # The Cargo workspace root is cli/, so Cargo.lock + target live there.
+          workspaces: cli
 
       - name: Run integration tests
         run: mise run test:integration
@@ -122,12 +128,15 @@ jobs:
 
       - name: Cache cargo build
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # The Cargo workspace root is cli/, so Cargo.lock + target live there.
+          workspaces: cli
 
       - name: Run cli checks
         run: mise run cli:check
 
-  build-cli:
-    name: Build cli
+  build-launcher:
+    name: Build launcher
     strategy:
       fail-fast: false
       matrix:
@@ -160,12 +169,15 @@ jobs:
 
       - name: Cache cargo build
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # The Cargo workspace root is cli/, so Cargo.lock + target live there.
+          workspaces: cli
 
       # The linker env must live on the BUILD step (not the apt step above): a
       # step's `env:` is scoped to that step alone. Harmless on macOS, which
       # never builds the aarch64-musl triple and so never consults it.
       - name: Release-build host-native triples
-        run: mise run build:cli
+        run: mise run build:launcher
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-gnu-gcc
 
@@ -211,6 +223,9 @@ jobs:
 
       - name: Cache cargo build
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # The Cargo workspace root is cli/, so Cargo.lock + target live there.
+          workspaces: cli
 
       # No built-binary cache for cargo-pup: a trustworthy out-of-band per-OS
       # checksum cannot be maintained from the dev environment, so per the
@@ -232,7 +247,7 @@ jobs:
       - check-scripts
       - check-build-system
       - check-cli
-      - build-cli
+      - build-launcher
       - check-supply-chain
       - check-architecture
     if: github.event_name == 'push'
@@ -269,7 +284,7 @@ jobs:
       - name: Attest binary provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
-          subject-path: "cli/bin/luminosity-*"
+          subject-path: "cli/launcher/bin/luminosity-*"
 
       - name: Finalise prerelease
         env:
@@ -324,7 +339,7 @@ jobs:
       - name: Attest stable binary provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
-          subject-path: "cli/bin/luminosity-*"
+          subject-path: "cli/launcher/bin/luminosity-*"
 
       - name: Finalise stable release
         env:
@@ -339,7 +354,7 @@ jobs:
       - name: Attest post-stable binary provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
-          subject-path: "cli/bin/luminosity-*"
+          subject-path: "cli/launcher/bin/luminosity-*"
 
       - name: Finalise post-stable prerelease
         env:

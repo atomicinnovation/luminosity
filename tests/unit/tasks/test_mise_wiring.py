@@ -13,7 +13,10 @@ from typing import Any
 
 import pytest
 
+from tasks.shared.rust import LAUNCHER_CRATE
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
+WORKSPACE_ROOT = REPO_ROOT / "cli"
 
 Mise = dict[str, Any]
 
@@ -32,6 +35,8 @@ def _depends(mise: Mise, name: str) -> list[str]:
 
 
 class TestCliCheckWiring:
+    """`cli:check` is the workspace-wide roll-up that feeds `check`."""
+
     def test_cli_check_folds_format_and_lint_only(self, mise: Mise):
         assert _depends(mise, "cli:check") == [
             "format:cli:check",
@@ -64,7 +69,39 @@ class TestCliCheckWiring:
         assert "deps:install:rust-components" in _depends(mise, leaf)
 
 
+class TestLauncherCheckWiring:
+    """`launcher:check` is a single-crate (`-p luminosity`) ad-hoc roll-up."""
+
+    def test_launcher_check_folds_format_and_lint_only(self, mise: Mise):
+        assert _depends(mise, "launcher:check") == [
+            "format:launcher:check",
+            "lint:launcher:check",
+        ]
+
+    def test_launcher_check_is_excluded_from_check(self, mise: Mise):
+        # The aggregate covers the launcher crate via the workspace-wide
+        # cli:check pass; a per-crate roll-up in `check` would only pay a second
+        # tool startup for no extra coverage.
+        assert "launcher:check" not in _depends(mise, "check")
+
+    @pytest.mark.parametrize(
+        "leaf",
+        [
+            "format:launcher:check",
+            "format:launcher:fix",
+            "lint:launcher:check",
+            "lint:launcher:fix",
+        ],
+    )
+    def test_launcher_leaves_provision_rustfmt_and_clippy(
+        self, mise: Mise, leaf: str
+    ):
+        assert "deps:install:rust-components" in _depends(mise, leaf)
+
+
 class TestKernelCheckWiring:
+    """`kernel:check` is a single-crate (`-p kernel`) ad-hoc roll-up."""
+
     def test_kernel_check_folds_format_and_lint_only(self, mise: Mise):
         assert _depends(mise, "kernel:check") == [
             "format:kernel:check",
@@ -93,35 +130,37 @@ class TestKernelCheckWiring:
             _tasks(mise)["test:unit:kernel"]["run"] == "invoke test.kernel.run"
         )
 
-    def test_test_unit_kernel_is_folded_into_test_unit(self, mise: Mise):
-        assert "test:unit:kernel" in _depends(mise, "test:unit")
+    def test_test_unit_kernel_is_not_in_test_unit(self, mise: Mise):
+        # The workspace-wide test:unit:cli pass covers the kernel crate; the
+        # per-crate task is ad-hoc convenience, not part of the aggregate.
+        assert "test:unit:kernel" not in _depends(mise, "test:unit")
 
     def test_test_unit_kernel_is_not_in_kernel_check(self, mise: Mise):
         assert "test:unit:kernel" not in _depends(mise, "kernel:check")
 
     def test_test_unit_kernel_provisions_llvm_tools(self, mise: Mise):
-        # Provision llvm-tools-preview up front so parallel cli/kernel llvm-cov
-        # runs don't race on `rustup component add`.
         assert "deps:install:rust-components" in _depends(
             mise, "test:unit:kernel"
         )
 
 
-class TestBuildCliWiring:
-    def test_build_cli_is_in_default(self, mise: Mise):
-        assert "build:cli" in _depends(mise, "default")
+class TestBuildLauncherWiring:
+    def test_build_launcher_is_in_default(self, mise: Mise):
+        assert "build:launcher" in _depends(mise, "default")
 
-    def test_build_cli_is_absent_from_check(self, mise: Mise):
-        assert "build:cli" not in _depends(mise, "check")
+    def test_build_launcher_is_absent_from_check(self, mise: Mise):
+        assert "build:launcher" not in _depends(mise, "check")
 
-    def test_build_cli_is_absent_from_cli_check(self, mise: Mise):
-        assert "build:cli" not in _depends(mise, "cli:check")
+    def test_build_launcher_is_absent_from_cli_check(self, mise: Mise):
+        assert "build:launcher" not in _depends(mise, "cli:check")
 
-    def test_build_cli_provisions_cross_targets(self, mise: Mise):
-        assert "deps:install:rust-targets" in _depends(mise, "build:cli")
+    def test_build_launcher_provisions_cross_targets(self, mise: Mise):
+        assert "deps:install:rust-targets" in _depends(mise, "build:launcher")
 
 
 class TestTestUnitCliWiring:
+    """`test:unit:cli` is the workspace-wide coverage pass in `test:unit`."""
+
     def test_test_unit_cli_is_folded_into_test_unit(self, mise: Mise):
         assert "test:unit:cli" in _depends(mise, "test:unit")
 
@@ -129,9 +168,15 @@ class TestTestUnitCliWiring:
         assert "test:unit:cli" not in _depends(mise, "cli:check")
 
     def test_test_unit_cli_provisions_llvm_tools(self, mise: Mise):
-        # Provision llvm-tools-preview up front so parallel cli/kernel llvm-cov
-        # runs don't race on `rustup component add`.
+        # Provision llvm-tools-preview up front so the coverage pass does not
+        # trigger cargo-llvm-cov's implicit `rustup component add` at runtime.
         assert "deps:install:rust-components" in _depends(mise, "test:unit:cli")
+
+    def test_per_crate_test_tasks_are_ad_hoc_not_aggregated(self, mise: Mise):
+        # The single --workspace pass replaces per-crate concurrency, so the
+        # single-crate test tasks stay out of the aggregate.
+        assert "test:unit:launcher" not in _depends(mise, "test:unit")
+        assert "test:unit:kernel" not in _depends(mise, "test:unit")
 
     def test_no_coverage_task_exists(self, mise: Mise):
         names = set(_tasks(mise))
@@ -231,7 +276,7 @@ class TestFinalEnumeratedArrays:
             "lint:check",
             "types:check",
             "test",
-            "build:cli",
+            "build:launcher",
             "deny:check",
             "pup:check",
         ]
@@ -240,7 +285,6 @@ class TestFinalEnumeratedArrays:
         assert _depends(mise, "test:unit") == [
             "test:unit:tasks",
             "test:unit:cli",
-            "test:unit:kernel",
         ]
 
 
@@ -249,14 +293,23 @@ class TestToolchainCoherence:
 
     A rust bump that updates mise.toml but forgets these silently applies
     MSRV-gated lints against a different stable than CI provisions, so the
-    fourth-hand-synced-mirror hazard is converted into a tested invariant.
+    fourth-hand-synced-mirror hazard is converted into a tested invariant. The
+    configs live in the workspace root (`cli/`) alongside Cargo.toml.
     """
 
     def test_clippy_msrv_matches_mise_rust_pin(self, mise: Mise):
-        clippy = tomllib.loads((REPO_ROOT / "clippy.toml").read_text())
+        clippy = tomllib.loads((WORKSPACE_ROOT / "clippy.toml").read_text())
         assert clippy["msrv"] == mise["tools"]["rust"]["version"]
 
-    def test_rustfmt_edition_matches_cli_crate_edition(self):
-        rustfmt = tomllib.loads((REPO_ROOT / "rustfmt.toml").read_text())
-        cli_cargo = tomllib.loads((REPO_ROOT / "cli/Cargo.toml").read_text())
-        assert rustfmt["edition"] == cli_cargo["package"]["edition"]
+    def test_rustfmt_edition_matches_launcher_crate_edition(self):
+        rustfmt = tomllib.loads((WORKSPACE_ROOT / "rustfmt.toml").read_text())
+        launcher_cargo = tomllib.loads(
+            (WORKSPACE_ROOT / "launcher" / "Cargo.toml").read_text()
+        )
+        assert rustfmt["edition"] == launcher_cargo["package"]["edition"]
+
+    def test_launcher_crate_constant_matches_cargo_package_name(self):
+        launcher_cargo = tomllib.loads(
+            (WORKSPACE_ROOT / "launcher" / "Cargo.toml").read_text()
+        )
+        assert launcher_cargo["package"]["name"] == LAUNCHER_CRATE

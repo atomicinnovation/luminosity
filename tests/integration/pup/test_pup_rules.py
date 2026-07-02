@@ -15,6 +15,7 @@ import pytest
 from tasks.shared.rust import PUP_NIGHTLY
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+WORKSPACE_ROOT = REPO_ROOT / "cli"
 
 # cargo-pup colours print-modules output even under NO_COLOR; strip the SGR
 # escapes before asserting on the text.
@@ -93,7 +94,7 @@ def test_module_rule_violation_fails_the_check(tmp_path: Path) -> None:
 
 def test_repo_pup_ron_actually_loads() -> None:
     _require_tools()
-    result = _pup("print-modules", cwd=REPO_ROOT)
+    result = _pup("print-modules", cwd=WORKSPACE_ROOT)
     assert result.returncode == 0, result.stdout + result.stderr
 
 
@@ -101,7 +102,7 @@ def test_real_inward_rule_binds_to_a_real_module() -> None:
     # Guards against a green-but-inert rule: `print-modules` lists each module
     # with its applicable lints, so the rule on the core line proves attachment.
     _require_tools()
-    result = _pup("print-modules", cwd=REPO_ROOT)
+    result = _pup("print-modules", cwd=WORKSPACE_ROOT)
     assert result.returncode == 0, result.stdout + result.stderr
     plain = _ANSI.sub("", result.stdout)
     core_line = next(
