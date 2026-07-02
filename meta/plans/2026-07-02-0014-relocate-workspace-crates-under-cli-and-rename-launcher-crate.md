@@ -5,7 +5,7 @@ title: "Relocate Workspace Crates Under cli/ and Rename the Launcher Crate Imple
 date: "2026-07-02T09:36:52+00:00"
 author: "Toby Clemson"
 producer: create-plan
-status: ready
+status: done
 work_item_id: "work-item:0014"
 parent: "work-item:0014"
 derived_from: ["codebase-research:2026-07-02-0014-relocate-workspace-crates-under-cli-and-rename-launcher-crate"]
