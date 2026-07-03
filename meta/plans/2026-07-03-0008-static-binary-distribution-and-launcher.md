@@ -1127,11 +1127,11 @@ repo-settings action — an unregistered job silently fails to gate merges).
 
 #### Automated Verification
 
-- [ ] `mise run scripts:check` passes (shfmt + ShellCheck + bashisms) **with the
+- [x] `mise run scripts:check` passes (shfmt + ShellCheck + bashisms) **with the
       extensionless `bin/luminosity` added to each tool's target list** — a test
       asserts `bin/luminosity` is actually covered, so it cannot silently escape
       the bash-3.2 floor.
-- [ ] `bash scripts/test-luminosity-entrypoint.sh` (new standalone suite, per the
+- [x] `bash scripts/test-luminosity-entrypoint.sh` (new standalone suite, per the
       shell test convention) passes **hermetically**: the fetch is stubbed via an overridable
       downloader (or a pre-seeded cache dir) so no case hits the network, covering
       host-triple detection + arch normalisation, cache-present short-circuit (no
@@ -1145,15 +1145,32 @@ repo-settings action — an unregistered job silently fails to gate merges).
       invocation), unset/invalid `CLAUDE_PLUGIN_ROOT` → named error, and
       argument/exit-code forwarding; the **shim black-box tests** (valid/tampered/
       wrong-key exit codes) run against the real compiled shim.
-- [ ] `mise run` exits 0.
-- [ ] The gated e2e smoke passes in CI against a real test release.
+- [x] `mise run` exits 0.
+- [ ] The gated e2e smoke passes in CI against a real test release. *(BLOCKED —
+      operational: needs the real release keypair + a pipeline-provisioned test
+      release, neither creatable from here. The hermetic entry-point + resolution
+      suites exercise the same fetch→verify→cache→exec path against a mock
+      server/local release.)*
 
 #### Manual Verification
 
 - [ ] On a clean machine with no cached binary, invoking
       `${CLAUDE_PLUGIN_ROOT}/bin/luminosity version` fetches, verifies, caches, and
-      runs the launcher's `version` output.
+      runs the launcher's `version` output. *(BLOCKED on the real release;
+      simulated hermetically by `scripts/test-luminosity-entrypoint.sh`.)*
 - [ ] The new CI job is registered as a required check (repo settings).
+      *(Operational — a manual repo-settings action per the CONTRIBUTING runbook.)*
+
+**Phase 6 deviations (documented):** (1) The bootstrap folds the corruption
+check into the shim signature verification (a corrupted download fails the
+signature) and binds freshness by pinning the fetch URL to the plugin's own
+`v{version}` tag, rather than parsing the manifest's sha256 in bash — no jq
+dependency, no fragile JSON parsing. (2) The shim's reproducible-build
+byte-identity check is a CI follow-up (it needs `--remap-path-prefix` /
+`SOURCE_DATE_EPOCH` reproducible-build flags); the shims are committed from the
+same pinned source the tests exercise. (3) The CI e2e smoke job is not wired
+(no real release to run it against); the entry-point + resolution suites cover
+the path hermetically.
 
 ---
 

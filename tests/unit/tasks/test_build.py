@@ -1,4 +1,5 @@
 import json
+import os
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
@@ -9,6 +10,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 from tasks import build
+from tasks.shared.paths import BOOTSTRAP, shim_path
 from tasks.shared.rust import LAUNCHER_CRATE
 from tasks.shared.targets import (
     MACOS_DEPLOYMENT_TARGET,
@@ -228,8 +230,12 @@ class TestBuildRelease:
         monkeypatch.setattr(build.platform, "system", lambda: "Darwin")
         ctx.run.side_effect = _fake_run
         build.release(ctx)
-        commands = _zigbuild_commands(ctx)
-        assert commands == [
+        launcher_builds = [
+            command
+            for command in _zigbuild_commands(ctx)
+            if f"--bin {LAUNCHER_CRATE} --target" in command
+        ]
+        assert launcher_builds == [
             f"cargo zigbuild --release --bin {LAUNCHER_CRATE} --target {triple}"
             for triple, _ in TARGETS
         ]
@@ -254,6 +260,26 @@ class TestBuildRelease:
                 )
             else:
                 assert "MACOSX_DEPLOYMENT_TARGET" not in env
+
+    def test_cross_builds_and_stages_the_verify_shim_per_triple(
+        self,
+        ctx: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+        seeded_checksums: Path,
+    ):
+        monkeypatch.setattr(build.platform, "system", lambda: "Darwin")
+        ctx.run.side_effect = _fake_run
+        build.release(ctx)
+        shim_builds = [
+            command
+            for command in _zigbuild_commands(ctx)
+            if "--bin luminosity-verify --target" in command
+        ]
+        assert shim_builds == [
+            f"cargo zigbuild --release --bin luminosity-verify "
+            f"--target {triple}"
+            for triple, _ in TARGETS
+        ]
 
     def test_stages_binaries_and_debug_archives_for_each_platform(
         self,
@@ -372,3 +398,22 @@ class TestHostAwareVerification:
         issued = [c.args[0] for c in ctx.run.call_args_list]
         assert any(c.startswith("lipo") for c in issued)
         assert any(c.startswith("otool") for c in issued)
+
+
+class TestPackagedRootOfTrustArtifacts:
+    """The committed plugin-package artifacts the bootstrap depends on.
+
+    The launcher is fetched on demand, but the entry point, the per-triple
+    verify shims (the root of trust), and the public key ship committed over
+    the marketplace channel — a guard that none is dropped from the package.
+    """
+
+    def test_a_verify_shim_ships_for_every_platform(self):
+        for _, platform in TARGETS:
+            assert shim_path(platform).exists(), (
+                f"missing packaged verify shim for {platform}"
+            )
+
+    def test_the_bootstrap_entry_point_is_executable(self):
+        assert BOOTSTRAP.exists()
+        assert os.access(BOOTSTRAP, os.X_OK)

@@ -841,6 +841,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "luminosity-verify"
+version = "0.1.0-pre.0"
+dependencies = [
+ "minisign-verify",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

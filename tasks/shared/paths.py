@@ -20,6 +20,12 @@ PRERELEASE_MARKETPLACE_JSON = (
     REPO_ROOT / ".claude-plugin/marketplace-prerelease.json"
 )
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"
+# The plugin package's committed entry point + root-of-trust artifacts, shipped
+# over the marketplace channel: the bash bootstrap, the per-triple verify shims,
+# and the release public key.
+PACKAGE_BIN_DIR = REPO_ROOT / "bin"
+BOOTSTRAP = PACKAGE_BIN_DIR / "luminosity"
+SHIM_CRATE = "luminosity-verify"
 
 
 def binary_path(platform: str, bin_dir: Path = BIN_DIR) -> Path:
@@ -32,3 +38,7 @@ def debug_archive_path(platform: str, bin_dir: Path = BIN_DIR) -> Path:
 
 def signature_path(platform: str, bin_dir: Path = BIN_DIR) -> Path:
     return bin_dir / f"luminosity-{platform}.minisig"
+
+
+def shim_path(platform: str, package_bin_dir: Path = PACKAGE_BIN_DIR) -> Path:
+    return package_bin_dir / f"luminosity-verify-{platform}"

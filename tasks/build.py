@@ -8,9 +8,11 @@ from tasks.shared.files import atomic_write_text
 from tasks.shared.hashing import compute_sha256
 from tasks.shared.paths import (
     CHECKSUMS,
+    SHIM_CRATE,
     WORKSPACE_ROOT,
     binary_path,
     debug_archive_path,
+    shim_path,
 )
 from tasks.shared.rust import LAUNCHER_CRATE
 from tasks.shared.targets import (
@@ -250,4 +252,28 @@ def release(context: Context) -> None:
             digests[target_platform] = _stage_artifacts(
                 context, triple, target_platform
             )
+            _build_and_stage_shim(context, triple, target_platform)
     _write_checksums(digests)
+
+
+def _build_and_stage_shim(
+    context: Context, triple: str, target_platform: str
+) -> None:
+    """Cross-build the root-of-trust verify shim and stage it into the package.
+
+    The per-triple shim is the bootstrap's root verifier and ships committed in
+    the plugin package (it rides the trusted marketplace channel); the launcher
+    is fetched on demand, but the tiny shim is not.
+    """
+    result = context.run(
+        f"cargo zigbuild --release --bin {SHIM_CRATE} --target {triple}",
+        warn=True,
+        pty=False,
+        env=_release_build_env(triple),
+    )
+    if result.exited != 0:
+        raise Exit(f"shim build failed: {triple}", code=1)
+    source = f"target/{triple}/release/{SHIM_CRATE}"
+    destination = shim_path(target_platform)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    context.run(f"cp {source} {destination}", pty=False)
