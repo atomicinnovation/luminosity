@@ -1,0 +1,21 @@
+[package]
+# The bootstrap's root-of-trust verifier: a tiny, statically-linked CLI wrapping
+# minisign-verify. Tooling, not a subdomain — it stays out of the pup layering
+# rules and does not activate the deny cross-crate ban-lists. Its own version is
+# independent of the product version (the launcher crate is version-bearing).
+name = "luminosity-verify"
+version = "0.1.0-pre.0"
+edition = "2021"
+rust-version = "1.90.0"
+license = "MIT"
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "luminosity-verify"
+path = "src/main.rs"
+
+[dependencies]
+minisign-verify = { workspace = true }

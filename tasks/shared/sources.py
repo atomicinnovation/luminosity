@@ -31,7 +31,10 @@ def _ignore_spec(repo: Path) -> pathspec.GitIgnoreSpec:
     return pathspec.GitIgnoreSpec.from_lines([*lines, *_VCS_METADATA_DIRS])
 
 
-_EXTENSIONLESS_SHELL_SOURCES: tuple[str, ...] = ()
+# Extensionless shell scripts the `*.sh` glob would miss. The bootstrap entry
+# point is named for the command it fronts (`bin/luminosity`, not `*.sh`), so it
+# is registered here explicitly — the bash-3.2 floor matters most on this file.
+_EXTENSIONLESS_SHELL_SOURCES: tuple[str, ...] = ("bin/luminosity",)
 
 
 def _is_ignored_dir(
