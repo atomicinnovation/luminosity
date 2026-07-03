@@ -1,9 +1,5 @@
-//! The launcher's imperative shell: the dispatch boundary that routes the
-//! parsed command tree to a built-in handler or to external resolution + exec.
-//!
-//! This is the named inward-only boundary the plan calls for — `version` stays a
-//! clean hexagon under `version::`, and no launcher dispatch code sits under
-//! `version::core` (which cargo-pup would reject).
+//! The dispatch boundary: routes the parsed command tree to a built-in handler
+//! or to external resolution + exec.
 
 pub mod core;
 pub mod help;

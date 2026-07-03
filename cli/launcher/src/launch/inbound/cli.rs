@@ -41,8 +41,6 @@ mod tests {
     #[test]
     fn an_unknown_subcommand_routes_to_external_with_its_args(
     ) -> Result<(), Box<dyn Error>> {
-        // Proves clap's derive enables external dispatch on the pinned clap
-        // version (retires the spike's to-confirm consequence, AC5).
         let cli = Cli::try_parse_from(["luminosity", "frobnicate", "--flag"])?;
         match cli.command {
             Command::External(raw) => assert_eq!(

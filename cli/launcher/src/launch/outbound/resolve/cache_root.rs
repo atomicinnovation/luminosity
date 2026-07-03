@@ -1,11 +1,9 @@
-//! Resolves the runtime cache directory: the plugin root when it is writable
-//! and exec-capable, else an XDG fallback, else a named error.
+//! Resolves the runtime cache directory.
 //!
-//! The plugin root (`${CLAUDE_PLUGIN_ROOT}/bin`) is preferred so Claude Code
-//! reclaims cached binaries on plugin upgrade, but read-only/immutable installs
-//! (Nix store paths, container layers) and `noexec` mounts break write-or-exec,
-//! so both are probed at runtime, not inferred. An explicit
-//! `LUMINOSITY_CACHE_DIR` override wins for operators on unusual mounts.
+//! Prefers the plugin root (`${CLAUDE_PLUGIN_ROOT}/bin`, so Claude Code reclaims
+//! it on upgrade) when writable and exec-capable, else an XDG fallback, else a
+//! named error. `LUMINOSITY_CACHE_DIR` overrides. Read-only installs and
+//! `noexec` mounts are probed, not inferred.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

@@ -1,11 +1,8 @@
-//! The transport collaborator: a blocking reqwest fetch with timeouts, a
-//! redirect host-allowlist, and bounded retry-with-backoff.
+//! Blocking reqwest fetch with timeouts, a redirect host-allowlist, and retry.
 //!
-//! GitHub 302-redirects asset downloads to rotating `*.githubusercontent.com`
-//! CDN hosts, so redirects are followed only within that suffix (plus the
-//! release origin) — a strict same-origin pin would reject real downloads and,
-//! under no-self-update, a future CDN rename would brick every deployed
-//! launcher. Retry is safe because resolution is idempotent (checksum-keyed).
+//! GitHub 302-redirects assets to rotating `*.githubusercontent.com` hosts, so
+//! redirects are followed only within that suffix (plus the release origin).
+//! Bounded retry-with-backoff is safe: resolution is idempotent.
 
 use std::time::Duration;
 

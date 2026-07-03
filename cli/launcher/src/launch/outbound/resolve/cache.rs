@@ -1,12 +1,9 @@
-//! The on-disk binary cache: atomic writes, prefix-scan lookup, eviction.
+//! The on-disk binary cache, keyed by name + version + checksum.
 //!
-//! Cache entries are keyed by name + version + checksum, encoded into the
-//! filename `"{name}-{version}-{sha256}"` with a sibling `".minisig"`. The
-//! checksum lives IN the name, so a cache hit is a prefix scan needing no
-//! manifest — an already-resolved sub-binary therefore resolves offline. Writes
-//! are atomic (temp-in-dir + rename), so only fully-written bytes appear under
-//! the final path even if a fetch is interrupted or two invocations race (the
-//! last rename wins with byte-identical, checksum-keyed content).
+//! Entries are `"{name}-{version}-{sha256}"` (+ a `.minisig` sibling); the
+//! checksum is in the name, so a cache hit is a prefix scan needing no manifest
+//! — an already-resolved binary resolves offline. Writes are atomic
+//! (temp-in-dir + rename), so only fully-written bytes appear under the path.
 
 use std::path::{Path, PathBuf};
 

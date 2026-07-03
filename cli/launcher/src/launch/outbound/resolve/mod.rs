@@ -1,10 +1,6 @@
-//! The real fetch → verify → cache → resolve adapter and its collaborators.
-//!
-//! Composes a [`Fetcher`] (transport), a [`verifier`] (manifest signature +
-//! version binding, then per-binary sha256 + minisign), a [`cache`] store
-//! (atomic write + prefix-scan lookup keyed by name+version+checksum), and a
-//! resolved cache root. Each collaborator is independently unit-tested; this
-//! module orchestrates them behind the `ResolveBinary` port.
+//! The real fetch → verify → cache resolver, composed from a [`Fetcher`], a
+//! [`verifier`], a [`cache`] store, and a resolved cache root behind the
+//! `ResolveBinary` port.
 
 pub mod cache;
 pub mod cache_root;

@@ -1,8 +1,6 @@
 //! The launcher's dispatch/resolution core and the ports it speaks through.
-//!
-//! Depends on no infrastructure (std + kernel only) — cargo-pup enforces that
-//! inward direction. The concrete resolver/executor adapters live under
-//! `launch::outbound`; the imperative shell that wires them is `launch::run`.
+//! Depends on std + kernel only; the concrete adapters live under
+//! `launch::outbound`.
 
 use std::ffi::OsString;
 use std::fmt;
@@ -48,9 +46,7 @@ impl ExternalCommand {
 pub enum ResolutionError {
     /// clap handed dispatch an empty external-subcommand vector.
     EmptyCommand,
-    /// The requested sub-binary could not be resolved to a path (the Phase 3
-    /// placeholder resolver; the real resolver draws the finer distinctions
-    /// below).
+    /// The requested sub-binary could not be resolved to a path.
     Unresolved { name: OsString },
     /// The host-triple asset could not be fetched (network/transport error).
     Fetch { target: String, url: String },
@@ -158,9 +154,6 @@ impl From<ResolutionError> for kernel::Error {
 }
 
 /// Resolves a sub-binary name to an executable path — a driven/outbound port.
-///
-/// Phase 3 has only a placeholder adapter; Phase 4's fetch → verify → cache
-/// adapter implements the same port so dispatch/exec are unchanged by it.
 pub trait ResolveBinary {
     /// # Errors
     ///

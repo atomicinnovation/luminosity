@@ -87,9 +87,8 @@ fn render_augmented_help() -> ExitCode {
 fn run(cli: &Cli) -> Result<(), kernel::Error> {
     let reporter = VersionReporter::new(VergenBuildMetadata);
     let executor = UnixExec;
-    // The fixture seam (tests only): when set, external dispatch runs against
-    // the in-crate fixture without the network. Production never sets it and
-    // always takes the real, lazily-built fetch → verify → cache resolver.
+    // Tests set FIXTURE_ENV to dispatch against the in-crate fixture; production
+    // never sets it and takes the real resolver.
     if std::env::var_os(FIXTURE_ENV).is_some_and(|value| !value.is_empty()) {
         dispatch(cli, &reporter, &FixtureResolver, &executor)
     } else {
@@ -103,19 +102,14 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    // try_parse (not parse) so `--help` can be intercepted and augmented with
-    // the manifest-derived section. `foo --help` is NOT a DisplayHelp error —
-    // clap routes it to External, so it is delegated to the child by dispatch.
+    // try_parse (not parse) so top-level `--help` can be intercepted and
+    // augmented; `foo --help` routes to External and is delegated to the child.
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(error) if error.kind() == ErrorKind::DisplayHelp => {
             return render_augmented_help();
         }
-        Err(error) => {
-            // Version display, usage errors, etc. — clap prints and picks the
-            // exit code.
-            error.exit();
-        }
+        Err(error) => error.exit(),
     };
 
     match run(&cli) {

@@ -1,22 +1,17 @@
-//! A transitional resolver adapter for Phase 3.
+//! A resolver that resolves every subcommand to the executable named by
+//! `LUMINOSITY_RESOLVE_FIXTURE`.
 //!
-//! Real resolution — fetch → verify (sha256 + minisign) → cache → return path —
-//! lands in Phase 4 as the adapter that replaces this one at the composition
-//! root. Until then, external dispatch and exec are proven against the in-crate
-//! test fixture via an explicit environment seam: `LUMINOSITY_RESOLVE_FIXTURE`
-//! names the executable to resolve every subcommand to. With the seam unset,
-//! external subcommands report an honest "unresolved" diagnostic (real
-//! resolution is not wired yet), so this ships harmlessly in the Phase 3
-//! intermediate state.
+//! Lets dispatch and exec be exercised against a test fixture without the
+//! network; with the variable unset it reports an "unresolved" diagnostic.
 
 use std::path::PathBuf;
 
 use crate::launch::core::{ExternalCommand, ResolutionError, ResolveBinary};
 
-/// The environment seam naming the fixture executable Phase 3 resolves to.
+/// The environment variable naming the executable to resolve to.
 pub const FIXTURE_ENV: &str = "LUMINOSITY_RESOLVE_FIXTURE";
 
-/// Resolves every subcommand to the path in [`FIXTURE_ENV`] (Phase 3 only).
+/// Resolves every subcommand to the path in [`FIXTURE_ENV`].
 pub struct FixtureResolver;
 
 impl ResolveBinary for FixtureResolver {

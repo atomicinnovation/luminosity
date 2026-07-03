@@ -51,8 +51,8 @@ allow = [
     "Zlib",
     "Unicode-3.0",
     "Unicode-DFS-2016",
-    # The Mozilla root-certificate bundle embedded by webpki-roots (the
-    # bundled TLS roots, AC7) ships under this permissive data license.
+    # The Mozilla root-certificate bundle embedded by webpki-roots ships under
+    # this permissive data license.
     "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.8
