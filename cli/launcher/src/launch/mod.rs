@@ -6,6 +6,7 @@
 //! `version::core` (which cargo-pup would reject).
 
 pub mod core;
+pub mod help;
 pub mod inbound;
 pub mod outbound;
 

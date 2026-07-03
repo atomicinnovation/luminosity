@@ -127,10 +127,13 @@ impl FetchVerifyCacheResolver {
         )
     }
 
-    fn fetch_verify_store(
-        &self,
-        name: &str,
-    ) -> Result<PathBuf, ResolutionError> {
+    /// Fetch, signature-verify, and version/schema-validate the release
+    /// manifest — the shared front half of resolution and help synthesis.
+    ///
+    /// # Errors
+    ///
+    /// A [`ResolutionError`] on fetch/signature/version/schema failure.
+    pub fn load_manifest(&self) -> Result<Manifest, ResolutionError> {
         let base = &self.config.base_url;
         let manifest_url = format!("{base}/manifest.json");
         let manifest_bytes =
@@ -144,11 +147,18 @@ impl FetchVerifyCacheResolver {
             })?;
         let signature = String::from_utf8_lossy(&signature_bytes);
         verifier::verify_manifest(&manifest_bytes, &signature, &self.keys)?;
-
-        let manifest = Manifest::parse_and_validate(
+        Manifest::parse_and_validate(
             &manifest_bytes,
             &self.config.expected_version,
-        )?;
+        )
+    }
+
+    fn fetch_verify_store(
+        &self,
+        name: &str,
+    ) -> Result<PathBuf, ResolutionError> {
+        let base = &self.config.base_url;
+        let manifest = self.load_manifest()?;
         let asset_name = format!("{name}-{}", self.config.platform);
         let asset_url = format!("{base}/{asset_name}");
         let entry = manifest

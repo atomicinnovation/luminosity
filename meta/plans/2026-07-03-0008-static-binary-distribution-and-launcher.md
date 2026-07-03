@@ -951,19 +951,19 @@ fixture emits (AC6).
 
 #### Automated Verification
 
-- [ ] `mise run test:unit:cli` passes: `--help` output contains built-ins + a
+- [x] `mise run test:unit:cli` passes: `--help` output contains built-ins + a
       manifest-derived `foo`/`Bar tool` line; `foo --help` emits the fixture's
       sentinel; a fixture manifest description containing **control/escape
       sequences** renders sanitised — the raw escape bytes are absent **and** the
       legitimate printable description text still appears (not over-stripped); and
       **`luminosity version` succeeds with no manifest present** (built-ins do not
       depend on the manifest — the lazy help path).
-- [ ] `mise run cli:check` passes.
-- [ ] `mise run` exits 0.
+- [x] `mise run cli:check` passes.
+- [x] `mise run` exits 0.
 
 #### Manual Verification
 
-- [ ] `luminosity --help` reads coherently with the synthesised section beneath
+- [x] `luminosity --help` reads coherently with the synthesised section beneath
       the built-ins.
 
 ---

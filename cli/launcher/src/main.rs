@@ -5,17 +5,20 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use clap::Parser as _;
+use clap::error::ErrorKind;
+use clap::{CommandFactory as _, Parser as _};
 
 use luminosity::launch::core::{
     ExternalCommand, ResolutionError, ResolveBinary,
 };
 use luminosity::launch::dispatch;
+use luminosity::launch::help::external_subcommands_section;
 use luminosity::launch::inbound::cli::Cli;
 use luminosity::launch::outbound::exec::UnixExec;
 use luminosity::launch::outbound::resolve::cache_root::{
     self, CacheRootConfig,
 };
+use luminosity::launch::outbound::resolve::fetcher::Fetcher;
 use luminosity::launch::outbound::resolve::keys::TrustedKeys;
 use luminosity::launch::outbound::resolve::{
     FetchVerifyCacheResolver, ResolverConfig,
@@ -56,27 +59,66 @@ impl ResolveBinary for LazyProductionResolver {
     }
 }
 
+/// Load the manifest and build the external-subcommands help section.
+///
+/// Best-effort and offline-tolerant: any failure (no network, no manifest, a
+/// bad key) yields `None`, so `--help` still prints the built-in help rather
+/// than erroring. No cache root is touched — help only reads the manifest.
+fn help_section() -> Option<String> {
+    let keys = TrustedKeys::embedded().ok()?;
+    let fetcher = Fetcher::new().ok()?;
+    let config = ResolverConfig::production(release_base_url(), PathBuf::new());
+    let resolver =
+        FetchVerifyCacheResolver::with_fetcher(config, keys, fetcher);
+    let manifest = resolver.load_manifest().ok()?;
+    external_subcommands_section(&manifest)
+}
+
+fn render_augmented_help() -> ExitCode {
+    let mut command = Cli::command();
+    if let Some(section) = help_section() {
+        command = command.after_help(section);
+    }
+    let _ = command.print_help();
+    println!();
+    ExitCode::SUCCESS
+}
+
+fn run(cli: &Cli) -> Result<(), kernel::Error> {
+    let reporter = VersionReporter::new(VergenBuildMetadata);
+    let executor = UnixExec;
+    // The fixture seam (tests only): when set, external dispatch runs against
+    // the in-crate fixture without the network. Production never sets it and
+    // always takes the real, lazily-built fetch → verify → cache resolver.
+    if std::env::var_os(FIXTURE_ENV).is_some_and(|value| !value.is_empty()) {
+        dispatch(cli, &reporter, &FixtureResolver, &executor)
+    } else {
+        dispatch(cli, &reporter, &LazyProductionResolver, &executor)
+    }
+}
+
 fn main() -> ExitCode {
     if let Err(error) = install_crypto_provider() {
         eprintln!("luminosity: {error}");
         return ExitCode::FAILURE;
     }
-    let cli = Cli::parse();
-    let reporter = VersionReporter::new(VergenBuildMetadata);
-    let executor = UnixExec;
 
-    // The fixture seam (tests only): when set, external dispatch runs against
-    // the in-crate fixture without the network. Production never sets it and
-    // always takes the real, lazily-built fetch → verify → cache resolver.
-    let outcome = if std::env::var_os(FIXTURE_ENV)
-        .is_some_and(|value| !value.is_empty())
-    {
-        dispatch(&cli, &reporter, &FixtureResolver, &executor)
-    } else {
-        dispatch(&cli, &reporter, &LazyProductionResolver, &executor)
+    // try_parse (not parse) so `--help` can be intercepted and augmented with
+    // the manifest-derived section. `foo --help` is NOT a DisplayHelp error —
+    // clap routes it to External, so it is delegated to the child by dispatch.
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) if error.kind() == ErrorKind::DisplayHelp => {
+            return render_augmented_help();
+        }
+        Err(error) => {
+            // Version display, usage errors, etc. — clap prints and picks the
+            // exit code.
+            error.exit();
+        }
     };
 
-    match outcome {
+    match run(&cli) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("luminosity: {error}");
