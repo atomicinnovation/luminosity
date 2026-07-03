@@ -289,6 +289,8 @@ jobs:
       - name: Finalise prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
         run: mise run prerelease:finalise
 
   approve-release:
@@ -344,6 +346,8 @@ jobs:
       - name: Finalise stable release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
         run: mise run release:finalise
 
       - name: Prepare post-stable prerelease
@@ -359,4 +363,6 @@ jobs:
       - name: Finalise post-stable prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
         run: mise run prerelease:finalise

@@ -266,6 +266,7 @@ class TestFinalEnumeratedArrays:
             "build-system:check",
             "scripts:check",
             "cli:check",
+            "version:check",
             "deny:check",
             "pup:check",
         ]
@@ -286,6 +287,14 @@ class TestFinalEnumeratedArrays:
             "test:unit:tasks",
             "test:unit:cli",
         ]
+
+
+class TestVersionCheckWiring:
+    def test_version_check_is_in_check(self, mise: Mise):
+        assert "version:check" in _depends(mise, "check")
+
+    def test_version_check_wraps_the_invoke_task(self, mise: Mise):
+        assert _tasks(mise)["version:check"]["run"] == "invoke version.check"
 
 
 class TestZigbuildProvisioning:

@@ -497,34 +497,37 @@ survive. Keep SLSA attestation in CI
 
 #### Automated Verification
 
-- [ ] `mise run test:unit:tasks` passes (sign/manifest/`version:check` unit tests
+- [x] `mise run test:unit:tasks` passes (sign/manifest/`version:check` unit tests
       using a fixture keypair; a desync test asserts the **specific mismatching
       filename(s)** appear in the output, not merely a non-zero exit; agreement →
       ok; a signed-manifest round-trip; the shared-fixture manifest parses in the
-      Rust reader).
-- [ ] `mise run build-system:check` passes.
-- [ ] `mise run version:check` exits 0 on a coherent tree and non-zero naming the
+      Rust reader). *(Rust reader consumes the shared fixture in Phase 4; the
+      Python writer side of the round-trip is asserted here.)*
+- [x] `mise run build-system:check` passes.
+- [x] `mise run version:check` exits 0 on a coherent tree and non-zero naming the
       desynced file when any of the four anchors (`plugin.json`,
       `cli/launcher/Cargo.toml`, `checksums.json`, `manifest.json`) is hand-desynced
       in a test; a **key-coherence** test fails when the plugin-committed key
       diverges from the launcher-embedded key.
-- [ ] `test_github.py` asserts a re-downloaded artifact signed by a **non-matching
+- [x] `test_github.py` asserts a re-downloaded artifact signed by a **non-matching
       key** makes `upload_and_verify` raise `AssetVerificationError` and **leave
       the release drafted** (un-draft not called, tag preserved).
-- [ ] `test_release.py` asserts `release_prepare`/`_publish` invokes `version:check`
+- [x] `test_release.py` asserts `release_prepare`/`_publish` invokes `version:check`
       and **aborts before `create_release`/`upload_and_verify`** when an anchor is
       hand-desynced.
-- [ ] `mise run` exits 0.
+- [x] `mise run` exits 0.
 
 #### Manual Verification
 
-- [ ] With the fixture key, the pipeline emits four binary `.minisig` files, a
+- [x] With the fixture key, the pipeline emits four binary `.minisig` files, a
       `manifest.json`, and a `manifest.minisig`; `minisign -Vm <binary> -P
       <pubkey>` verifies each binary and `minisign -Vm manifest.json -P <pubkey>`
-      verifies the manifest.
+      verifies the manifest. *(Verified locally with the placeholder keypair.)*
 - [ ] The GitHub `release` environment holds the secret; the committed public key
       matches it (the automated re-download step verifies this, not only manual
-      inspection).
+      inspection). *(BLOCKED — operational: the committed key is a placeholder;
+      the real keypair must be generated and `MINISIGN_SECRET_KEY` /
+      `MINISIGN_KEY_PASSWORD` provisioned as GitHub secrets. See CONTRIBUTING.md.)*
 
 ---
 

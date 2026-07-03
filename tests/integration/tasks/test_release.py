@@ -2,13 +2,14 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
-from invoke import Context
+from invoke import Context, Exit
 
 import tasks.build as tb
 import tasks.git as tgit
 import tasks.github as gh
 import tasks.marketplace as tm
 import tasks.release as tr
+import tasks.sign as tsign
 import tasks.version as tv
 from tasks.release import (
     _refuse_under_ci,
@@ -116,6 +117,8 @@ class TestReleasePrepare:
 
 class TestPrereleaseFinalise:
     def test_commits_before_upload(self, ctx: MagicMock, mocker: MockerFixture):
+        mocker.patch.object(tv, "check")
+        mocker.patch.object(tsign, "sign")
         mocker.patch.object(
             tv, "read", return_value=MagicMock(__str__=lambda _: "1.21.0-pre.1")
         )
@@ -133,6 +136,8 @@ class TestPrereleaseFinalise:
     def test_creates_release_before_upload(
         self, ctx: MagicMock, mocker: MockerFixture
     ):
+        mocker.patch.object(tv, "check")
+        mocker.patch.object(tsign, "sign")
         mocker.patch.object(
             tv, "read", return_value=MagicMock(__str__=lambda _: "1.21.0-pre.1")
         )
@@ -146,6 +151,45 @@ class TestPrereleaseFinalise:
 
         assert mock_create.called
         assert mock_upload.called
+
+    def test_signs_before_upload(self, ctx: MagicMock, mocker: MockerFixture):
+        mocker.patch.object(tv, "check")
+        mock_sign = mocker.patch.object(tsign, "sign")
+        mocker.patch.object(
+            tv, "read", return_value=MagicMock(__str__=lambda _: "1.21.0-pre.1")
+        )
+        mocker.patch.object(tgit, "commit_version")
+        mocker.patch.object(tgit, "tag_version")
+        mocker.patch.object(tgit, "push")
+        mocker.patch.object(gh, "create_release")
+        mocker.patch.object(gh, "upload_and_verify")
+
+        prerelease_finalise(ctx)
+
+        mock_sign.assert_called_once_with(ctx)
+
+    def test_coherence_gate_aborts_before_signing_or_publishing(
+        self, ctx: MagicMock, mocker: MockerFixture
+    ):
+        # A desynced anchor must block the publish path before anything is
+        # signed, tagged, created, or uploaded — not only in the PR-time check.
+        mocker.patch.object(
+            tv, "check", side_effect=Exit("version:check failed", code=1)
+        )
+        mock_sign = mocker.patch.object(tsign, "sign")
+        mock_commit = mocker.patch.object(tgit, "commit_version")
+        mock_create = mocker.patch.object(gh, "create_release")
+        mock_upload = mocker.patch.object(gh, "upload_and_verify")
+        mocker.patch.object(tgit, "tag_version")
+        mocker.patch.object(tgit, "push")
+
+        with pytest.raises(Exit):
+            prerelease_finalise(ctx)
+
+        assert not mock_sign.called
+        assert not mock_commit.called
+        assert not mock_create.called
+        assert not mock_upload.called
 
 
 class TestLocalDevGuards:

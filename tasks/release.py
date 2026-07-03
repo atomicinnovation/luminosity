@@ -2,7 +2,7 @@ import os
 
 from invoke import Context, task
 
-from . import build, changelog, git, github, marketplace, version
+from . import build, changelog, git, github, marketplace, sign, version
 
 
 def _refuse_under_ci(task_name: str) -> None:
@@ -21,6 +21,16 @@ def _refuse_under_ci(task_name: str) -> None:
 
 
 def _publish(context: Context) -> None:
+    # Fail-closed coherence gate on the release path itself, not only in the
+    # PR-time `mise run check`: a release cut with desynced anchors outside a
+    # normal PR (a manual edit, a partial bump) is blocked before anything is
+    # tagged, created, or uploaded.
+    version.check(context)
+    # Sign the staged binaries + emit and sign the manifest before anything is
+    # committed or uploaded, so the release commit records the inline
+    # signatures and upload_and_verify has the .minisig assets to publish and
+    # re-verify. Requires MINISIGN_SECRET_KEY in the environment.
+    sign.sign(context)
     resolved_version = str(version.read(context, print_to_stdout=False))
     git.commit_version(context)
     git.tag_version(context)

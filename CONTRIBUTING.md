@@ -60,3 +60,70 @@ gh api repos/{owner}/{repo}/branches/main/protection \
 ```
 
 and confirm the five Rust-job names above are present.
+
+## Release signing (minisign) — standing operational responsibilities
+
+Releases are integrity-protected with **minisign** (sha256 alone is not trust;
+in-process signature verification is, per ADR-0002). These are ongoing
+maintainer duties, not one-offs.
+
+### Key provisioning (do this before the first real release)
+
+The public key committed at `keys/luminosity-release.pub` and
+`cli/launcher/keys/release.pub` (kept byte-identical by `mise run version:check`)
+is currently a **placeholder** generated during implementation. Before cutting a
+real release:
+
+1. Generate the production keypair: `minisign -G -p release.pub -s release.key`
+   (choose a strong passphrase).
+2. Store the **secret** in the GitHub `MINISIGN_SECRET_KEY` secret (the full
+   `release.key` contents) and its passphrase in `MINISIGN_KEY_PASSWORD`. The
+   secret key is **never** committed (`.gitignore` blocks `*.key`).
+3. Replace **both** committed public-key copies with the real public key and
+   confirm `mise run version:check` still passes (key coherence).
+
+### Publishing `.minisig` assets
+
+Every release publishes, per binary, a `.minisig` alongside the binary and its
+`.sha256`, plus a signed `manifest.json` (`manifest.minisig`). This is automatic
+in the release pipeline (`tasks/sign.py` → `upload_and_verify`), which
+re-downloads every asset and re-verifies its signature against the committed
+public key **before** un-drafting — so a key/secret mismatch is caught at publish
+time, not at a user's first fetch.
+
+### Key rotation
+
+Rotate using the **verify-any-of overlap window** (the launcher trusts a small
+set of keys): (1) add the new public key to the trusted set and ship a plugin
+release trusting **both** old and new; (2) switch signing to the new key; (3)
+after the window, drop the old key in a later release. **Bound the window** — an
+indefinitely-trusted retired key widens the forgery surface.
+
+### Compromise response
+
+There is **no launcher self-update**, so revoking a leaked key requires cutting a
+plugin release that drops it from the trusted set; exposure lasts until users
+upgrade. Treat a leaked `MINISIGN_SECRET_KEY` as an incident: rotate immediately
+and cut a release dropping the compromised key.
+
+### Bundled-roots refresh cadence
+
+The launcher carries a frozen `webpki-roots` snapshot (it does not read the host
+cert store). Bump `webpki-roots` on each release cut so the Mozilla root
+snapshot cannot go stale against GitHub's TLS chain under no-self-update.
+
+### Vendored verify shim
+
+The per-triple `minisign-verify` shim (the bootstrap's root-of-trust verifier)
+is a trusted, no-self-update component: a shim-side flaw likewise persists until
+users upgrade. Refresh its pin on the same cadence and treat a shim
+vulnerability as an upgrade-forcing event.
+
+### Signing/build isolation (known follow-up)
+
+The plan calls for signing to run in a **separate CI job** that never shares an
+environment with crate compilation (so a compromised build dependency cannot
+exfiltrate `MINISIGN_SECRET_KEY`). The current pipeline signs within the release
+job's finalise step (after the build step, secret scoped to finalise). Splitting
+signing into an isolated job that consumes the built artefacts via job artifacts
+is a tracked hardening follow-up.

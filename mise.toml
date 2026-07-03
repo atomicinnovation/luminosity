@@ -9,6 +9,10 @@ rust = { version = "1.90.0", components = "rustfmt,clippy,llvm-tools-preview" }
 "aqua:nextest-rs/nextest/cargo-nextest" = "0.9.138"
 "aqua:taiki-e/cargo-llvm-cov" = "0.8.7"
 "aqua:EmbarkStudios/cargo-deny" = "0.19.8"
+# minisign via ubi (direct GitHub-release binary): the aqua registry entry
+# self-verifies its own .minisig with an unset Asset template var and fails to
+# install, so ubi fetches the pinned release asset directly instead.
+"ubi:jedisct1/minisign[exe=minisign]" = "0.12"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
 "aqua:rhysd/actionlint" = "1.7.12"
@@ -263,8 +267,8 @@ description = "Apply all formatters + safe lint fixes (MECHANICAL only — no ty
 depends = ["format:fix", "lint:fix"]
 
 [tasks.check]
-description = "Read-only format, lint, and type checks plus the cargo-deny/cargo-pup static checks (test-free, build-free; the subset CI mirrors)"
-depends = ["build-system:check", "scripts:check", "cli:check", "deny:check", "pup:check"]
+description = "Read-only format, lint, and type checks plus the version-coherence and cargo-deny/cargo-pup static checks (test-free, build-free; the subset CI mirrors)"
+depends = ["build-system:check", "scripts:check", "cli:check", "version:check", "deny:check", "pup:check"]
 
 [tasks.default]
 description = "Full local CI mirror: format-fix, lint, type-check, the whole test roll-up (cli tests carry coverage), the build:launcher host-native release build, and the deny/pup static checks (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
@@ -281,6 +285,11 @@ run = "invoke version.write"
 [tasks."version:bump"]
 description = "Bump plugin version"
 run = "invoke version.bump"
+
+[tasks."version:check"]
+description = "Enforce version coherence across plugin.json / Cargo.toml / checksums.json / manifest.json plus release-key coherence (names the drifted files)"
+depends = ["deps:install:python"]
+run = "invoke version.check"
 
 [tasks."github:check-auth"]
 description = "Verify the GitHub CLI is authenticated"
