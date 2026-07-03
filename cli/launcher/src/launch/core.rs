@@ -48,10 +48,35 @@ impl ExternalCommand {
 pub enum ResolutionError {
     /// clap handed dispatch an empty external-subcommand vector.
     EmptyCommand,
-    /// The requested sub-binary could not be resolved to a path. (Phase 3
-    /// placeholder; Phase 4 replaces this with the fetch/asset/release
-    /// distinctions the fetch→verify→cache adapter draws.)
+    /// The requested sub-binary could not be resolved to a path (the Phase 3
+    /// placeholder resolver; the real resolver draws the finer distinctions
+    /// below).
     Unresolved { name: OsString },
+    /// The host-triple asset could not be fetched (network/transport error).
+    Fetch { target: String, url: String },
+    /// The release has no asset for this binary+platform.
+    AssetNotFound { target: String, url: String },
+    /// The release itself is missing/unavailable.
+    ReleaseUnavailable { target: String, url: String },
+    /// A fetched/cached binary's sha256 did not match the manifest.
+    ChecksumMismatch {
+        asset: String,
+        expected: String,
+        actual: String,
+    },
+    /// A binary's minisign signature did not verify against a trusted key.
+    SignatureMismatch { asset: String },
+    /// The manifest's own signature did not verify against a trusted key.
+    ManifestSignature,
+    /// The signed manifest's version did not equal the launcher's own
+    /// (anti-rollback: a valid signature proves authenticity, not freshness).
+    ManifestVersionMismatch { expected: String, actual: String },
+    /// The manifest declares a schema version the launcher does not support.
+    UnsupportedSchema { found: u64, supported: u64 },
+    /// A cache read/write/lock operation failed.
+    Cache { path: PathBuf, detail: String },
+    /// No writable, exec-capable cache directory could be resolved.
+    CacheRootUnavailable { detail: String },
     /// `exec` of a resolved binary failed (it only returns on failure).
     Exec {
         program: PathBuf,
@@ -70,6 +95,49 @@ impl Display for ResolutionError {
                 "could not resolve subcommand '{}' to a binary",
                 name.to_string_lossy()
             ),
+            Self::Fetch { target, url } => write!(
+                formatter,
+                "could not fetch the {target} asset from {url}"
+            ),
+            Self::AssetNotFound { target, url } => write!(
+                formatter,
+                "no {target} asset published at {url}"
+            ),
+            Self::ReleaseUnavailable { target, url } => write!(
+                formatter,
+                "the release for the {target} asset is unavailable at {url}"
+            ),
+            Self::ChecksumMismatch {
+                asset,
+                expected,
+                actual,
+            } => write!(
+                formatter,
+                "{asset}: sha256 mismatch (expected {expected}, got {actual})"
+            ),
+            Self::SignatureMismatch { asset } => write!(
+                formatter,
+                "{asset}: minisign signature is not valid for any trusted key"
+            ),
+            Self::ManifestSignature => write!(
+                formatter,
+                "the release manifest signature is not valid for any trusted key"
+            ),
+            Self::ManifestVersionMismatch { expected, actual } => write!(
+                formatter,
+                "manifest version {actual} does not match expected {expected}"
+            ),
+            Self::UnsupportedSchema { found, supported } => write!(
+                formatter,
+                "unsupported manifest schema_version {found} (supported \
+                 up to {supported})"
+            ),
+            Self::Cache { path, detail } => {
+                write!(formatter, "cache error at {}: {detail}", path.display())
+            }
+            Self::CacheRootUnavailable { detail } => {
+                write!(formatter, "no usable cache directory: {detail}")
+            }
             Self::Exec { program, source } => {
                 write!(
                     formatter,

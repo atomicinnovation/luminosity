@@ -874,7 +874,7 @@ maximally strict; call it out at review.
 
 #### Automated Verification
 
-- [ ] `mise run test:unit:cli` passes: fetch→verify→cache→exec happy path;
+- [x] `mise run test:unit:cli` passes: fetch→verify→cache→exec happy path;
       **cache reuse asserts the mock server received exactly one request across
       two invocations** (not merely that both succeed — proving no re-fetch, AC3);
       **a cached valid signed binary mutated on disk is refused on re-invocation
@@ -891,15 +891,15 @@ maximally strict; call it out at review.
       fallback, exceeding the retained-versions cap evicts the oldest;
       unreachable/no-asset/unavailable each exit non-zero with a target-naming
       diagnostic and no exec; an offline cache-hit still resolves and execs.
-- [ ] `mise run deny:check` passes (dev-deps do not spring the native-tls ban).
-- [ ] `mise run cli:check` passes.
-- [ ] `mise run` exits 0.
+- [x] `mise run deny:check` passes (dev-deps do not spring the native-tls ban).
+- [x] `mise run cli:check` passes.
+- [x] `mise run` exits 0.
 
 #### Manual Verification
 
-- [ ] Against the mock server, a first invocation fetches+caches and a second
+- [x] Against the mock server, a first invocation fetches+caches and a second
       reuses the cache (observable via server hit count / cache mtime).
-- [ ] Interrupting a fetch mid-download leaves no file at the final cache name
+- [x] Interrupting a fetch mid-download leaves no file at the final cache name
       (atomic rename), and a later invocation fetches cleanly.
 
 ---
