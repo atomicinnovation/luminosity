@@ -1,14 +1,11 @@
-//! Arg-driven test fixture for the launcher's dispatch/exec/help tests.
+//! A stand-in "sub-binary" the launcher resolves and execs in tests, exposing
+//! behaviours by argument so exit-code/signal propagation, argument forwarding,
+//! and `--help` delegation can be exercised. Located via
+//! `CARGO_BIN_EXE_luminosity-fixture`; the release staging copies only the
+//! `luminosity` binary, so it never ships.
 //!
-//! This is NOT product code — it is a stand-in "sub-binary" the launcher
-//! resolves and execs so exit-code/signal propagation, argument forwarding, and
-//! `--help` delegation can be exercised without a real product sub-binary.
-//! Located from tests via `CARGO_BIN_EXE_luminosity-fixture`. The release
-//! staging copies only the `luminosity` binary, so this never ships.
-//!
-//! Restriction lints are allowed crate-wide here (a CLI stub legitimately calls
-//! `process::exit` and prints to stdout); this is the deliberate, bounded
-//! test-scaffolding exemption recorded in the plan.
+//! Restriction lints are allowed crate-wide: a CLI stub legitimately calls
+//! `process::exit` and prints to stdout.
 #![allow(
     clippy::exit,
     clippy::print_stdout,

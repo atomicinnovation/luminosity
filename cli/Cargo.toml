@@ -13,11 +13,10 @@ vergen = { version = "=9.0.6", default-features = false }
 vergen-gitcl = { version = "1", features = ["build", "cargo"] }
 time = { version = "0.3", features = ["parsing"] }  # dev-only
 # The launcher HTTP/verification stack (kernel stays dependency-light).
-# THE RUSTLS TRAP: reqwest MUST be default-features = false or its default
-# native-tls feature pulls openssl-sys and trips deny.toml. TLS roots are the
-# bundled webpki-roots (no host cert store, AC7); the `-no-provider` variant
-# plus a direct rustls dep with the `ring` feature keeps the crypto provider off
-# aws-lc-rs (C + per-arch asm, hostile to the four-triple cross-build).
+# reqwest MUST be default-features = false: its default native-tls feature pulls
+# openssl-sys and trips deny.toml. Bundled webpki-roots means no host cert store;
+# the `-no-provider` variant plus a direct rustls `ring` dep keeps the crypto
+# provider off aws-lc-rs (C + per-arch asm, hostile to the cross-build).
 # hickory-dns makes name resolution bypass the host getaddrinfo/nsswitch.
 reqwest = { version = "0.12", default-features = false, features = [
     "blocking",

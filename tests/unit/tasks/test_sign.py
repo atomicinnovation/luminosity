@@ -72,9 +72,8 @@ class TestSharedManifestFixture:
         assert manifest["schema_version"] == MANIFEST_SCHEMA_VERSION
 
     def test_lists_a_synthetic_sub_binary_with_a_description(self):
-        # foo / "Bar tool" is the synthetic sub-binary help synthesis renders
-        # (AC6); the name-keyed shape is what makes per-binary descriptions
-        # expressible.
+        # The name-keyed shape lets each sub-binary carry its own description
+        # (what help synthesis renders).
         foo = self._fixture()["binaries"]["foo"]
         assert foo["description"] == "Bar tool"
         assert "darwin-arm64" in foo["platforms"]

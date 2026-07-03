@@ -1,15 +1,10 @@
-//! A minimal hand-rolled HTTP/1.1 mock server for the hermetic resolution
-//! tests.
+//! A minimal hand-rolled HTTP/1.1 mock server for the resolution tests.
 //!
-//! Std-only (no async runtime, no HTTP dev-dep — so cargo-deny's dev-dep scan
-//! cannot spring the native-tls trap). Serves fixed per-path responses, counts
-//! hits so a test can prove "exactly one fetch", and supports 404/5xx/redirect
-//! shapes for the failure-path tests.
+//! Std-only (no async runtime, no HTTP dev-dep — keeping cargo-deny's dev-dep
+//! scan TLS-free). Serves fixed per-path responses, counts hits, and supports
+//! 404/5xx/redirect shapes.
 
-// Shared across test files; not every file uses every helper. The restriction
-// lints are allowed for this test-infrastructure module (lock().expect(...) and
-// building a response with format! are idiomatic here) — the same bounded
-// scaffolding exemption as the fixture bin.
+// Test-infrastructure module: expect/unwrap and format!-into-String are allowed.
 #![allow(
     dead_code,
     clippy::expect_used,

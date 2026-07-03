@@ -86,11 +86,10 @@ def test_native_tls_dependency_fails_the_bans_check(tmp_path: Path) -> None:
     assert "native-tls" in (result.stdout + result.stderr)
 
 
-# The launcher's actual resolved feature graph must not pull the native-TLS,
-# OpenSSL, native-cert, or aws-lc-rs closures the rustls-webpki-roots/ring
-# choice is meant to avoid (AC7). deny's target-scoped ban is complementary;
-# this reads the real tree so a feature-flag regression is caught even if
-# deny's config drifts.
+# The launcher's resolved feature graph must not pull the native-TLS, OpenSSL,
+# native-cert, or aws-lc-rs closures the rustls-webpki-roots/ring choice avoids.
+# Reading the real tree catches a feature-flag regression even if deny's config
+# drifts.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _WORKSPACE = _REPO_ROOT / "cli"
 

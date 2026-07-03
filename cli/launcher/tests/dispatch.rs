@@ -1,10 +1,9 @@
 //! Black-box tests of external-subcommand dispatch + exec.
 //!
-//! `exec` REPLACES the current process, so these must spawn the real
-//! `luminosity` binary as a child (never call dispatch in-process — that would
-//! replace the test runner). The Phase 3 resolver reads `LUMINOSITY_RESOLVE_FIXTURE`
-//! and returns it for any subcommand, so these exercise the real dispatch + exec
-//! path against the in-crate fixture without any network.
+//! `exec` replaces the current process, so these spawn the real `luminosity`
+//! binary as a child (calling dispatch in-process would replace the test
+//! runner). `LUMINOSITY_RESOLVE_FIXTURE` points the resolver at the in-crate
+//! fixture, so the dispatch + exec path runs without any network.
 
 use std::error::Error;
 use std::ffi::OsString;
@@ -25,7 +24,6 @@ fn launcher() -> Command {
 
 #[test]
 fn external_subcommand_exit_code_propagates() -> Result<(), Box<dyn Error>> {
-    // A resolved sub-binary exiting 42 makes `luminosity <sub>` exit 42 (AC5).
     let status = launcher().args(["frobnicate", "exit-42"]).status()?;
     assert_eq!(status.code(), Some(42));
     Ok(())
@@ -64,9 +62,8 @@ fn external_subcommand_terminating_signal_propagates(
 
 #[test]
 fn per_command_help_is_delegated_to_the_child() -> Result<(), Box<dyn Error>> {
-    // `luminosity foo --help` is NOT a top-level DisplayHelp — clap routes it to
-    // External, so dispatch resolves + re-execs the child with --help, emitting
-    // the child's OWN help (a sentinel only the fixture prints) (AC6).
+    // clap routes `foo --help` to External (not top-level help), so dispatch
+    // re-execs the child with --help and the child emits its own help.
     let output = launcher().args(["frobnicate", "--help"]).output()?;
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout)?;

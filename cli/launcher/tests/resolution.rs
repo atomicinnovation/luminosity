@@ -1,14 +1,10 @@
 //! Hermetic tests of the real fetch → verify → cache resolver.
 //!
-//! In-process against a local mock server with an injected test keypair: the
-//! resolver takes its trusted keys as config, so tests sign fixtures with a
-//! freshly-generated key and inject its public key — no unsafe production
-//! trusted-key env seam, and the embedded release key is never involved.
-//! Requires the `minisign` CLI to sign fixtures; skips cleanly if it is absent
-//! (present under `mise run test:unit:cli`).
+//! In-process against a local mock server: the resolver takes its trusted keys
+//! as config, so tests sign fixtures with a freshly-generated key and inject its
+//! public key. Requires the `minisign` CLI; skips cleanly if it is absent.
 
-// Test harness: expect/unwrap in the setup helpers (keygen, signing, temp dirs)
-// is the bounded test-scaffolding exemption; test bodies return Result + assert.
+// expect/unwrap allowed in the setup helpers (keygen, signing, temp dirs).
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 mod common;
