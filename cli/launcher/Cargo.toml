@@ -4,6 +4,10 @@
 name = "luminosity"
 version = "0.1.0-pre.0"
 edition = "2021"
+# The MSRV; with resolver = "3" this drives MSRV-aware version selection. A CI
+# leg builds/tests on this exact toolchain so an MSRV-breaking transitive bump
+# in the fast-moving reqwest/rustls closure fails loudly, not at a user's fetch.
+rust-version = "1.90.0"
 license = "MIT"
 # Static binary, not published; also lets cargo-deny's allow-wildcard-paths
 # exempt the kernel path dependency.
@@ -16,9 +20,21 @@ workspace = true
 name = "luminosity"
 path = "src/main.rs"
 
+# Arg-driven test fixture, located from black-box tests via
+# CARGO_BIN_EXE_luminosity-fixture (cargo only sets that var for bins in this
+# package, so the fixture cannot be a separate crate). Named unambiguously; the
+# release staging copies only `luminosity`, so it never enters a shipped asset.
+[[bin]]
+name = "luminosity-fixture"
+path = "tests/fixtures/luminosity_fixture.rs"
+
 [dependencies]
 kernel = { path = "../kernel" }
 clap = { workspace = true }
+reqwest = { workspace = true }
+rustls = { workspace = true }
+minisign-verify = { workspace = true }
+sha2 = { workspace = true }
 
 [build-dependencies]
 # vergen is named only to hold the exact pin (see root Cargo.toml); vergen-gitcl

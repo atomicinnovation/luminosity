@@ -11,12 +11,9 @@ wrong reason (resolving the real graph rather than the banned dependency).
 import os
 import shutil
 import subprocess
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 _CARGO = shutil.which("cargo")
 _CARGO_DENY = shutil.which("cargo-deny")
@@ -87,3 +84,46 @@ def test_native_tls_dependency_fails_the_bans_check(tmp_path: Path) -> None:
     )
     assert result.returncode != 0, result.stdout + result.stderr
     assert "native-tls" in (result.stdout + result.stderr)
+
+
+# The launcher's actual resolved feature graph must not pull the native-TLS,
+# OpenSSL, native-cert, or aws-lc-rs closures the rustls-webpki-roots/ring
+# choice is meant to avoid (AC7). deny's target-scoped ban is complementary;
+# this reads the real tree so a feature-flag regression is caught even if
+# deny's config drifts.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_WORKSPACE = _REPO_ROOT / "cli"
+
+_FORBIDDEN_IN_LAUNCHER_TREE = (
+    "openssl-sys",
+    "native-tls",
+    "rustls-native-certs",
+    "security-framework",
+    "aws-lc-rs",
+    "aws-lc-sys",
+)
+
+
+def _launcher_feature_tree() -> str:
+    result = subprocess.run(
+        ["cargo", "tree", "-e", "features", "-p", "luminosity"],
+        cwd=_WORKSPACE,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout
+
+
+@pytest.mark.parametrize("crate", _FORBIDDEN_IN_LAUNCHER_TREE)
+def test_launcher_tree_excludes_the_native_tls_closure(crate: str) -> None:
+    _require_tools()
+    tree = _launcher_feature_tree()
+    assert crate not in tree, f"{crate} entered the launcher dependency tree"
+
+
+def test_launcher_tree_uses_the_ring_crypto_provider() -> None:
+    # Positive control: prove the pure-Rust provider IS present, so the
+    # negative aws-lc-rs assertion is not passing because TLS dropped out.
+    _require_tools()
+    assert "ring" in _launcher_feature_tree()

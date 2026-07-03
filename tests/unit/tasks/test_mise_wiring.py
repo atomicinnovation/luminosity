@@ -353,6 +353,24 @@ class TestToolchainCoherence:
         clippy = tomllib.loads((WORKSPACE_ROOT / "clippy.toml").read_text())
         assert clippy["msrv"] == mise["tools"]["rust"]["version"]
 
+    def test_launcher_rust_version_matches_mise_rust_pin(self, mise: Mise):
+        # rust-version drives MSRV-aware resolution (resolver = "3"); it is a
+        # further hand-synced mirror of the mise rust pin. A drift would resolve
+        # the dep graph against a different floor than CI builds on.
+        launcher_cargo = tomllib.loads(
+            (WORKSPACE_ROOT / "launcher" / "Cargo.toml").read_text()
+        )
+        assert (
+            launcher_cargo["package"]["rust-version"]
+            == mise["tools"]["rust"]["version"]
+        )
+
+    def test_workspace_uses_msrv_aware_resolver(self):
+        # resolver = "3" is what makes rust-version actually gate resolution;
+        # resolver = "2" would silently ignore it.
+        workspace = tomllib.loads((WORKSPACE_ROOT / "Cargo.toml").read_text())
+        assert workspace["workspace"]["resolver"] == "3"
+
     def test_rustfmt_edition_matches_launcher_crate_edition(self):
         rustfmt = tomllib.loads((WORKSPACE_ROOT / "rustfmt.toml").read_text())
         launcher_cargo = tomllib.loads(
