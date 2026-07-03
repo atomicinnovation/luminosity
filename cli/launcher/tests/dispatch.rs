@@ -63,6 +63,21 @@ fn external_subcommand_terminating_signal_propagates(
 }
 
 #[test]
+fn per_command_help_is_delegated_to_the_child() -> Result<(), Box<dyn Error>> {
+    // `luminosity foo --help` is NOT a top-level DisplayHelp — clap routes it to
+    // External, so dispatch resolves + re-execs the child with --help, emitting
+    // the child's OWN help (a sentinel only the fixture prints) (AC6).
+    let output = launcher().args(["frobnicate", "--help"]).output()?;
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout)?;
+    assert!(
+        stdout.contains("LUMINOSITY_FIXTURE_HELP_SENTINEL"),
+        "expected the child's help sentinel, got: {stdout}"
+    );
+    Ok(())
+}
+
+#[test]
 fn non_utf8_arguments_survive_verbatim_to_the_child(
 ) -> Result<(), Box<dyn Error>> {
     // The reason External is Vec<OsString>, not Vec<String>: a non-UTF-8 arg
