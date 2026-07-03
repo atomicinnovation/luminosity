@@ -336,20 +336,20 @@ only bump the version despite `mise.toml:285/294` claiming they build.
 
 #### Automated Verification
 
-- [ ] `mise run test:unit:tasks` passes (new `build.release` / staging / checksum
+- [x] `mise run test:unit:tasks` passes (new `build.release` / staging / checksum
       unit tests, mocked `context.run`, per `tests/unit/tasks/test_build.py`).
-- [ ] `mise run build-system:check` passes (ruff + pyrefly strict + actionlint).
-- [ ] `mise run version:write -- 0.1.0-pre.1` no longer raises and rewrites all
+- [x] `mise run build-system:check` passes (ruff + pyrefly strict + actionlint).
+- [x] `mise run version:write -- 0.1.0-pre.1` no longer raises and rewrites all
       three anchors coherently.
-- [ ] `mise run build:launcher` still passes (host-native canary unchanged).
-- [ ] `mise run` (bare default) exits 0.
+- [x] `mise run build:launcher` still passes (host-native canary unchanged).
+- [x] `mise run` (bare default) exits 0.
 
 #### Manual Verification
 
-- [ ] On one host, `mise run build.release` produces four
+- [x] On one host, `mise run build.release` produces four
       `cli/launcher/bin/luminosity-{platform}` + four `.debug.tar.gz` +
       populated `checksums.json`.
-- [ ] `file`/`ldd` on the two musl binaries confirm "statically linked" / "not a
+- [x] `file`/`ldd` on the two musl binaries confirm "statically linked" / "not a
       dynamic executable"; on macOS `otool -L` on the host darwin binary lists
       only system libraries.
 

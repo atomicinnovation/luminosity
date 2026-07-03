@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from invoke import Context
 
+import tasks.build as tb
 import tasks.git as tgit
 import tasks.github as gh
 import tasks.marketplace as tm
@@ -72,6 +73,8 @@ class TestPrereleasePrepare:
         # Mocked so tests never mutate the real on-disk
         # .claude-plugin/marketplace-prerelease.json.
         mocker.patch.object(tm, "update_prerelease_version")
+        # Mocked so tests never trigger a real four-triple cargo-zigbuild.
+        mocker.patch.object(tb, "release")
 
     def test_calls_configure_and_pull(
         self, ctx: MagicMock, mocker: MockerFixture
@@ -85,6 +88,30 @@ class TestPrereleasePrepare:
         self._setup(mocker)
         prerelease_prepare(ctx)
         tv.bump.assert_called_once()
+
+    def test_cross_builds_the_release_binaries(
+        self, ctx: MagicMock, mocker: MockerFixture
+    ):
+        self._setup(mocker)
+        prerelease_prepare(ctx)
+        tb.release.assert_called_once_with(ctx)
+
+
+class TestReleasePrepare:
+    def _setup(self, mocker: MockerFixture):
+        mocker.patch.object(tgit, "configure")
+        mocker.patch.object(tgit, "pull")
+        mocker.patch.object(tv, "bump")
+        mocker.patch.object(tm, "update_version")
+        mocker.patch.object(tr.changelog, "release")
+        mocker.patch.object(tb, "release")
+
+    def test_cross_builds_the_release_binaries(
+        self, ctx: MagicMock, mocker: MockerFixture
+    ):
+        self._setup(mocker)
+        tr.release_prepare(ctx)
+        tb.release.assert_called_once_with(ctx)
 
 
 class TestPrereleaseFinalise:

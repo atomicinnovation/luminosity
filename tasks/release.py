@@ -2,7 +2,7 @@ import os
 
 from invoke import Context, task
 
-from . import changelog, git, github, marketplace, version
+from . import build, changelog, git, github, marketplace, version
 
 
 def _refuse_under_ci(task_name: str) -> None:
@@ -31,11 +31,12 @@ def _publish(context: Context) -> None:
 
 @task
 def prerelease_prepare(context: Context) -> None:
-    """CI prerelease part 1: bump version."""
+    """CI prerelease part 1: bump version, cross-build binaries, checksum."""
     git.configure(context)
     git.pull(context)
     version.bump(context, bump_type=[version.BumpType.PRE])
     marketplace.update_prerelease_version(context, plugin="accelerator")
+    build.release(context)
 
 
 @task
@@ -55,6 +56,7 @@ def release_prepare(context: Context) -> None:
     version.bump(context, bump_type=[version.BumpType.FINALISE])
     marketplace.update_version(context, plugin="luminosity")
     changelog.release(context)
+    build.release(context)
 
 
 @task

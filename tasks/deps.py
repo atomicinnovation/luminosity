@@ -23,6 +23,25 @@ def install_rust_targets(context: Context) -> None:
 
 
 @task
+def install_zigbuild(context: Context) -> None:
+    """Provision the zig + cargo-zigbuild cross-compile toolchain.
+
+    ziglang and cargo-zigbuild are uv-managed build-group deps (pinned in
+    pyproject.toml, frozen in uv.lock); this verifies both are usable and adds
+    the rustup cross-targets, so the four-triple `build:release` has everything
+    the cross-compile needs. Mirrors deps:install:rust-targets.
+    """
+    checks = (
+        ('uv run python -c "import ziglang"', "ziglang is not importable"),
+        ("uv run cargo-zigbuild --version", "cargo-zigbuild is not runnable"),
+    )
+    for command, message in checks:
+        if context.run(command, warn=True, pty=False).exited != 0:
+            raise Exit(f"deps:install:zigbuild: {message}", code=1)
+    install_rust_targets(context)
+
+
+@task
 def install_rust_components(context: Context) -> None:
     """Install the rustfmt, clippy, and llvm-tools-preview components.
 
