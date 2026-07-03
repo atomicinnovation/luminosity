@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,14 +16,18 @@ from tasks.github import (
     AssetVerificationError,
     create_release,
     download_and_verify,
+    download_and_verify_signature,
     download_release_asset,
     is_prerelease_version,
     upload_and_verify,
     upload_release_asset,
     verify_release_asset,
 )
+from tasks.shared import minisign
 from tasks.shared.errors import InvalidVersionError
 from tasks.shared.targets import TARGETS
+
+_MINISIGN_ABSENT = shutil.which(minisign.MINISIGN) is None
 
 _PLATFORMS = tuple(platform for _, platform in TARGETS)
 
@@ -40,6 +45,7 @@ def _setup_upload_and_verify(
     *,
     create_binaries: bool = True,
     create_archives: bool = True,
+    create_signatures: bool = True,
 ) -> None:
     checksums_file = tmp_path / "checksums.json"
     checksums_file.write_text(
@@ -50,29 +56,44 @@ def _setup_upload_and_verify(
             }
         )
     )
+    manifest_file = tmp_path / "manifest.json"
+    manifest_file.write_text(json.dumps({"schema_version": 1}))
+    manifest_sig = tmp_path / "manifest.minisig"
+    manifest_sig.write_text("untrusted comment: sig\nAAAA\n")
+    public_key = tmp_path / "release.pub"
+    public_key.write_text("untrusted comment: key\nRWQ\n")
     mocker.patch.object(gh, "CHECKSUMS", checksums_file)
+    mocker.patch.object(gh, "MANIFEST", manifest_file)
+    mocker.patch.object(gh, "MANIFEST_SIGNATURE", manifest_sig)
+    mocker.patch.object(gh, "RELEASE_PUBLIC_KEY", public_key)
     mocker.patch.object(
         gh,
         "binary_path",
-        side_effect=lambda p: tmp_path / f"accelerator-visualiser-{p}",
+        side_effect=lambda p: tmp_path / f"luminosity-{p}",
     )
     mocker.patch.object(
         gh,
         "debug_archive_path",
-        side_effect=lambda p: (
-            tmp_path / f"accelerator-visualiser-{p}.debug.tar.gz"
-        ),
+        side_effect=lambda p: tmp_path / f"luminosity-{p}.debug.tar.gz",
+    )
+    mocker.patch.object(
+        gh,
+        "signature_path",
+        side_effect=lambda p: tmp_path / f"luminosity-{p}.minisig",
     )
     if create_binaries:
         for platform in _PLATFORMS:
-            (tmp_path / f"accelerator-visualiser-{platform}").write_bytes(
-                b"\x00" * 4
-            )
+            (tmp_path / f"luminosity-{platform}").write_bytes(b"\x00" * 4)
     if create_archives:
         for platform in _PLATFORMS:
-            (
-                tmp_path / f"accelerator-visualiser-{platform}.debug.tar.gz"
-            ).write_bytes(b"\x00" * 8)
+            (tmp_path / f"luminosity-{platform}.debug.tar.gz").write_bytes(
+                b"\x00" * 8
+            )
+    if create_signatures:
+        for platform in _PLATFORMS:
+            (tmp_path / f"luminosity-{platform}.minisig").write_text(
+                "untrusted comment: sig\nAAAA\n"
+            )
 
 
 class TestCreateRelease:
@@ -276,17 +297,21 @@ class TestUploadAndVerify:
     ):
         _setup_upload_and_verify(mocker, tmp_path)
         mocker.patch.object(gh, "download_and_verify")
+        mocker.patch.object(gh, "download_and_verify_signature")
         upload_and_verify(ctx, "1.20.0")
         upload_calls = [
             c for c in ctx.run.call_args_list if "gh release upload" in str(c)
         ]
-        assert len(upload_calls) == 8
+        # 4 binaries + 4 debug archives + 4 .minisig + manifest.json +
+        # manifest.minisig.
+        assert len(upload_calls) == 14
 
     def test_publish_runs_after_verify(
         self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
     ):
         _setup_upload_and_verify(mocker, tmp_path)
         mocker.patch.object(gh, "download_and_verify")
+        mocker.patch.object(gh, "download_and_verify_signature")
         upload_and_verify(ctx, "1.20.0")
         all_cmds = [str(c.args[0]) for c in ctx.run.call_args_list]
         assert any("--draft=false" in s for s in all_cmds)
@@ -296,14 +321,28 @@ class TestUploadAndVerify:
     ):
         _setup_upload_and_verify(mocker, tmp_path)
         mock_verify = mocker.patch.object(gh, "download_and_verify")
+        mocker.patch.object(gh, "download_and_verify_signature")
         upload_and_verify(ctx, "1.20.0")
         assert mock_verify.call_count == 4
+
+    def test_signature_verified_per_binary_and_for_manifest(
+        self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
+    ):
+        _setup_upload_and_verify(mocker, tmp_path)
+        mocker.patch.object(gh, "download_and_verify")
+        mock_sig = mocker.patch.object(gh, "download_and_verify_signature")
+        upload_and_verify(ctx, "1.20.0")
+        # 4 per-binary signature verifications + 1 manifest verification.
+        assert mock_sig.call_count == 5
+        verified_names = {c.args[2] for c in mock_sig.call_args_list}
+        assert "manifest.json" in verified_names
 
     def test_verify_skips_debug_archives(
         self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
     ):
         _setup_upload_and_verify(mocker, tmp_path)
         mock_verify = mocker.patch.object(gh, "download_and_verify")
+        mocker.patch.object(gh, "download_and_verify_signature")
         upload_and_verify(ctx, "1.20.0")
         for call in mock_verify.call_args_list:
             asset_name = (
@@ -313,6 +352,25 @@ class TestUploadAndVerify:
             )
             assert asset_name is not None
             assert not asset_name.endswith(".debug.tar.gz")
+
+    def test_signature_mismatch_preserves_draft(
+        self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
+    ):
+        # A re-downloaded binary whose signature was made by a non-release key
+        # (or fails to verify for any reason) must abort with the draft + tag
+        # preserved, never fall into the tag-destroying generic branch.
+        _setup_upload_and_verify(mocker, tmp_path)
+        mocker.patch.object(gh, "download_and_verify")
+        mocker.patch.object(
+            gh,
+            "download_and_verify_signature",
+            side_effect=AssetVerificationError("non-release key"),
+        )
+        with pytest.raises(AssetVerificationError):
+            upload_and_verify(ctx, "1.20.0")
+        all_cmds = "".join(str(c.args[0]) for c in ctx.run.call_args_list)
+        assert "gh release delete" not in all_cmds
+        assert "--draft=false" not in all_cmds
 
     def test_asset_verification_error_preserves_draft(
         self,
@@ -422,6 +480,88 @@ class TestUploadAndVerify:
         )
         with pytest.raises(subprocess.CalledProcessError, match="gh upload"):
             upload_and_verify(ctx, "1.20.0")
+
+
+def _generate_keypair(tmp_path: Path, name: str) -> tuple[Path, Path]:
+    public_key = tmp_path / f"{name}.pub"
+    secret_key = tmp_path / f"{name}.key"
+    subprocess.run(
+        [
+            minisign.MINISIGN,
+            "-G",
+            "-W",
+            "-f",
+            "-p",
+            str(public_key),
+            "-s",
+            str(secret_key),
+        ],
+        capture_output=True,
+        check=True,
+        timeout=60,
+    )
+    return public_key, secret_key
+
+
+@pytest.mark.skipif(_MINISIGN_ABSENT, reason="minisign not on PATH")
+class TestDownloadAndVerifySignatureRealTool:
+    """`download_and_verify_signature` against the real minisign binary."""
+
+    def _stage(
+        self,
+        mocker: MockerFixture,
+        signed_by_secret: Path,
+        password: str | None = None,
+    ) -> tuple[Path, str]:
+        # A real signed payload; download_release_asset is stubbed to place the
+        # already-prepared bytes into whatever temp path the helper picked.
+        source_dir = signed_by_secret.parent
+        payload = source_dir / "payload.bin"
+        payload.write_bytes(b"launcher-bytes")
+        sig = source_dir / "payload.bin.minisig"
+        minisign.sign(signed_by_secret, payload, sig, password=password)
+
+        def fake_download(
+            ctx: MagicMock, tag: str, asset_name: str, output_path: Path
+        ) -> None:
+            src = sig if asset_name.endswith(".minisig") else payload
+            output_path.write_bytes(src.read_bytes())
+
+        mocker.patch.object(
+            gh, "download_release_asset", side_effect=fake_download
+        )
+        return payload, sig.name
+
+    def test_valid_signature_passes(
+        self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
+    ):
+        public_key, secret_key = _generate_keypair(tmp_path, "release")
+        _, sig_name = self._stage(mocker, secret_key)
+        download_and_verify_signature(
+            ctx, "v1.0.0", "payload.bin", sig_name, public_key
+        )
+
+    def test_non_release_key_signature_is_refused(
+        self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
+    ):
+        release_pub, _ = _generate_keypair(tmp_path, "release")
+        _, attacker_secret = _generate_keypair(tmp_path, "attacker")
+        _, sig_name = self._stage(mocker, attacker_secret)
+        with pytest.raises(AssetVerificationError):
+            download_and_verify_signature(
+                ctx, "v1.0.0", "payload.bin", sig_name, release_pub
+            )
+
+    def test_missing_minisign_tool_raises_asset_verification_error(
+        self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
+    ):
+        public_key, secret_key = _generate_keypair(tmp_path, "release")
+        _, sig_name = self._stage(mocker, secret_key)
+        mocker.patch.object(minisign, "MINISIGN", "definitely-not-a-real-tool")
+        with pytest.raises(AssetVerificationError):
+            download_and_verify_signature(
+                ctx, "v1.0.0", "payload.bin", sig_name, public_key
+            )
 
 
 class TestIsPreReleaseVersion:

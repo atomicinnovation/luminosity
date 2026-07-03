@@ -1,13 +1,24 @@
 import json
+from collections import Counter
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import semver
 import tomlkit
-from invoke import Context, task
+from invoke import Context, Exit, task
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from .shared.files import atomic_write_text
-from .shared.paths import CARGO_TOML, CHECKSUMS, PLUGIN_JSON
+from .shared.paths import (
+    CARGO_TOML,
+    CHECKSUMS,
+    LAUNCHER_EMBEDDED_PUBLIC_KEY,
+    MANIFEST,
+    PLUGIN_JSON,
+    RELEASE_PUBLIC_KEY,
+)
 
 
 class BumpType(StrEnum):
@@ -41,6 +52,12 @@ def _render_checksums_version(version: str) -> str:
     return json.dumps(data, indent=2) + "\n"
 
 
+def _render_manifest_version(version: str) -> str:
+    data = json.loads(MANIFEST.read_text())
+    data["version"] = version
+    return json.dumps(data, indent=2) + "\n"
+
+
 _PRERELEASE_IDENTIFIER = "pre"
 
 
@@ -70,14 +87,83 @@ def read(_context: Context, print_to_stdout: bool = True) -> semver.Version:
 
 @task
 def write(_context: Context, version: str) -> None:
-    """Write plugin version to plugin.json, Cargo.toml, and checksums.json."""
+    """Write the version to every version-bearing file, coherently.
+
+    Single writer for plugin.json, the launcher Cargo.toml, checksums.json, and
+    the release manifest, so the four anchors version:check guards can never
+    drift apart through a normal bump.
+    """
     rendered_plugin_json = _render_plugin_json(version)
     rendered_cargo_toml = _render_cargo_toml(version)
     rendered_checksums = _render_checksums_version(version)
+    rendered_manifest = _render_manifest_version(version)
 
     atomic_write_text(PLUGIN_JSON, rendered_plugin_json)
     atomic_write_text(CARGO_TOML, rendered_cargo_toml)
     atomic_write_text(CHECKSUMS, rendered_checksums)
+    atomic_write_text(MANIFEST, rendered_manifest)
+
+
+def _cargo_version() -> str:
+    return tomlkit.parse(CARGO_TOML.read_text())["package"]["version"]
+
+
+def _json_version(path: Path) -> str:
+    return json.loads(path.read_text())["version"]
+
+
+def _anchor_versions() -> dict[str, str]:
+    """Return each guarded anchor's declared version, keyed by filename."""
+    return {
+        "plugin.json": read_plugin_metadata()["version"],
+        "cli/launcher/Cargo.toml": _cargo_version(),
+        "cli/launcher/bin/checksums.json": _json_version(CHECKSUMS),
+        "cli/launcher/bin/manifest.json": _json_version(MANIFEST),
+    }
+
+
+def _mismatching_anchor_files(versions: dict[str, str]) -> list[str]:
+    """Files whose version differs from the majority — empty when all agree."""
+    majority, _ = Counter(versions.values()).most_common(1)[0]
+    return sorted(name for name, value in versions.items() if value != majority)
+
+
+def _key_coherence_error() -> str | None:
+    """Non-None when the two committed release public keys diverge."""
+    shipped = RELEASE_PUBLIC_KEY.read_text()
+    embedded = LAUNCHER_EMBEDDED_PUBLIC_KEY.read_text()
+    if shipped != embedded:
+        return (
+            "release public key diverges: keys/luminosity-release.pub differs "
+            "from cli/launcher/keys/release.pub"
+        )
+    return None
+
+
+@task
+def check(_context: Context) -> None:
+    """Fail (naming the culprits) if the release-contract anchors have drifted.
+
+    Enforces version coherence across plugin.json, the launcher Cargo.toml,
+    checksums.json, and manifest.json, plus a companion key-coherence check
+    that the bootstrap-shipped public key is byte-identical to the one the
+    launcher embeds. Wired into `mise run check` and re-run as a fail-closed
+    precondition on the release path.
+    """
+    problems: list[str] = []
+
+    mismatching = _mismatching_anchor_files(_anchor_versions())
+    if mismatching:
+        problems.append(
+            "version mismatch across anchors: " + ", ".join(mismatching)
+        )
+
+    key_error = _key_coherence_error()
+    if key_error is not None:
+        problems.append(key_error)
+
+    if problems:
+        raise Exit("version:check failed:\n  " + "\n  ".join(problems), code=1)
 
 
 @task(iterable=["bump_type"])
