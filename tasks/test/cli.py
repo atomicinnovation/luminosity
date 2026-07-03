@@ -12,9 +12,14 @@ def run(context: Context) -> None:
     is folded into the test run (default `cargo llvm-cov nextest`) and there is
     no cross-crate profraw collision to isolate. It is report-only — no
     `--fail-under`/threshold, by design.
+
+    The arg-driven test fixture (`tests/fixtures/`) is excluded from the
+    coverage report: it is spawned as a subprocess, never instrumented in-run,
+    so it would otherwise skew the report as permanent 0%-covered scaffolding.
     """
     command = (
-        "cargo llvm-cov nextest --workspace --summary-only"
+        "cargo llvm-cov nextest --workspace --summary-only "
+        "--ignore-filename-regex 'tests/fixtures/'"
         if coverage_enabled()
         else "cargo nextest run --workspace"
     )

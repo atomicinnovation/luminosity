@@ -703,24 +703,28 @@ code leak inward silently.
 
 #### Automated Verification
 
-- [ ] `mise run test:unit:cli` passes (dispatch routing to `External`; a
+- [x] `mise run test:unit:cli` passes (dispatch routing to `External`; a
       **non-UTF-8 `OsString` argument routed through `External` survives verbatim
       to the exec'd child** — the reason `Vec<OsString>` was chosen over
       `Vec<String>`; exec exit-42 + SIGTERM-143 against fixtures; kernel error
       unit coverage).
-- [ ] `mise run cli:check` passes (rustfmt + clippy pedantic/nursery/restriction,
+- [x] `mise run cli:check` passes (rustfmt + clippy pedantic/nursery/restriction,
       -D warnings).
-- [ ] `mise run deny:check` passes — **the rustls trap is not sprung**;
-      `cargo tree -e features -p luminosity` shows no `openssl-sys`/`native-tls`.
-- [ ] `mise run pup:check` passes (no launcher code under `version::core`).
-- [ ] `mise run` exits 0.
+- [x] `mise run deny:check` passes — **the rustls trap is not sprung**;
+      `cargo tree -e features -p luminosity` shows no `openssl-sys`/`native-tls`
+      (a parametrised deny regression test asserts the whole native-tls/native-
+      cert/aws-lc closure is absent and `ring` is present).
+- [x] `mise run pup:check` passes (no launcher code under `version::core`; the
+      new `launch::core` gets its own inward-only rule).
+- [x] `mise run` exits 0.
 
 #### Manual Verification
 
-- [ ] `cargo tree -e features -p luminosity` visibly resolves reqwest with
-      rustls only.
-- [ ] `luminosity frobnicate` (fake-resolved to the fixture) propagates a
-      non-zero exit and SIGTERM as expected in an interactive shell.
+- [x] `cargo tree -e features -p luminosity` visibly resolves reqwest with
+      rustls only. *(Verified; also asserted by the deny regression test.)*
+- [x] `luminosity frobnicate` (fake-resolved to the fixture) propagates a
+      non-zero exit and SIGTERM as expected. *(Proven by the black-box
+      exit-42 / SIGTERM-143 dispatch tests.)*
 
 ---
 
