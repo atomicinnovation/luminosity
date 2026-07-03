@@ -69,18 +69,19 @@ maintainer duties, not one-offs.
 
 ### Key provisioning (do this before the first real release)
 
-The public key committed at `keys/luminosity-release.pub` and
-`cli/launcher/keys/release.pub` (kept byte-identical by `mise run version:check`)
-is currently a **placeholder** generated during implementation. Before cutting a
-real release:
+The single public key committed at `keys/luminosity-release.pub` is currently a
+**placeholder** generated during implementation. It is the one source of truth:
+the bootstrap ships it, and `cli/launcher/build.rs` copies it into the launcher's
+`OUT_DIR` at build time for the launcher to embed, so the two never diverge (no
+coherence check needed). Before cutting a real release:
 
 1. Generate the production keypair: `minisign -G -p release.pub -s release.key`
    (choose a strong passphrase).
 2. Store the **secret** in the GitHub `MINISIGN_SECRET_KEY` secret (the full
    `release.key` contents) and its passphrase in `MINISIGN_KEY_PASSWORD`. The
    secret key is **never** committed (`.gitignore` blocks `*.key`).
-3. Replace **both** committed public-key copies with the real public key and
-   confirm `mise run version:check` still passes (key coherence).
+3. Replace `keys/luminosity-release.pub` with the real public key and rebuild
+   (`mise run build:launcher` re-embeds it via `build.rs`).
 
 ### Publishing `.minisig` assets
 

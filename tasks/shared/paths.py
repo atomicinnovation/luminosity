@@ -9,11 +9,11 @@ CHECKSUMS = BIN_DIR / "checksums.json"
 MANIFEST = BIN_DIR / "manifest.json"
 MANIFEST_SIGNATURE = BIN_DIR / "manifest.minisig"
 CARGO_TOML = LAUNCHER_DIR / "Cargo.toml"
-# The release public key rides two committed copies kept byte-identical by
-# version:check: one shipped in the plugin package (for the bootstrap's
-# root-of-trust shim) and one the launcher embeds via include_str!.
+# The single committed release public key: shipped in the plugin package (the
+# bootstrap reads it, and the release re-verify checks against it), and copied
+# into the launcher's OUT_DIR by cli/launcher/build.rs for the launcher to embed
+# — one source of truth, so no key-coherence check is needed.
 RELEASE_PUBLIC_KEY = REPO_ROOT / "keys" / "luminosity-release.pub"
-LAUNCHER_EMBEDDED_PUBLIC_KEY = LAUNCHER_DIR / "keys" / "release.pub"
 PLUGIN_JSON = REPO_ROOT / ".claude-plugin/plugin.json"
 MARKETPLACE_JSON = REPO_ROOT / ".claude-plugin/marketplace.json"
 PRERELEASE_MARKETPLACE_JSON = (

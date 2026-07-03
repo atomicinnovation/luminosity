@@ -8,10 +8,14 @@ use minisign_verify::{PublicKey, Signature};
 
 use crate::launch::core::ResolutionError;
 
-/// The committed release public key the launcher embeds. Kept byte-identical to
-/// the plugin-package copy by `version:check` (key coherence).
+/// The release public key the launcher embeds.
+///
+/// Single source of truth: `build.rs` copies the one committed key
+/// (`keys/luminosity-release.pub` — the same file the bootstrap ships) into
+/// `OUT_DIR`, so the launcher's embedded key and the bootstrap's key cannot
+/// diverge (no separate coherence check needed).
 pub const EMBEDDED_RELEASE_KEY: &str =
-    include_str!("../../../../keys/release.pub");
+    include_str!(concat!(env!("OUT_DIR"), "/release.pub"));
 
 /// A set of trusted public keys; a signature is accepted if ANY key verifies it.
 pub struct TrustedKeys {
@@ -69,5 +73,17 @@ impl TrustedKeys {
         self.keys
             .iter()
             .any(|key| key.verify(data, &parsed, false).is_ok())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TrustedKeys;
+
+    #[test]
+    fn the_embedded_release_key_parses() {
+        // Guards the build.rs copy → include_str!(OUT_DIR) → parse chain: the
+        // committed key must produce a usable trust root.
+        assert!(TrustedKeys::embedded().is_ok());
     }
 }

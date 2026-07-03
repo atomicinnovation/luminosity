@@ -11,14 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 from .shared.files import atomic_write_text
-from .shared.paths import (
-    CARGO_TOML,
-    CHECKSUMS,
-    LAUNCHER_EMBEDDED_PUBLIC_KEY,
-    MANIFEST,
-    PLUGIN_JSON,
-    RELEASE_PUBLIC_KEY,
-)
+from .shared.paths import CARGO_TOML, CHECKSUMS, MANIFEST, PLUGIN_JSON
 
 
 class BumpType(StrEnum):
@@ -128,42 +121,26 @@ def _mismatching_anchor_files(versions: dict[str, str]) -> list[str]:
     return sorted(name for name, value in versions.items() if value != majority)
 
 
-def _key_coherence_error() -> str | None:
-    """Non-None when the two committed release public keys diverge."""
-    shipped = RELEASE_PUBLIC_KEY.read_text()
-    embedded = LAUNCHER_EMBEDDED_PUBLIC_KEY.read_text()
-    if shipped != embedded:
-        return (
-            "release public key diverges: keys/luminosity-release.pub differs "
-            "from cli/launcher/keys/release.pub"
-        )
-    return None
-
-
 @task
 def check(_context: Context) -> None:
     """Fail (naming the culprits) if the release-contract anchors have drifted.
 
     Enforces version coherence across plugin.json, the launcher Cargo.toml,
-    checksums.json, and manifest.json, plus a companion key-coherence check
-    that the bootstrap-shipped public key is byte-identical to the one the
-    launcher embeds. Wired into `mise run check` and re-run as a fail-closed
-    precondition on the release path.
-    """
-    problems: list[str] = []
+    checksums.json, and manifest.json. Wired into `mise run check` and re-run as
+    a fail-closed precondition on the release path.
 
+    There is no key-coherence check: the release public key is a single
+    committed file that `cli/launcher/build.rs` copies into the launcher's
+    OUT_DIR at build time, so the bootstrap-shipped key and the launcher's
+    embedded key are the same source and cannot diverge.
+    """
     mismatching = _mismatching_anchor_files(_anchor_versions())
     if mismatching:
-        problems.append(
-            "version mismatch across anchors: " + ", ".join(mismatching)
+        raise Exit(
+            "version:check failed: version mismatch across anchors: "
+            + ", ".join(mismatching),
+            code=1,
         )
-
-    key_error = _key_coherence_error()
-    if key_error is not None:
-        problems.append(key_error)
-
-    if problems:
-        raise Exit("version:check failed:\n  " + "\n  ".join(problems), code=1)
 
 
 @task(iterable=["bump_type"])
