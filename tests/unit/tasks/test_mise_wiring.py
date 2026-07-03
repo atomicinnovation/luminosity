@@ -7,6 +7,7 @@ prose becomes executable assertions. Introduced in Phase 1 and extended each
 phase as edges are added.
 """
 
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,7 @@ from typing import Any
 import pytest
 
 from tasks.shared.rust import LAUNCHER_CRATE
+from tasks.shared.targets import TARGETS
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKSPACE_ROOT = REPO_ROOT / "cli"
@@ -383,3 +385,45 @@ class TestToolchainCoherence:
             (WORKSPACE_ROOT / "launcher" / "Cargo.toml").read_text()
         )
         assert launcher_cargo["package"]["name"] == LAUNCHER_CRATE
+
+
+class TestPlatformAliasCoherence:
+    """The triple→alias map is single-sourced across Python, launcher, bash.
+
+    The publisher (`tasks/shared/targets.py`), the launcher's `HOST_PLATFORM`
+    cfg map, and (later) the bootstrap must agree on the platform alias, or the
+    asset-naming contract silently drifts across publisher and consumer.
+    """
+
+    _RESOLVE_RS = (
+        WORKSPACE_ROOT
+        / "launcher"
+        / "src"
+        / "launch"
+        / "outbound"
+        / "resolve"
+        / "mod.rs"
+    )
+
+    def _launcher_alias_map(self) -> dict[tuple[str, str], str]:
+        pattern = re.compile(
+            r'#\[cfg\(all\(target_arch = "([^"]+)", target_os = "([^"]+)"\)\)\]'
+            r'\s*pub const HOST_PLATFORM: &str = "([^"]+)";'
+        )
+        source = self._RESOLVE_RS.read_text()
+        return {
+            (arch, os): alias for arch, os, alias in pattern.findall(source)
+        }
+
+    def _expected_alias_map(self) -> dict[tuple[str, str], str]:
+        arch_of = {"aarch64": "aarch64", "x86_64": "x86_64"}
+        os_of = {"apple-darwin": "macos", "unknown-linux": "linux"}
+        expected: dict[tuple[str, str], str] = {}
+        for triple, alias in TARGETS:
+            arch = next(a for a in arch_of if triple.startswith(a))
+            os_marker = next(marker for marker in os_of if marker in triple)
+            expected[(arch, os_of[os_marker])] = alias
+        return expected
+
+    def test_launcher_host_platform_map_matches_targets(self):
+        assert self._launcher_alias_map() == self._expected_alias_map()

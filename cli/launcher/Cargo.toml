@@ -35,6 +35,8 @@ reqwest = { workspace = true }
 rustls = { workspace = true }
 minisign-verify = { workspace = true }
 sha2 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [build-dependencies]
 # vergen is named only to hold the exact pin (see root Cargo.toml); vergen-gitcl

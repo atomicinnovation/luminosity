@@ -832,6 +832,8 @@ dependencies = [
  "minisign-verify",
  "reqwest",
  "rustls",
+ "serde",
+ "serde_json",
  "sha2",
  "time",
  "vergen",
