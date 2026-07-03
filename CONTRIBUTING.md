@@ -75,12 +75,15 @@ the bootstrap ships it, and `cli/launcher/build.rs` copies it into the launcher'
 `OUT_DIR` at build time for the launcher to embed, so the two never diverge (no
 coherence check needed). Before cutting a real release:
 
-1. Generate the production keypair: `minisign -G -p release.pub -s release.key`
-   (choose a strong passphrase).
+1. Generate the production keypair: `mise run keys:generate` (choose a strong
+   passphrase; pass `--force` to replace the placeholder). It writes the public
+   key to `keys/luminosity-release.pub` (commit it) and the secret key to the
+   gitignored `keys/luminosity-release.key`, then prints these next steps.
 2. Store the **secret** in the GitHub `MINISIGN_SECRET_KEY` secret (the full
-   `release.key` contents) and its passphrase in `MINISIGN_KEY_PASSWORD`. The
-   secret key is **never** committed (`.gitignore` blocks `*.key`).
-3. Replace `keys/luminosity-release.pub` with the real public key and rebuild
+   `keys/luminosity-release.key` contents) and its passphrase in
+   `MINISIGN_KEY_PASSWORD`, then delete the local secret key. It is **never**
+   committed (`.gitignore` blocks `*.key`).
+3. Rebuild so the launcher re-embeds the new public key
    (`mise run build:launcher` re-embeds it via `build.rs`).
 
 ### Publishing `.minisig` assets

@@ -7,6 +7,7 @@ from . import (
     deps,
     git,
     github,
+    keys,
     lint,
     marketplace,
     pup,
@@ -38,6 +39,7 @@ ns.add_collection(Collection.from_module(deny))
 ns.add_collection(Collection.from_module(deps))
 ns.add_collection(Collection.from_module(git))
 ns.add_collection(Collection.from_module(github))
+ns.add_collection(Collection.from_module(keys))
 ns.add_collection(Collection.from_module(marketplace))
 ns.add_collection(Collection.from_module(pup))
 ns.add_collection(Collection.from_module(sign))
