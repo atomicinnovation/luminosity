@@ -7,6 +7,14 @@ TARGETS = (
     ("x86_64-unknown-linux-musl", "linux-x64"),
 )
 
+# The minimum macOS the cross-built darwin artifacts support, set explicitly so
+# the supported range is a conscious, reproducible choice rather than whatever
+# the host toolchain happens to default to. 11.0 (Big Sur) is the common floor
+# for both arm64 (which requires >= 11.0) and x86_64. Bump deliberately when the
+# support window moves; the darwin release builds export it as
+# MACOSX_DEPLOYMENT_TARGET.
+MACOS_DEPLOYMENT_TARGET = "11.0"
+
 # platform.system() value -> the OS substring its release triples carry.
 _HOST_OS_MARKERS = {
     "Darwin": "apple-darwin",

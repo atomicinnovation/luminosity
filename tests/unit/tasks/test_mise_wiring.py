@@ -288,6 +288,49 @@ class TestFinalEnumeratedArrays:
         ]
 
 
+class TestZigbuildProvisioning:
+    """The four-triple release build provisions its cross-compile toolchain."""
+
+    def test_build_release_provisions_zigbuild(self, mise: Mise):
+        assert "deps:install:zigbuild" in _depends(mise, "build:release")
+
+    def test_release_prepare_tasks_provision_zigbuild(self, mise: Mise):
+        # The prepare halves run the cross-build, so they must provision zig +
+        # cargo-zigbuild (which itself adds the rustup targets), not merely the
+        # rustup targets the host-native build needed.
+        assert "deps:install:zigbuild" in _depends(mise, "prerelease:prepare")
+        assert "deps:install:zigbuild" in _depends(mise, "release:prepare")
+
+
+class TestZigbuildPins:
+    """zig + cargo-zigbuild are exact-pinned and coherent with uv.lock.
+
+    They are provisioned by uv (build group) rather than mise [tools], so the
+    "pinned exactly" convention is enforced here: the pyproject constraint must
+    be an exact `==` and equal the version uv actually resolved, so a frozen
+    install reproduces the tested cross-compile toolchain.
+    """
+
+    _PINNED = ("ziglang", "cargo-zigbuild")
+
+    def _build_group(self) -> list[str]:
+        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+        return pyproject["dependency-groups"]["build"]
+
+    def _locked_versions(self) -> dict[str, str]:
+        lock = tomllib.loads((REPO_ROOT / "uv.lock").read_text())
+        return {
+            p["name"]: p["version"] for p in lock["package"] if "version" in p
+        }
+
+    @pytest.mark.parametrize("name", _PINNED)
+    def test_pinned_exactly(self, name: str):
+        constraints = [
+            dep for dep in self._build_group() if dep.startswith(name)
+        ]
+        assert constraints == [f"{name}=={self._locked_versions()[name]}"]
+
+
 class TestToolchainCoherence:
     """The clippy msrv and rustfmt edition mirror the mise rust pin by hand.
 
