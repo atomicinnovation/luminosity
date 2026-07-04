@@ -482,6 +482,31 @@ class TestUploadAndVerify:
             upload_and_verify(ctx, "1.20.0")
 
 
+class TestDownloadAndVerifySignatureTimeout:
+    """A `gh release download` timeout during signature re-verification must
+    surface as AssetVerificationError, not a bare TimeoutExpired — otherwise
+    the publish path's generic branch destroys the pushed tag."""
+
+    def test_download_timeout_raises_asset_verification_error(
+        self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
+    ):
+        public_key = tmp_path / "release.pub"
+        public_key.write_text("untrusted comment: test\nRWtest\n")
+        mocker.patch.object(
+            gh,
+            "download_release_asset",
+            side_effect=subprocess.TimeoutExpired(["gh"], 120),
+        )
+        with pytest.raises(AssetVerificationError, match="timed out"):
+            download_and_verify_signature(
+                ctx,
+                "v1.0.0",
+                "payload.bin",
+                "payload.bin.minisig",
+                public_key,
+            )
+
+
 def _generate_keypair(tmp_path: Path, name: str) -> tuple[Path, Path]:
     public_key = tmp_path / f"{name}.pub"
     secret_key = tmp_path / f"{name}.key"

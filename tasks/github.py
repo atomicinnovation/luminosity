@@ -163,8 +163,17 @@ def download_and_verify_signature(
     with tempfile.NamedTemporaryFile(delete=False) as sig_tmp:
         sig_path = Path(sig_tmp.name)
     try:
-        download_release_asset(context, release_tag, asset_name, target_path)
-        download_release_asset(context, release_tag, signature_name, sig_path)
+        try:
+            download_release_asset(
+                context, release_tag, asset_name, target_path
+            )
+            download_release_asset(
+                context, release_tag, signature_name, sig_path
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise AssetVerificationError(
+                f"gh release download timed out for {asset_name}"
+            ) from exc
         try:
             minisign.verify(target_path, sig_path, public_key)
         except MinisignError as exc:
