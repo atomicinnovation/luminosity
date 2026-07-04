@@ -83,3 +83,20 @@ class TestVersionCheck:
         with pytest.raises(Exit) as excinfo:
             check(ctx)
         assert filename in str(excinfo.value)
+
+    def test_even_split_names_every_anchor(
+        self, ctx: MagicMock, coherent_tree: dict[str, Path]
+    ):
+        # A 2-2 split has no majority to trust as the reference, so every
+        # anchor must be named — not just the pair that loses a tiebreak.
+        coherent_tree["cli/launcher/bin/checksums.json"].write_text(
+            json.dumps({"version": "0.2.0", "binaries": {}})
+        )
+        coherent_tree["cli/launcher/bin/manifest.json"].write_text(
+            json.dumps({"schema_version": 1, "version": "0.2.0"})
+        )
+        with pytest.raises(Exit) as excinfo:
+            check(ctx)
+        message = str(excinfo.value)
+        for filename in coherent_tree:
+            assert filename in message
