@@ -214,12 +214,22 @@ class TestPytestSuiteWiring:
             == "invoke test.integration.deny"
         )
 
-    def test_integration_roll_up_includes_tasks_and_deny(self, mise: Mise):
-        # The deny ban regression rides the general test-integration job; the
-        # nightly-only pup suite does not (asserted in TestPupWiring).
+    def test_integration_scripts_wraps_an_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["test:integration:scripts"]["run"]
+            == "invoke test.integration.scripts"
+        )
+
+    def test_integration_roll_up_includes_tasks_deny_and_scripts(
+        self, mise: Mise
+    ):
+        # The deny ban regression and the shell-wrapper suite ride the general
+        # test-integration job; the nightly-only pup suite does not (asserted in
+        # TestPupWiring).
         assert _depends(mise, "test:integration") == [
             "test:integration:tasks",
             "test:integration:deny",
+            "test:integration:scripts",
         ]
 
 
