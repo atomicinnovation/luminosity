@@ -292,7 +292,7 @@ description = "Bump plugin version"
 run = "invoke version.bump"
 
 [tasks."version:check"]
-description = "Enforce version coherence across plugin.json / Cargo.toml / checksums.json / manifest.json plus release-key coherence (names the drifted files)"
+description = "Enforce version coherence across plugin.json / Cargo.toml / checksums.json / manifest.json (names the drifted files)"
 depends = ["deps:install:python"]
 run = "invoke version.check"
 

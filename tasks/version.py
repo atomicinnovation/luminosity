@@ -116,9 +116,23 @@ def _anchor_versions() -> dict[str, str]:
 
 
 def _mismatching_anchor_files(versions: dict[str, str]) -> list[str]:
-    """Files whose version differs from the majority — empty when all agree."""
-    majority, _ = Counter(versions.values()).most_common(1)[0]
-    return sorted(name for name, value in versions.items() if value != majority)
+    """Files whose version differs from the reference — empty when all agree.
+
+    A strict majority is the reference (its holders are coherent; the rest are
+    named). With no strict majority — an even split or all-distinct — no anchor
+    can be trusted as the reference, so every anchor is named rather than an
+    order-dependent subset.
+    """
+    counts = Counter(versions.values())
+    if len(counts) == 1:
+        return []
+    (top_version, top_count), *rest = counts.most_common()
+    has_strict_majority = not rest or rest[0][1] < top_count
+    if has_strict_majority:
+        return sorted(
+            name for name, value in versions.items() if value != top_version
+        )
+    return sorted(versions)
 
 
 @task
