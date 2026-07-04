@@ -11,7 +11,11 @@ use reqwest::redirect::{Attempt, Policy};
 
 const MAX_ATTEMPTS: u32 = 3;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
-const TOTAL_TIMEOUT: Duration = Duration::from_secs(120);
+// Blocking reqwest exposes only a connect timeout and a whole-request total
+// (no per-read/idle timeout), so the total is sized as a *generous aggregate
+// deadline* — large enough that a big asset over a slow-but-progressing link
+// completes rather than being false-failed, while still bounding a hung request.
+const TOTAL_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_REDIRECTS: usize = 10;
 const CDN_HOST_SUFFIX: &str = ".githubusercontent.com";
 const RELEASE_ORIGIN_HOST: &str = "github.com";
@@ -57,24 +61,33 @@ pub struct Fetcher {
     client: Client,
     max_attempts: u32,
     backoff: Duration,
+    require_https: bool,
 }
 
 impl Fetcher {
-    /// Build the production fetcher (real timeouts + backoff).
+    /// Build the production fetcher (real timeouts + backoff, https pinned).
     ///
     /// # Errors
     ///
     /// If the underlying client cannot be constructed.
     pub fn new() -> Result<Self, String> {
-        Self::with_backoff(Duration::from_millis(250))
+        Self::build(Duration::from_millis(250), true)
     }
 
-    /// Build a fetcher with a caller-chosen backoff (tests use a tiny one).
+    /// Build a fetcher with a caller-chosen backoff, permitting `http`.
+    ///
+    /// This is the test path: it points at a local `http` mock server, so the
+    /// production https-scheme pin is relaxed. Production code must use
+    /// [`Fetcher::new`].
     ///
     /// # Errors
     ///
     /// If the underlying client cannot be constructed.
     pub fn with_backoff(backoff: Duration) -> Result<Self, String> {
+        Self::build(backoff, false)
+    }
+
+    fn build(backoff: Duration, require_https: bool) -> Result<Self, String> {
         // Ensure the ring crypto provider is installed before building a TLS
         // client (idempotent: an already-installed provider is fine). This makes
         // the Fetcher self-sufficient for both main and the in-process tests.
@@ -89,17 +102,23 @@ impl Fetcher {
             client,
             max_attempts: MAX_ATTEMPTS,
             backoff,
+            require_https,
         })
     }
 
     /// GET `url`, returning its body bytes. Retries transient/5xx failures with
     /// backoff up to the attempt cap; a 404 returns [`FetchError::NotFound`]
-    /// immediately.
+    /// immediately. A production fetcher refuses a non-https URL up front.
     ///
     /// # Errors
     ///
     /// [`FetchError`] describing the terminal failure.
     pub fn get(&self, url: &str) -> Result<Vec<u8>, FetchError> {
+        if self.require_https && !is_https(url) {
+            return Err(FetchError::Unreachable(format!(
+                "refusing non-https URL (scheme not permitted): {url}"
+            )));
+        }
         let mut last = String::new();
         for attempt in 0..self.max_attempts {
             if attempt > 0 {
@@ -146,7 +165,26 @@ enum Terminal {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_allowed_redirect_host, is_https};
+    use super::{is_allowed_redirect_host, is_https, FetchError, Fetcher};
+
+    #[test]
+    fn production_fetcher_refuses_non_https_urls() {
+        // The production constructor pins the scheme, so an http URL is
+        // rejected before any connection is attempted (defence in depth on top
+        // of the signature gate). The test constructor keeps http for the local
+        // mock server, so this behaviour is unique to `new()`.
+        let Ok(fetcher) = Fetcher::new() else {
+            return;
+        };
+        let result = fetcher.get("http://127.0.0.1:1/asset");
+        assert!(
+            matches!(
+                &result,
+                Err(FetchError::Unreachable(detail)) if detail.contains("https")
+            ),
+            "expected an https scheme refusal, got {result:?}"
+        );
+    }
 
     #[test]
     fn cdn_suffix_and_origin_are_allowed_redirect_hosts() {
