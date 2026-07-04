@@ -39,9 +39,11 @@ required-check name must be registered manually — see the runbook in
 
 The aggregate `mise run test:*` tasks have no name filter; drop to the underlying runner for one test:
 
-- **Python (tasks/):** `uv run pytest tests/unit/tasks/test_x.py::test_y -v`
-- **Shell:** the suites are standalone scripts — run e.g. `bash scripts/test-config.sh`
-  or `bash hooks/test-vcs-detect.sh` directly.
+- **Python (build tooling, `tasks/`):** `uv run pytest tests/unit/tasks/test_x.py::test_y -v`
+- **Shell wrappers:** exercised by Python, not bash suites (ADR-0004 — Python is
+  the test language for non-Rust surfaces). The tests live under
+  `tests/integration/scripts/`; run one with
+  `uv run pytest tests/integration/scripts/test_x.py::test_y -v`.
 - **Rust (cli/launcher/):** `cargo nextest run -p luminosity -E 'test(<name>)'`
   — the plain (uninstrumented) form with nextest's filter syntax. It
   deliberately skips coverage, unlike the default `test:unit:cli` path
