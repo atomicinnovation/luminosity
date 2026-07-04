@@ -138,6 +138,41 @@ def test_unset_plugin_root_is_a_named_error() -> None:
     assert "CLAUDE_PLUGIN_ROOT" in result.stderr
 
 
+def test_invalid_plugin_root_is_a_named_error(tmp_path: Path) -> None:
+    # A set-but-non-directory CLAUDE_PLUGIN_ROOT must fail closed with the named
+    # diagnostic, not a raw shell error.
+    missing = tmp_path / "does-not-exist"
+    result = subprocess.run(
+        [BOOTSTRAP, "version"],
+        env={**os.environ, "CLAUDE_PLUGIN_ROOT": str(missing)},
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    assert result.returncode != 0
+    assert "not a directory" in result.stderr
+
+
+def test_unrunnable_verify_shim_is_a_fail_closed_named_error(
+    tmp_path: Path,
+) -> None:
+    # The shim is the root of trust. If it is present but cannot run, the
+    # bootstrap must fail closed with a named diagnostic and never exec the
+    # launcher — not silently downgrade to a TLS-only trust model.
+    public, secret = _make_keypair(tmp_path, "release")
+    root = tmp_path / "root"
+    _make_plugin_root(root, public)
+    _make_release(tmp_path / "rel", secret)  # a validly signed launcher
+    broken = root / "bin" / f"luminosity-verify-{PLATFORM}"
+    broken.write_text("not a runnable program\n")
+    broken.chmod(broken.stat().st_mode | stat.S_IEXEC)
+    result = _run(root, tmp_path / "rel", tmp_path / "cache", "go")
+    assert result.returncode != 0
+    assert "LAUNCHER RAN" not in result.stdout
+    assert "luminosity:" in result.stderr
+
+
 def test_happy_path_fetches_verifies_execs_and_forwards_args(
     tmp_path: Path,
 ) -> None:
