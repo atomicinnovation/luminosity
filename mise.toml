@@ -58,6 +58,11 @@ description = "Run the cargo-deny ban-violation regression suite"
 depends = ["deps:install:python"]
 run = "invoke test.integration.deny"
 
+[tasks."test:integration:scripts"]
+description = "Run the pytest integration tests for the shell wrappers"
+depends = ["deps:install:python"]
+run = "invoke test.integration.scripts"
+
 [tasks."test:integration:pup"]
 description = "Run the cargo-pup behavioural regression (requires the nightly lane; check-architecture only, not the test roll-up)"
 depends = ["deps:install:python", "deps:install:pup"]
@@ -84,7 +89,7 @@ depends = ["test:unit:tasks", "test:unit:cli"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"
-depends = ["test:integration:tasks", "test:integration:deny"]
+depends = ["test:integration:tasks", "test:integration:deny", "test:integration:scripts"]
 
 [tasks.test]
 description = "Run all tests in parallel"
