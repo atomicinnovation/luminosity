@@ -119,10 +119,23 @@ with no `openssl`/`native-tls`/`aws-lc-rs`.
   (`fetcher.rs:13-14,83-84`), which is precisely the "single fixed total-request
   timeout" the plan warned against; the separate connect + read/idle + aggregate
   deadline is not implemented.
+  **PARTIALLY ADDRESSED (2026-07-04, post-validation):** the total was widened
+  to a generous **300 s aggregate deadline** so a large asset over a
+  slow-but-progressing link is no longer false-failed (the plan's stated
+  concern). A true per-read/idle timeout remains **not implemented**: the
+  blocking `reqwest` builder the launcher uses exposes only `connect_timeout`
+  and a whole-request `timeout` — `read_timeout` exists solely on the async
+  builder, and adding it would mean a direct `tokio` dependency, reversing a
+  deliberate design decision. ADR-0010 is accepted/immutable, so this constraint
+  is recorded here rather than in the ADR.
 - **Phase 4 https-scheme pin** — `is_https` is defined and unit-tested but **never
   called** in the fetch path (`fetcher.rs:38-41`); scheme is not enforced.
   (Downloads are still signature-gated, so this is defence-in-depth, not the
   security boundary.)
+  **✓ RESOLVED (2026-07-04, post-validation):** the production `Fetcher::new`
+  now pins the scheme — `get` refuses a non-https URL before any connection
+  (the test constructor keeps `http` for the local mock). Covered by
+  `production_fetcher_refuses_non_https_urls`.
 - **Phase 4 manifest caching** — the verified manifest is **not** persisted
   alongside the binary; offline reuse instead relies on the checksum-in-filename
   + `.minisig` sidecar. Goal (offline cache-hit resolves + re-verifies) is met and
@@ -169,6 +182,10 @@ with no `openssl`/`native-tls`/`aws-lc-rs`.
    four mismatching files are named. Still exits non-zero and names *some* files
    (satisfies the literal AC), but the reported set is order-dependent. Tests
    cover only single-file desync.
+   **✓ RESOLVED (2026-07-04, post-validation):** `_mismatching_anchor_files`
+   now names **every** anchor when there is no strict majority (even split or
+   all-distinct), rather than an order-dependent subset. Covered by
+   `test_even_split_names_every_anchor`.
 3. **Phase 4 concurrency + resource bounding absent.** No advisory `flock`/`fcntl`
    locking exists anywhere in the launcher (grep-clean), so the plan's per-key
    lock, re-scan-on-acquire/timeout, and FD_CLOEXEC-before-exec are unimplemented;
@@ -177,6 +194,16 @@ with no `openssl`/`native-tls`/`aws-lc-rs`.
    (`fetcher.rs:135-138`), so an oversized response is unbounded. These were
    design-body correctness measures, not explicit success-criteria checkboxes, so
    `mise run` stays green — but they are real gaps against the plan's intent.
+   **DECISION (2026-07-04, post-validation): deliberately deferred, not
+   implemented.** Advisory locking is judged disproportionate for a single-user
+   CLI cache: the cache already writes via atomic temp+rename, so concurrent
+   first-use is *safe* (worst case a duplicate idempotent fetch; last rename
+   wins; both exec a verified binary), and the only residual is a narrow
+   eviction TOCTOU that fails cleanly with `ENOENT`, never a wrong/tampered
+   binary. The download size cap / free-space check was also deferred (the
+   manifest carries no size field, so it could only be a fixed cap; an `ENOSPC`
+   on write already errors cleanly). Recorded here rather than in the
+   accepted/immutable ADR-0010.
 4. **Bootstrap trusts a single key, defeating verify-any-of rotation.** The
    bootstrap passes one committed key to the shim (`bin/luminosity:64`;
    `cli/verify/src/main.rs:30-37`), so the overlap-window rotation documented in
@@ -228,3 +255,29 @@ from the repository and all are correctly deferred:
 - **Revisit bootstrap key rotation** — let the shim/bootstrap accept multiple
   committed keys so the documented overlap-window rotation actually works at the
   root-of-trust layer.
+
+### Post-validation follow-up (2026-07-04)
+
+Actioned after the report was written (each with a red→green test where a
+behaviour changed):
+
+- ✓ **Potential Issue #1** — `gh` download timeout in the signature re-verify
+  now maps to `AssetVerificationError` (draft + tag preserved).
+- ✓ **Potential Issue #2** — `version:check` names every anchor on a no-majority
+  split.
+- ✓ **https-scheme pin** — production `Fetcher` refuses non-https URLs (the dead
+  `is_https` is now wired in).
+- ✓ **Stale docs** — the `mise.toml` `version:check` description no longer
+  claims key-coherence.
+- ✓ **Phase 5 / Phase 6 test gaps** — added end-to-end tests: `version` works
+  with no manifest, `--help` degrades gracefully; entry-point invalid-plugin-root
+  and unrunnable-shim fail-closed. (The manifest-derived `--help` section stays
+  a unit test — the binary pins the embedded key, so a test cannot sign a
+  manifest under it.)
+- ⚠️ **Fetch timeout** — total widened to a 300 s aggregate deadline; a true
+  per-read/idle timeout is not feasible on blocking `reqwest` without a direct
+  `tokio` dep (see Deviations).
+- ◻︎ **Deliberately deferred** — advisory locking and download size/free-space
+  bounding (see Potential Issue #3 for rationale).
+- ◻︎ **Not actioned this pass** — Phase 6 cache-root duplication and bootstrap
+  single-key rotation remain open.
