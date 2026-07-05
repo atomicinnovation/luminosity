@@ -1,11 +1,8 @@
 //! `luminosity-verify` — the bootstrap's root-of-trust minisign verifier.
 //!
-//! A binary cannot verify itself, so the bash bootstrap uses this tiny vendored
-//! shim to verify the fetched launcher's signature against the plugin-committed
-//! public key BEFORE exec, failing closed. It is delivered over the trusted
-//! marketplace channel (its trust basis), pure `minisign-verify` so it links
-//! statically with no heavy closure, and held to the same lints as the rest of
-//! the workspace — so it propagates `Result` and never `unwrap`s.
+//! A binary cannot verify itself, so the bash bootstrap uses this vendored shim
+//! to verify the fetched launcher's signature against the committed public key
+//! before exec, failing closed.
 //!
 //! Usage: `luminosity-verify <public-key-file> <signature-file> <target-file>`
 //! Exit 0 iff the signature is valid for the target under the key.

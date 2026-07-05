@@ -1,12 +1,4 @@
-"""Regression: the ADR-0010 native-tls ban must fail the build, not warn.
-
-Runs `cargo deny check bans` against a throwaway manifest that depends on
-native-tls and asserts a non-zero exit, so a future edit loosening `[bans] deny`
-is caught automatically. The manifest is isolated in `tmp_path` with its own
-`[workspace]` table so cargo/cargo-deny do not walk upward and absorb the real
-workspace or its committed Cargo.lock — otherwise the test could pass for the
-wrong reason (resolving the real graph rather than the banned dependency).
-"""
+"""Regression: the native-tls ban must fail the build, not warn."""
 
 import os
 import shutil
@@ -86,9 +78,7 @@ def test_native_tls_dependency_fails_the_bans_check(tmp_path: Path) -> None:
     assert "native-tls" in (result.stdout + result.stderr)
 
 
-# The launcher's resolved feature graph must not pull the native-TLS, OpenSSL,
-# native-cert, or aws-lc-rs closures the rustls-webpki-roots/ring choice avoids.
-# Reading the real tree catches a feature-flag regression even if deny's config
+# Reading the real feature tree catches a regression even if deny's config
 # drifts.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _WORKSPACE = _REPO_ROOT / "cli"
@@ -122,7 +112,7 @@ def test_launcher_tree_excludes_the_native_tls_closure(crate: str) -> None:
 
 
 def test_launcher_tree_uses_the_ring_crypto_provider() -> None:
-    # Positive control: prove the pure-Rust provider IS present, so the
-    # negative aws-lc-rs assertion is not passing because TLS dropped out.
+    # Positive control: the negative aws-lc-rs assertion must not pass merely
+    # because TLS dropped out.
     _require_tools()
     assert "ring" in _launcher_feature_tree()

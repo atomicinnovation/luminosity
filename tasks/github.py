@@ -53,9 +53,8 @@ def check_auth(context: Context) -> None:
 def create_release(context: Context, target_version: str | None = None) -> None:
     """Create a draft GitHub release for the current version.
 
-    Passes --prerelease for pre-release versions (X.Y.Z-suffix) and
-    --draft unconditionally so no assets are visible until upload_and_verify
-    has verified every binary and published the release.
+    Passes --prerelease for pre-release versions; always --draft so nothing is
+    visible until upload_and_verify has verified every binary and published.
     """
     resolved_version = str(
         target_version or version.read(context, print_to_stdout=False)
@@ -151,12 +150,9 @@ def download_and_verify_signature(
 ) -> None:
     """Re-download an asset + `.minisig` and minisign-verify against a key.
 
-    Every failure mode — a genuine signature mismatch AND any tool hiccup
-    (absent minisign, timeout, non-zero exit) — surfaces as
-    `AssetVerificationError`, so no transient tooling failure escapes into the
-    generic branch that destroys the pushed tag. This closes the loop that the
-    committed public key — the same bytes the launcher embeds — actually
-    validates the shipped artefacts.
+    Every failure mode — a genuine signature mismatch or any tool hiccup —
+    surfaces as `AssetVerificationError`, so no transient tooling failure
+    escapes into the generic branch that destroys the pushed tag.
     """
     with tempfile.NamedTemporaryFile(delete=False) as target_tmp:
         target_path = Path(target_tmp.name)

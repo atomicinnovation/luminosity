@@ -1,6 +1,4 @@
-//! The real fetch → verify → cache resolver, composed from a [`Fetcher`], a
-//! [`verifier`], a [`cache`] store, and a resolved cache root behind the
-//! `ResolveBinary` port.
+//! The fetch → verify → cache resolver behind the `ResolveBinary` port.
 
 pub mod cache;
 pub mod cache_root;
@@ -18,9 +16,8 @@ use self::fetcher::{FetchError, Fetcher};
 use self::keys::TrustedKeys;
 use self::manifest::Manifest;
 
-/// The host platform alias this launcher was built for — the single Rust source
-/// of the triple→alias map, asserted equal to `tasks/shared/targets.py` by a
-/// cross-language coherence test.
+/// The host platform alias this launcher was built for; kept coherent with
+/// `tasks/shared/targets.py` by a cross-language test.
 #[cfg(all(target_arch = "aarch64", target_os = "macos"))]
 pub const HOST_PLATFORM: &str = "darwin-arm64";
 #[cfg(all(target_arch = "x86_64", target_os = "macos"))]
@@ -32,24 +29,17 @@ pub const HOST_PLATFORM: &str = "linux-x64";
 
 const DEFAULT_RETAINED_VERSIONS: usize = 3;
 
-/// Configuration for the resolver — injected so tests point it at a mock server
-/// and a temp cache root.
 pub struct ResolverConfig {
     /// The launcher's own version; the manifest must match it (anti-rollback).
     pub expected_version: String,
-    /// The host platform alias (`HOST_PLATFORM` in production).
     pub platform: String,
-    /// The release-download base URL (no trailing slash), pinned to the
-    /// plugin's own `v{version}` tag in production.
+    /// The release-download base URL (no trailing slash).
     pub base_url: String,
-    /// Where cached binaries live (resolved via `cache_root` in production).
     pub cache_root: PathBuf,
-    /// Bound on retained versions per binary (host-un-GC'd XDG growth cap).
     pub retained_versions: usize,
 }
 
 impl ResolverConfig {
-    /// Build the production config from the base URL and resolved cache root.
     #[must_use]
     pub fn production(base_url: String, cache_root: PathBuf) -> Self {
         Self {
@@ -62,8 +52,6 @@ impl ResolverConfig {
     }
 }
 
-/// The real `ResolveBinary` adapter: cache-hit re-verify, else fetch → verify →
-/// cache.
 pub struct FetchVerifyCacheResolver {
     config: ResolverConfig,
     keys: TrustedKeys,
@@ -88,7 +76,6 @@ impl FetchVerifyCacheResolver {
         })
     }
 
-    /// Construct with a caller-supplied fetcher (tests inject a tiny backoff).
     #[must_use]
     pub const fn with_fetcher(
         config: ResolverConfig,
@@ -123,8 +110,8 @@ impl FetchVerifyCacheResolver {
         )
     }
 
-    /// Fetch, signature-verify, and version/schema-validate the release
-    /// manifest — the shared front half of resolution and help synthesis.
+    /// Fetch, signature-verify, and schema/version-validate the release
+    /// manifest.
     ///
     /// # Errors
     ///
@@ -208,9 +195,9 @@ impl ResolveBinary for FetchVerifyCacheResolver {
             name,
             &self.config.expected_version,
         ) {
-            // Re-verify before every exec, including cache hits: the cache dir
-            // is user-writable, so a poisoned entry (binary + matching sha) must
-            // still be caught by the signature. On failure, self-heal.
+            // Re-verify even cache hits: the cache dir is user-writable, so a
+            // poisoned entry must still be caught by the signature; self-heal on
+            // failure.
             match self.reverify(&cached) {
                 Ok(()) => return Ok(cached.path),
                 Err(_) => cache::evict(&cached),

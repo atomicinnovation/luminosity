@@ -1,8 +1,4 @@
-//! The clap inbound (driving) adapter for the whole launcher surface — the
-//! top-level command tree.
-//!
-//! Built-in commands and the external-subcommand growth mechanism live together
-//! here; the per-command logic lives in its subdomain.
+//! The clap inbound (driving) adapter — the top-level command tree.
 
 use std::ffi::OsString;
 
@@ -16,9 +12,6 @@ pub struct Cli {
     pub command: Command,
 }
 
-/// The launcher's command tree: compiled-in built-ins plus the
-/// `external_subcommand` catch-all that grows the CLI with on-demand
-/// sub-binaries.
 #[derive(Subcommand)]
 pub enum Command {
     /// Print the version, commit SHA, build date, and target triple.

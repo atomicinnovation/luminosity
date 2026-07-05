@@ -401,12 +401,7 @@ class TestHostAwareVerification:
 
 
 class TestPackagedRootOfTrustArtifacts:
-    """The committed plugin-package artifacts the bootstrap depends on.
-
-    The launcher is fetched on demand, but the entry point, the per-triple
-    verify shims (the root of trust), and the public key ship committed over
-    the marketplace channel — a guard that none is dropped from the package.
-    """
+    """The committed plugin-package artifacts the bootstrap depends on."""
 
     def test_a_verify_shim_ships_for_every_platform(self):
         for _, platform in TARGETS:

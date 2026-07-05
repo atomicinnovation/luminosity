@@ -1,11 +1,4 @@
-"""Assert the mise task wiring the plan relies on.
-
-The other task tests mock invoke's `Context` and assert command strings; none
-reads `mise.toml`, so the `depends`/aggregate edges are otherwise untested. This
-module parses `mise.toml` (and the Rust config files) directly so the wiring
-prose becomes executable assertions. Introduced in Phase 1 and extended each
-phase as edges are added.
-"""
+"""Assert the mise task wiring by parsing mise.toml and the Rust configs."""
 
 import re
 import tomllib
@@ -190,12 +183,7 @@ class TestTestUnitCliWiring:
 
 
 class TestPytestSuiteWiring:
-    """The pytest suites run via invoke tasks, not pytest invoked directly.
-
-    Suites are separated by directory (tests/integration/{tasks,deny,pup}),
-    not pytest markers. The actual pytest command strings are asserted in
-    test_test.py.
-    """
+    """The pytest suites run via invoke tasks, not pytest directly."""
 
     def test_unit_tasks_wraps_an_invoke_task(self, mise: Mise):
         assert (
@@ -267,11 +255,7 @@ class TestPupWiring:
 
 
 class TestFinalEnumeratedArrays:
-    """Pin the complete top-level arrays the plan enumerates.
-
-    Together with test_workflows.py these are the automated backstop for the
-    whole mise + CI wiring.
-    """
+    """Pin the complete top-level task arrays."""
 
     def test_check_array(self, mise: Mise):
         assert _depends(mise, "check") == [
@@ -324,13 +308,7 @@ class TestZigbuildProvisioning:
 
 
 class TestZigbuildPins:
-    """zig + cargo-zigbuild are exact-pinned and coherent with uv.lock.
-
-    They are provisioned by uv (build group) rather than mise [tools], so the
-    "pinned exactly" convention is enforced here: the pyproject constraint must
-    be an exact `==` and equal the version uv actually resolved, so a frozen
-    install reproduces the tested cross-compile toolchain.
-    """
+    """zig + cargo-zigbuild are exact-pinned and coherent with uv.lock."""
 
     _PINNED = ("ziglang", "cargo-zigbuild")
 
@@ -353,13 +331,7 @@ class TestZigbuildPins:
 
 
 class TestToolchainCoherence:
-    """The clippy msrv and rustfmt edition mirror the mise rust pin by hand.
-
-    A rust bump that updates mise.toml but forgets these silently applies
-    MSRV-gated lints against a different stable than CI provisions, so the
-    fourth-hand-synced-mirror hazard is converted into a tested invariant. The
-    configs live in the workspace root (`cli/`) alongside Cargo.toml.
-    """
+    """The clippy msrv and rustfmt edition mirror the mise rust pin by hand."""
 
     def test_clippy_msrv_matches_mise_rust_pin(self, mise: Mise):
         clippy = tomllib.loads((WORKSPACE_ROOT / "clippy.toml").read_text())
@@ -398,12 +370,7 @@ class TestToolchainCoherence:
 
 
 class TestPlatformAliasCoherence:
-    """The triple→alias map is single-sourced across Python, launcher, bash.
-
-    The publisher (`tasks/shared/targets.py`), the launcher's `HOST_PLATFORM`
-    cfg map, and (later) the bootstrap must agree on the platform alias, or the
-    asset-naming contract silently drifts across publisher and consumer.
-    """
+    """The triple→alias map is single-sourced across Python, launcher, bash."""
 
     _RESOLVE_RS = (
         WORKSPACE_ROOT

@@ -1,6 +1,4 @@
 //! The launcher's dispatch/resolution core and the ports it speaks through.
-//! Depends on std + kernel only; the concrete adapters live under
-//! `launch::outbound`.
 
 use std::ffi::OsString;
 use std::fmt;
@@ -9,11 +7,8 @@ use std::fmt::Formatter;
 use std::path::Path;
 use std::path::PathBuf;
 
-/// A parsed external subcommand: the sub-binary name plus the args to forward.
-///
-/// Git-style — `luminosity foo a b` resolves the binary named `foo` and forwards
-/// `[a, b]` to it; the name is consumed for resolution, not passed on. Both are
-/// [`OsString`] so a non-UTF-8 argument survives verbatim to the exec'd child.
+/// Both fields are [`OsString`] so a non-UTF-8 argument survives verbatim to the
+/// exec'd child; the name is consumed for resolution, not forwarded.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExternalCommand {
     pub name: OsString,
@@ -21,12 +16,9 @@ pub struct ExternalCommand {
 }
 
 impl ExternalCommand {
-    /// Split clap's raw `External` vector into name + forwarded args.
-    ///
     /// # Errors
     ///
-    /// [`ResolutionError::EmptyCommand`] if the vector is empty (clap should
-    /// never hand us one, but the core refuses it rather than index blindly).
+    /// [`ResolutionError::EmptyCommand`] if the vector is empty.
     pub fn from_raw(raw: Vec<OsString>) -> Result<Self, ResolutionError> {
         let mut parts = raw.into_iter();
         let name = parts.next().ok_or(ResolutionError::EmptyCommand)?;
@@ -37,43 +29,49 @@ impl ExternalCommand {
     }
 }
 
-/// The launcher's rich, local failure taxonomy — each variant carries the
-/// payload its diagnostic needs.
-///
-/// Maps into the small shared [`kernel::Error`] at the dispatch boundary so
-/// subdomains never compile against variants they cannot produce.
 #[derive(Debug)]
 pub enum ResolutionError {
-    /// clap handed dispatch an empty external-subcommand vector.
     EmptyCommand,
-    /// The requested sub-binary could not be resolved to a path.
-    Unresolved { name: OsString },
-    /// The host-triple asset could not be fetched (network/transport error).
-    Fetch { target: String, url: String },
-    /// The release has no asset for this binary+platform.
-    AssetNotFound { target: String, url: String },
-    /// The release itself is missing/unavailable.
-    ReleaseUnavailable { target: String, url: String },
-    /// A fetched/cached binary's sha256 did not match the manifest.
+    Unresolved {
+        name: OsString,
+    },
+    Fetch {
+        target: String,
+        url: String,
+    },
+    AssetNotFound {
+        target: String,
+        url: String,
+    },
+    ReleaseUnavailable {
+        target: String,
+        url: String,
+    },
     ChecksumMismatch {
         asset: String,
         expected: String,
         actual: String,
     },
-    /// A binary's minisign signature did not verify against a trusted key.
-    SignatureMismatch { asset: String },
-    /// The manifest's own signature did not verify against a trusted key.
+    SignatureMismatch {
+        asset: String,
+    },
     ManifestSignature,
-    /// The signed manifest's version did not equal the launcher's own
-    /// (anti-rollback: a valid signature proves authenticity, not freshness).
-    ManifestVersionMismatch { expected: String, actual: String },
-    /// The manifest declares a schema version the launcher does not support.
-    UnsupportedSchema { found: u64, supported: u64 },
-    /// A cache read/write/lock operation failed.
-    Cache { path: PathBuf, detail: String },
-    /// No writable, exec-capable cache directory could be resolved.
-    CacheRootUnavailable { detail: String },
-    /// `exec` of a resolved binary failed (it only returns on failure).
+    /// Anti-rollback: a valid signature proves authenticity, not freshness.
+    ManifestVersionMismatch {
+        expected: String,
+        actual: String,
+    },
+    UnsupportedSchema {
+        found: u64,
+        supported: u64,
+    },
+    Cache {
+        path: PathBuf,
+        detail: String,
+    },
+    CacheRootUnavailable {
+        detail: String,
+    },
     Exec {
         program: PathBuf,
         source: std::io::Error,
@@ -153,7 +151,6 @@ impl From<ResolutionError> for kernel::Error {
     }
 }
 
-/// Resolves a sub-binary name to an executable path — a driven/outbound port.
 pub trait ResolveBinary {
     /// # Errors
     ///
@@ -164,21 +161,14 @@ pub trait ResolveBinary {
     ) -> Result<PathBuf, ResolutionError>;
 }
 
-/// Replaces the current process with a resolved binary — a driven/outbound port.
-///
-/// Modelled as a port so dispatch's resolve→exec wiring is unit-testable with a
-/// recording fake; the real Unix `exec` cannot be tested in-process (it would
-/// replace the test runner), so its behaviour is proven by black-box tests.
+/// A port so dispatch's resolve→exec wiring is unit-testable with a fake; a real
+/// Unix `exec` cannot be tested in-process (it would replace the test runner).
 pub trait ExecBinary {
-    /// Returns only on failure (a successful `exec` replaces the process), so
-    /// the return type is the error that prevented replacement.
+    /// Returns only on failure — a successful `exec` replaces the process.
     fn exec(&self, program: &Path, args: &[OsString]) -> ResolutionError;
 }
 
-/// Resolve the sub-binary and exec it, forwarding its args.
-///
-/// Only ever returns an error: a successful `exec` replaces this process, so
-/// control returns here solely when resolution or exec failed.
+/// Only ever returns an error — a successful `exec` replaces this process.
 pub fn run_external(
     resolver: &impl ResolveBinary,
     executor: &impl ExecBinary,
@@ -244,8 +234,6 @@ mod tests {
         fn exec(&self, program: &Path, args: &[OsString]) -> ResolutionError {
             *self.seen.borrow_mut() =
                 Some((program.to_path_buf(), args.to_vec()));
-            // A real exec never returns on success; the fake reports "attempted"
-            // so the plumbing is observable without replacing the test runner.
             ResolutionError::Exec {
                 program: program.to_path_buf(),
                 source: std::io::Error::other("fake exec"),

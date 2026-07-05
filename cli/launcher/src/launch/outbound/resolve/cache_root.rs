@@ -1,17 +1,15 @@
 //! Resolves the runtime cache directory.
 //!
-//! Prefers the plugin root (`${CLAUDE_PLUGIN_ROOT}/bin`, so Claude Code reclaims
-//! it on upgrade) when writable and exec-capable, else an XDG fallback, else a
-//! named error. `LUMINOSITY_CACHE_DIR` overrides. Read-only installs and
-//! `noexec` mounts are probed, not inferred.
+//! `LUMINOSITY_CACHE_DIR` override, else `${CLAUDE_PLUGIN_ROOT}/bin` (reclaimed
+//! by Claude Code on upgrade), else an XDG fallback. Each candidate is probed by
+//! writing AND executing a script, so a `noexec` mount is caught rather than
+//! inferred.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::launch::core::ResolutionError;
 
-/// The environment inputs the resolution needs — injected so tests supply temp
-/// dirs instead of reading the real process environment.
 pub struct CacheRootConfig {
     pub cache_dir_override: Option<PathBuf>,
     pub plugin_root: Option<PathBuf>,
@@ -20,7 +18,6 @@ pub struct CacheRootConfig {
 }
 
 impl CacheRootConfig {
-    /// Read the config from the process environment.
     #[must_use]
     pub fn from_env() -> Self {
         Self {
@@ -44,7 +41,6 @@ impl CacheRootConfig {
             return Some(base.join("luminosity"));
         }
         let home = self.home.as_ref()?;
-        // Darwin conventionally caches under ~/Library/Caches.
         if cfg!(target_os = "macos") {
             Some(home.join("Library/Caches/luminosity"))
         } else {
@@ -57,9 +53,7 @@ impl CacheRootConfig {
 ///
 /// # Errors
 ///
-/// [`ResolutionError::CacheRootUnavailable`] when no candidate is usable — an
-/// unset `CLAUDE_PLUGIN_ROOT` with no override, or every candidate failing the
-/// write+exec probe.
+/// [`ResolutionError::CacheRootUnavailable`] when no candidate is usable.
 pub fn resolve(config: &CacheRootConfig) -> Result<PathBuf, ResolutionError> {
     if let Some(override_dir) = &config.cache_dir_override {
         return if probe_writable_and_executable(override_dir) {
@@ -101,9 +95,8 @@ pub fn resolve(config: &CacheRootConfig) -> Result<PathBuf, ResolutionError> {
     })
 }
 
-/// Probe a directory for both writability and exec-capability by writing a
-/// trivial script and executing it — catching `noexec` mounts, which a
-/// write-only probe would miss.
+/// Writes a script and executes it, so a `noexec` mount (which a write-only
+/// probe would miss) fails the check.
 fn probe_writable_and_executable(dir: &Path) -> bool {
     if std::fs::create_dir_all(dir).is_err() {
         return false;
@@ -199,7 +192,6 @@ mod tests {
         Ok(())
     }
 
-    // A minimal unique temp dir under CARGO_TARGET_TMPDIR (no dev-dep needed).
     fn tempdir() -> Result<PathBuf, Box<dyn Error>> {
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(0);

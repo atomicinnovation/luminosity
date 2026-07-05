@@ -1,15 +1,13 @@
-//! The on-disk binary cache, keyed by name + version + checksum.
+//! On-disk binary cache keyed by name + version + checksum.
 //!
-//! Entries are `"{name}-{version}-{sha256}"` (+ a `.minisig` sibling); the
-//! checksum is in the name, so a cache hit is a prefix scan needing no manifest
-//! — an already-resolved binary resolves offline. Writes are atomic
-//! (temp-in-dir + rename), so only fully-written bytes appear under the path.
+//! The checksum is in the entry name, so a cache hit needs no manifest (an
+//! already-resolved binary resolves offline). Writes are atomic
+//! (temp-in-dir + rename).
 
 use std::path::{Path, PathBuf};
 
 use crate::launch::core::ResolutionError;
 
-/// A located cache entry: the binary and its detached signature.
 pub struct CachedBinary {
     pub path: PathBuf,
     pub sha256: String,
@@ -35,8 +33,6 @@ fn cache_error(path: &Path, error: &std::io::Error) -> ResolutionError {
     }
 }
 
-/// Find a cached binary for `name`+`version` by prefix scan. Returns the entry
-/// only if its signature sidecar is also present.
 #[must_use]
 pub fn find(root: &Path, name: &str, version: &str) -> Option<CachedBinary> {
     let prefix = format!("{name}-{version}-");
@@ -62,10 +58,8 @@ pub fn find(root: &Path, name: &str, version: &str) -> Option<CachedBinary> {
     None
 }
 
-/// Atomically store a verified binary + its signature, returning the entry.
-///
-/// The caller must have verified `bytes` against `sha256` and `signature`
-/// BEFORE calling — only fully-verified bytes should reach the cache.
+/// Atomically store a verified binary + signature. The caller MUST have
+/// verified `bytes` before calling — only verified bytes reach the cache.
 ///
 /// # Errors
 ///
@@ -83,8 +77,8 @@ pub fn store(
     let final_path = root.join(&stem);
     let signature_path = root.join(signature_name(&stem));
 
-    // Temp files live INSIDE the cache dir so the rename is intra-filesystem
-    // (a cross-mount temp would fail EXDEV and force a torn copy-fallback).
+    // Temp files live inside the cache dir so the rename is intra-filesystem
+    // (a cross-mount rename fails EXDEV).
     let unique = std::process::id();
     let temp_binary = root.join(format!(".tmp-{stem}-{unique}"));
     let temp_signature = root.join(format!(".tmp-{stem}-{unique}.minisig"));
@@ -132,17 +126,13 @@ fn set_executable(_path: &Path) -> Result<(), ResolutionError> {
     Ok(())
 }
 
-/// Remove a cache entry (binary + signature) — used to self-heal a cache-hit
-/// verification failure before re-fetching.
 pub fn evict(binary: &CachedBinary) {
     let _ = std::fs::remove_file(&binary.path);
     let _ = std::fs::remove_file(&binary.signature_path);
 }
 
-/// Bound cache growth for `name` to at most `cap` retained versions.
-///
-/// Removes the oldest-by-mtime beyond the cap. Best-effort (used on the
-/// host-un-GC'd XDG fallback); never removes the entry just stored (the newest).
+/// Bound cache growth for `name` to at most `cap` retained versions, removing
+/// the oldest by mtime. Best-effort; never removes the newest entry.
 pub fn enforce_retention_cap(root: &Path, name: &str, cap: usize) {
     let prefix = format!("{name}-");
     let Ok(entries) = std::fs::read_dir(root) else {
@@ -158,7 +148,6 @@ pub fn enforce_retention_cap(root: &Path, name: &str, cap: usize) {
         let Some(rest) = file.strip_prefix(&prefix) else {
             continue;
         };
-        // rest is "{version}-{sha}"; require a trailing 64-hex to be a binary.
         let Some((_, sha)) = rest.rsplit_once('-') else {
             continue;
         };

@@ -1,11 +1,9 @@
-//! Emits the `version` subcommand's build metadata via vergen, and copies the
-//! single committed release public key into `OUT_DIR` for the launcher to
-//! embed.
+//! Emits the `version` build metadata via vergen and copies the release public
+//! key into `OUT_DIR` for the launcher to embed.
 //!
-//! `fail_on_error()` is intentionally not called for vergen: it degrades a
-//! git-less or shallow build to a placeholder rather than failing to compile.
-//! The key copy, by contrast, fails loudly — a launcher that cannot embed its
-//! trust root must not build.
+//! vergen deliberately degrades a git-less or shallow build to a placeholder
+//! rather than failing. The key copy, by contrast, fails the build loudly — a
+//! launcher that cannot embed its trust root must not build.
 
 use std::error::Error;
 use std::path::Path;
@@ -28,13 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Copy the single committed release public key (`keys/luminosity-release.pub`
-/// at the repo root — the same file the bootstrap ships) into `OUT_DIR` so the
-/// launcher can `include_str!` it. Running in `build.rs` (not a mise step) means
-/// every `cargo` invocation — including rust-analyzer and a bare `cargo test` —
-/// has the key, and it stays a single source of truth with no coherence check.
 fn embed_release_public_key() -> Result<(), Box<dyn Error>> {
-    // CARGO_MANIFEST_DIR is cli/launcher; the committed key is at repo/keys.
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")?;
     let source =
         Path::new(&manifest_dir).join("../../keys/luminosity-release.pub");
@@ -48,7 +40,6 @@ fn embed_release_public_key() -> Result<(), Box<dyn Error>> {
         )
     })?;
     std::fs::write(&destination, key)?;
-    // Rebuild if the committed key changes (e.g. a rotation).
     println!("cargo:rerun-if-changed={}", source.display());
     Ok(())
 }

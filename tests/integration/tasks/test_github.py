@@ -356,9 +356,6 @@ class TestUploadAndVerify:
     def test_signature_mismatch_preserves_draft(
         self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
     ):
-        # A re-downloaded binary whose signature was made by a non-release key
-        # (or fails to verify for any reason) must abort with the draft + tag
-        # preserved, never fall into the tag-destroying generic branch.
         _setup_upload_and_verify(mocker, tmp_path)
         mocker.patch.object(gh, "download_and_verify")
         mocker.patch.object(
@@ -483,9 +480,8 @@ class TestUploadAndVerify:
 
 
 class TestDownloadAndVerifySignatureTimeout:
-    """A `gh release download` timeout during signature re-verification must
-    surface as AssetVerificationError, not a bare TimeoutExpired — otherwise
-    the publish path's generic branch destroys the pushed tag."""
+    """A download timeout during signature re-verification surfaces as
+    AssetVerificationError, not a bare TimeoutExpired."""
 
     def test_download_timeout_raises_asset_verification_error(
         self, ctx: MagicMock, mocker: MockerFixture, tmp_path: Path
@@ -538,8 +534,8 @@ class TestDownloadAndVerifySignatureRealTool:
         signed_by_secret: Path,
         password: str | None = None,
     ) -> tuple[Path, str]:
-        # A real signed payload; download_release_asset is stubbed to place the
-        # already-prepared bytes into whatever temp path the helper picked.
+        # download_release_asset is stubbed to place the already-prepared bytes
+        # into whatever temp path the helper picked.
         source_dir = signed_by_secret.parent
         payload = source_dir / "payload.bin"
         payload.write_bytes(b"launcher-bytes")

@@ -9,10 +9,8 @@ CHECKSUMS = BIN_DIR / "checksums.json"
 MANIFEST = BIN_DIR / "manifest.json"
 MANIFEST_SIGNATURE = BIN_DIR / "manifest.minisig"
 CARGO_TOML = LAUNCHER_DIR / "Cargo.toml"
-# The single committed release public key: shipped in the plugin package (the
-# bootstrap reads it, and the release re-verify checks against it), and copied
-# into the launcher's OUT_DIR by cli/launcher/build.rs for the launcher to embed
-# — one source of truth, so no key-coherence check is needed.
+# The single committed release public key: shipped in the plugin package and
+# embedded into the launcher by cli/launcher/build.rs.
 RELEASE_PUBLIC_KEY = REPO_ROOT / "keys" / "luminosity-release.pub"
 PLUGIN_JSON = REPO_ROOT / ".claude-plugin/plugin.json"
 MARKETPLACE_JSON = REPO_ROOT / ".claude-plugin/marketplace.json"
@@ -20,9 +18,8 @@ PRERELEASE_MARKETPLACE_JSON = (
     REPO_ROOT / ".claude-plugin/marketplace-prerelease.json"
 )
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"
-# The plugin package's committed entry point + root-of-trust artifacts, shipped
-# over the marketplace channel: the bash bootstrap, the per-triple verify shims,
-# and the release public key.
+# The plugin package's committed entry point + root-of-trust artifacts: the bash
+# bootstrap, the per-triple verify shims, and the release public key.
 PACKAGE_BIN_DIR = REPO_ROOT / "bin"
 BOOTSTRAP = PACKAGE_BIN_DIR / "luminosity"
 SHIM_CRATE = "luminosity-verify"

@@ -1,21 +1,12 @@
-//! Manifest-driven help synthesis.
-//!
-//! clap cannot enumerate external subcommands (they are fetched on demand), so
-//! `luminosity --help` augments clap's built-in help with a section built from
-//! the signed manifest's per-binary `description`. This runs on the LAZY path —
-//! only when `--help` is actually requested — so offline built-ins never pay a
-//! manifest read+verify.
+//! Manifest-driven help synthesis: `luminosity --help` augments clap's built-in
+//! help with a section built from the signed manifest's per-binary descriptions.
 
 use std::fmt::Write as _;
 
 use crate::launch::outbound::resolve::manifest::Manifest;
 
-/// Build the "External subcommands" help section from the manifest.
-///
-/// Returns `None` when the manifest lists no binaries. Descriptions are
-/// key-authenticated (the manifest is signature-verified) but still
-/// terminal-rendered, so control/escape characters are stripped to defend
-/// against terminal-escape injection.
+/// Descriptions are terminal-rendered, so control/escape characters are stripped
+/// to defend against terminal-escape injection.
 #[must_use]
 pub fn external_subcommands_section(manifest: &Manifest) -> Option<String> {
     if manifest.binaries.is_empty() {
@@ -31,14 +22,11 @@ pub fn external_subcommands_section(manifest: &Manifest) -> Option<String> {
     for (name, entry) in &manifest.binaries {
         let name = sanitize(name);
         let description = sanitize(&entry.description);
-        // write! into a String is infallible; the result is discarded.
         let _ = write!(section, "\n  {name:<width$}  {description}");
     }
     Some(section)
 }
 
-/// Strip control/escape characters (keeping printable text, including
-/// non-ASCII) so a manifest description cannot smuggle terminal escapes.
 fn sanitize(text: &str) -> String {
     text.chars().filter(|c| !c.is_control()).collect()
 }
@@ -80,8 +68,6 @@ mod tests {
 
     #[test]
     fn strips_control_and_escape_sequences_but_keeps_printable_text() {
-        // A description carrying an ANSI escape + a bell must render sanitised —
-        // the raw escape bytes gone, the legitimate text intact.
         let dirty = "safe\u{1b}[31m text\u{0007}here";
         let clean = sanitize(dirty);
         assert!(!clean.contains('\u{1b}'));

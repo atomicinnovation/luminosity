@@ -57,10 +57,9 @@ _PRERELEASE_IDENTIFIER = "pre"
 def _bump_to_next_prerelease(version: semver.Version) -> semver.Version:
     """Advance to the next prerelease, opening a fresh line off a stable cut.
 
-    Bumping a finalised release's prerelease directly would re-cut
-    `<x.y.z>-pre.1`, colliding with the prerelease tags that led up to that
-    release; advancing to the next minor's first prerelease avoids the clash.
-    An in-progress prerelease simply increments.
+    An in-progress prerelease increments; a finalised release advances to the
+    next minor's first prerelease, avoiding a clash with the tags that led up
+    to it.
     """
     already_in_prerelease = version.prerelease is not None
     if already_in_prerelease:
@@ -83,8 +82,7 @@ def write(_context: Context, version: str) -> None:
     """Write the version to every version-bearing file, coherently.
 
     Single writer for plugin.json, the launcher Cargo.toml, checksums.json, and
-    the release manifest, so the four anchors version:check guards can never
-    drift apart through a normal bump.
+    the release manifest, so a normal bump cannot drift the anchors apart.
     """
     rendered_plugin_json = _render_plugin_json(version)
     rendered_cargo_toml = _render_cargo_toml(version)
@@ -118,10 +116,9 @@ def _anchor_versions() -> dict[str, str]:
 def _mismatching_anchor_files(versions: dict[str, str]) -> list[str]:
     """Files whose version differs from the reference — empty when all agree.
 
-    A strict majority is the reference (its holders are coherent; the rest are
-    named). With no strict majority — an even split or all-distinct — no anchor
-    can be trusted as the reference, so every anchor is named rather than an
-    order-dependent subset.
+    A strict majority is the reference. With no strict majority (an even split
+    or all-distinct), every anchor is named rather than an order-dependent
+    subset.
     """
     counts = Counter(versions.values())
     if len(counts) == 1:
@@ -140,13 +137,7 @@ def check(_context: Context) -> None:
     """Fail (naming the culprits) if the release-contract anchors have drifted.
 
     Enforces version coherence across plugin.json, the launcher Cargo.toml,
-    checksums.json, and manifest.json. Wired into `mise run check` and re-run as
-    a fail-closed precondition on the release path.
-
-    There is no key-coherence check: the release public key is a single
-    committed file that `cli/launcher/build.rs` copies into the launcher's
-    OUT_DIR at build time, so the bootstrap-shipped key and the launcher's
-    embedded key are the same source and cannot diverge.
+    checksums.json, and manifest.json.
     """
     mismatching = _mismatching_anchor_files(_anchor_versions())
     if mismatching:

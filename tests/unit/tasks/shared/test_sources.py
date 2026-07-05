@@ -82,9 +82,8 @@ class TestShellSourcesDiscovery:
     def test_includes_the_registered_extensionless_bootstrap(
         self, tmp_path: Path
     ):
-        # The bootstrap is extensionless, so the `*.sh` walk would miss it; it
-        # must be discovered via the registered-extensionless list so shfmt /
-        # ShellCheck / bashisms all cover it (the bash-3.2 floor matters here).
+        # The bootstrap is extensionless, so the `*.sh` walk misses it; it must
+        # be discovered via the registered-extensionless list.
         _write(tmp_path / "bin/luminosity")
         _write(tmp_path / "scripts/keep.sh")
 
@@ -93,6 +92,4 @@ class TestShellSourcesDiscovery:
 
 class TestRealRepoCoversBootstrap:
     def test_the_committed_bootstrap_is_in_scope(self):
-        # A guard against the real bin/luminosity silently escaping the shell
-        # tooling (it cannot be reformatted/linted if it is not discovered).
         assert "bin/luminosity" in shell_sources()

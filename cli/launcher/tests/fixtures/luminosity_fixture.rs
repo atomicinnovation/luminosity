@@ -1,11 +1,6 @@
-//! A stand-in "sub-binary" the launcher resolves and execs in tests, exposing
-//! behaviours by argument so exit-code/signal propagation, argument forwarding,
-//! and `--help` delegation can be exercised. Located via
-//! `CARGO_BIN_EXE_luminosity-fixture`; the release staging copies only the
-//! `luminosity` binary, so it never ships.
-//!
-//! Restriction lints are allowed crate-wide: a CLI stub legitimately calls
-//! `process::exit` and prints to stdout.
+//! A stand-in "sub-binary" the launcher resolves and execs in tests, selecting
+//! a behaviour by argument. Located via `CARGO_BIN_EXE_luminosity-fixture`; the
+//! release staging copies only the `luminosity` binary, so it never ships.
 #![allow(
     clippy::exit,
     clippy::print_stdout,
@@ -25,8 +20,6 @@ fn main() {
     // args_os, not args: a non-UTF-8 forwarded argument must not panic here.
     let args: Vec<OsString> = std::env::args_os().skip(1).collect();
 
-    // `--help` delegation: whatever else was asked, a forwarded --help makes the
-    // child emit its own help — a sentinel only this fixture prints.
     if args.iter().any(|arg| arg == "--help") {
         println!("{HELP_SENTINEL}");
         return;
@@ -56,9 +49,8 @@ fn block_until_signalled() -> ! {
     }
 }
 
-/// `write-args-to <file> <arg>...` — write the args AFTER the destination path,
-/// NUL-separated, as raw bytes, so a test can assert non-UTF-8 arguments
-/// survived exec verbatim.
+/// `write-args-to <file> <arg>...` — writes the args after the destination path,
+/// NUL-separated as raw bytes, so a test can assert non-UTF-8 args survive exec.
 fn write_forwarded_args(args: &[OsString]) {
     let Some(destination) = args.get(1) else {
         eprintln!("luminosity-fixture: write-args-to needs a destination");
