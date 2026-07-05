@@ -1,8 +1,6 @@
-//! The release manifest — the launcher's signed read contract.
-//!
-//! Deserialised leniently (unknown fields ignored) so the contract can gain
-//! additive fields under "no launcher self-update", but the `schema_version` is
-//! asserted supported and fails closed on an unrecognised higher value.
+//! The release manifest — the launcher's signed read contract. Deserialised
+//! leniently (unknown fields ignored) so it can gain additive fields, but a
+//! `schema_version` higher than supported fails closed.
 
 use std::collections::BTreeMap;
 
@@ -10,8 +8,8 @@ use serde::Deserialize;
 
 use crate::launch::core::ResolutionError;
 
-/// The manifest schema the launcher understands. Bumped only on a breaking
-/// shape change; kept coherent with `tasks/sign.py`'s `MANIFEST_SCHEMA_VERSION`.
+/// The manifest schema the launcher understands; kept coherent with
+/// `tasks/sign.py`'s `MANIFEST_SCHEMA_VERSION`.
 pub const SUPPORTED_SCHEMA_VERSION: u64 = 1;
 
 #[derive(Debug, Deserialize)]
@@ -38,8 +36,8 @@ pub struct PlatformEntry {
 
 impl Manifest {
     /// Parse manifest JSON, then assert the schema is supported and the version
-    /// matches the launcher's own (anti-rollback). Both are checked only AFTER
-    /// the caller has verified the manifest signature.
+    /// matches the launcher's own (anti-rollback). Call only AFTER verifying the
+    /// manifest signature.
     ///
     /// # Errors
     ///
@@ -71,7 +69,6 @@ impl Manifest {
         Ok(manifest)
     }
 
-    /// Look up a binary's entry for a platform, or `None` if absent.
     #[must_use]
     pub fn platform_entry(
         &self,
@@ -94,8 +91,6 @@ mod tests {
     #[test]
     fn parses_the_shared_fixture_the_python_writer_emits(
     ) -> Result<(), Box<dyn Error>> {
-        // The same fixture the Python writer suite consumes — the two readers of
-        // the publisher↔launcher contract cannot silently diverge.
         let manifest = Manifest::parse_and_validate(
             SHARED_FIXTURE.as_bytes(),
             "0.1.0-pre.1",
@@ -105,7 +100,6 @@ mod tests {
             .ok_or("missing luminosity/darwin-arm64")?;
         assert_eq!(launcher.sha256.len(), 64);
         assert!(!launcher.signature.is_empty());
-        // The synthetic sub-binary with its own description (help synthesis).
         let foo = manifest.binaries.get("foo").ok_or("missing foo")?;
         assert_eq!(foo.description, "Bar tool");
         Ok(())

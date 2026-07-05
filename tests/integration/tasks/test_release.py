@@ -71,10 +71,9 @@ class TestPrereleasePrepare:
         mocker.patch.object(tv, "bump")
         mock_read = mocker.patch.object(tv, "read", return_value=MagicMock())
         mock_read.return_value.__str__ = lambda _: "1.21.0-pre.1"
-        # Mocked so tests never mutate the real on-disk
-        # .claude-plugin/marketplace-prerelease.json.
+        # Mocked so tests never mutate the real on-disk marketplace file.
         mocker.patch.object(tm, "update_prerelease_version")
-        # Mocked so tests never trigger a real four-triple cargo-zigbuild.
+        # Mocked so tests never trigger a real four-triple cross-build.
         mocker.patch.object(tb, "release")
 
     def test_calls_configure_and_pull(
@@ -171,8 +170,6 @@ class TestPrereleaseFinalise:
     def test_coherence_gate_aborts_before_signing_or_publishing(
         self, ctx: MagicMock, mocker: MockerFixture
     ):
-        # A desynced anchor must block the publish path before anything is
-        # signed, tagged, created, or uploaded — not only in the PR-time check.
         mocker.patch.object(
             tv, "check", side_effect=Exit("version:check failed", code=1)
         )

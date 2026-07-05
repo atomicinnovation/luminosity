@@ -1,10 +1,6 @@
-//! A minimal hand-rolled HTTP/1.1 mock server for the resolution tests.
-//!
-//! Std-only (no async runtime, no HTTP dev-dep — keeping cargo-deny's dev-dep
-//! scan TLS-free). Serves fixed per-path responses, counts hits, and supports
-//! 404/5xx/redirect shapes.
+//! A minimal hand-rolled HTTP/1.1 mock server for the resolution tests, std-only
+//! (no async runtime, no HTTP dev-dep) so the dev-dependency tree stays TLS-free.
 
-// Test-infrastructure module: expect/unwrap and format!-into-String are allowed.
 #![allow(
     dead_code,
     clippy::expect_used,
@@ -20,16 +16,11 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-/// What the server returns for a path.
 #[derive(Clone)]
 pub enum Route {
-    /// 200 with these bytes.
     Ok(Vec<u8>),
-    /// This status code with an empty body.
     Status(u16),
-    /// 302 redirect to this absolute Location.
     Redirect(String),
-    /// 500 for the first `fail_times` hits, then 200 with the bytes.
     FlakyThenOk { fail_times: usize, body: Vec<u8> },
 }
 
@@ -45,7 +36,6 @@ pub struct MockServer {
 }
 
 impl MockServer {
-    /// Bind an ephemeral loopback port and start serving in a background thread.
     pub fn start() -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock");
         let port = listener.local_addr().expect("addr").port();
@@ -60,7 +50,6 @@ impl MockServer {
         Self { port, shared }
     }
 
-    /// The base URL for the server (no trailing slash).
     pub fn base_url(&self) -> String {
         format!("http://127.0.0.1:{}", self.port)
     }
@@ -79,7 +68,6 @@ impl MockServer {
             .or_insert_with(|| Arc::new(AtomicUsize::new(0)));
     }
 
-    /// How many times `path` was requested.
     pub fn hits(&self, path: &str) -> usize {
         self.shared
             .hits

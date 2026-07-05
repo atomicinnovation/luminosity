@@ -1,11 +1,6 @@
-//! Black-box tests of the compiled `luminosity-verify` shim — the most
-//! trust-critical node, so it is tested directly against the real minisign CLI.
-//!
-//! Skips cleanly when `minisign` is not on PATH (present under
-//! `mise run test:unit:cli`).
+//! Black-box tests of the compiled `luminosity-verify` shim, exercised directly
+//! against the real `minisign` CLI. Skips cleanly when `minisign` is absent.
 
-// Test harness: expect/unwrap in the keygen/signing helpers is the bounded
-// test-scaffolding exemption; test bodies return Result + assert.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::error::Error;
@@ -100,7 +95,7 @@ fn exits_nonzero_on_a_tampered_payload() -> Result<(), Box<dyn Error>> {
     let target = dir.join("launcher");
     std::fs::write(&target, b"launcher bytes")?;
     let signature = sign(&minisign, &secret, &target);
-    std::fs::write(&target, b"tampered bytes")?; // change after signing
+    std::fs::write(&target, b"tampered bytes")?;
 
     let status = Command::new(SHIM)
         .arg(&public)
@@ -122,7 +117,6 @@ fn exits_nonzero_on_a_non_release_key() -> Result<(), Box<dyn Error>> {
     std::fs::write(&target, b"launcher bytes")?;
     let signature = sign(&minisign, &attacker_secret, &target);
 
-    // Signed by attacker, verified against the release key → refused.
     let status = Command::new(SHIM)
         .arg(&release_public)
         .arg(&signature)

@@ -1,9 +1,8 @@
-//! Black-box tests of external-subcommand dispatch + exec.
-//!
-//! `exec` replaces the current process, so these spawn the real `luminosity`
-//! binary as a child (calling dispatch in-process would replace the test
+//! Black-box tests of external-subcommand dispatch + exec: `exec` replaces the
+//! current process, so these spawn the real `luminosity` binary as a child
+//! rather than calling dispatch in-process (which would replace the test
 //! runner). `LUMINOSITY_RESOLVE_FIXTURE` points the resolver at the in-crate
-//! fixture, so the dispatch + exec path runs without any network.
+//! fixture, so the path runs without network.
 
 use std::error::Error;
 use std::ffi::OsString;
@@ -62,8 +61,6 @@ fn external_subcommand_terminating_signal_propagates(
 
 #[test]
 fn per_command_help_is_delegated_to_the_child() -> Result<(), Box<dyn Error>> {
-    // clap routes `foo --help` to External (not top-level help), so dispatch
-    // re-execs the child with --help and the child emits its own help.
     let output = launcher().args(["frobnicate", "--help"]).output()?;
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout)?;
@@ -77,11 +74,9 @@ fn per_command_help_is_delegated_to_the_child() -> Result<(), Box<dyn Error>> {
 #[test]
 fn non_utf8_arguments_survive_verbatim_to_the_child(
 ) -> Result<(), Box<dyn Error>> {
-    // The reason External is Vec<OsString>, not Vec<String>: a non-UTF-8 arg
-    // must reach the exec'd child byte-for-byte.
     let destination =
         std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("nonutf8-args");
-    let non_utf8 = OsString::from_vec(vec![0x66, 0x80, 0x6f]); // "f\x80o"
+    let non_utf8 = OsString::from_vec(vec![0x66, 0x80, 0x6f]);
 
     let status = launcher()
         .arg("frobnicate")
@@ -92,6 +87,6 @@ fn non_utf8_arguments_survive_verbatim_to_the_child(
     assert!(status.success(), "fixture did not write the args");
 
     let written = std::fs::read(&destination)?;
-    assert_eq!(written, vec![0x66, 0x80, 0x6f, 0]); // arg bytes + NUL separator
+    assert_eq!(written, vec![0x66, 0x80, 0x6f, 0]);
     Ok(())
 }

@@ -14,18 +14,10 @@ def generate(
 ) -> None:
     """Generate the release minisign keypair.
 
-    Writes the PUBLIC key to `keys/luminosity-release.pub` (committed — the
-    launcher embeds it via `cli/launcher/build.rs` and the bootstrap ships it)
-    and the SECRET key to the sibling `keys/luminosity-release.key` (gitignored
-    by the `*.key` rule). After generating: store the secret key's contents in
-    the GitHub `MINISIGN_SECRET_KEY` secret (and its passphrase in
-    `MINISIGN_KEY_PASSWORD`), then delete the local secret file.
-
-    Regenerating invalidates every prior release signature, so it refuses to
-    overwrite an existing public key without `--force`. Prompts for a passphrase
-    interactively unless `--no-password` is given (an unencrypted key).
+    Writes the committed public key and its gitignored sibling secret key.
+    Refuses to overwrite an existing public key without `--force`, since
+    regenerating invalidates every prior release signature.
     """
-    # Sibling of the public key, gitignored by the `*.key` rule.
     secret_key = RELEASE_PUBLIC_KEY.with_suffix(".key")
     if RELEASE_PUBLIC_KEY.exists() and not force:
         raise Exit(
@@ -38,7 +30,7 @@ def generate(
     command = [
         minisign.MINISIGN,
         "-G",
-        "-f",  # existence is guarded above; -f lets --force actually overwrite
+        "-f",  # minisign overwrite flag; existence is guarded by --force above
         "-p",
         str(RELEASE_PUBLIC_KEY),
         "-s",

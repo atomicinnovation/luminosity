@@ -4,7 +4,6 @@
 //! as config, so tests sign fixtures with a freshly-generated key and inject its
 //! public key. Requires the `minisign` CLI; skips cleanly if it is absent.
 
-// expect/unwrap allowed in the setup helpers (keygen, signing, temp dirs).
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 mod common;
@@ -93,9 +92,8 @@ fn sign(minisign: &Path, secret: &Path, dir: &Path, bytes: &[u8]) -> String {
 }
 
 fn manifest_json(version: &str, sha256: &str, signature: &str) -> String {
-    // The signature's minisign trusted comment carries newlines AND tabs; both
-    // are control characters that must be JSON-escaped (production uses
-    // json.dumps, which does this). A raw tab would make serde reject the JSON.
+    // The minisign trusted comment carries newlines and tabs; both are control
+    // characters that must be JSON-escaped or serde rejects the manifest.
     let escaped = signature.replace('\n', "\\n").replace('\t', "\\t");
     format!(
         "{{\"schema_version\":1,\"version\":\"{version}\",\"binaries\":{{\
@@ -146,7 +144,6 @@ fn asset_path() -> String {
     format!("/{BINARY}-{HOST_PLATFORM}")
 }
 
-/// Build a harness with a correctly-signed release the resolver will accept.
 fn happy_harness() -> Option<Harness> {
     let minisign = minisign_bin()?;
     let workdir = tempdir("work");
@@ -198,7 +195,6 @@ fn happy_path_fetches_verifies_caches_and_returns_a_runnable_binary(
     let path = harness.resolve()?;
     assert!(path.exists(), "cached binary missing");
     assert_eq!(std::fs::read(&path)?, harness.fixture_bytes);
-    // The cached path is the real, runnable fixture: exit code propagates.
     let status = Command::new(&path).arg("exit-42").status()?;
     assert_eq!(status.code(), Some(42));
     Ok(())
@@ -407,7 +403,6 @@ fn an_already_cached_binary_resolves_offline() -> Result<(), Box<dyn Error>> {
     let harness = skip_if_no_minisign!(happy_harness());
     let first = harness.resolve()?;
     assert!(first.exists());
-    // A second resolver whose server is dead still resolves from the cache.
     let keys = TrustedKeys::from_public_key_files(
         &harness
             .trusted
@@ -439,8 +434,8 @@ fn a_poisoned_cache_entry_is_evicted_and_refetched(
 ) -> Result<(), Box<dyn Error>> {
     let harness = skip_if_no_minisign!(happy_harness());
     let path = harness.resolve()?;
-    // Poison the cached binary (attacker overwrites both binary and, implicitly,
-    // leaves a now-mismatched signature): re-verify must reject and self-heal.
+    // Poison the cached binary so its bytes no longer match the signed digest;
+    // re-verify must reject it and self-heal by refetching.
     std::fs::write(&path, b"poisoned")?;
     let healed = harness.resolve()?;
     assert_eq!(std::fs::read(&healed)?, harness.fixture_bytes, "refetched");

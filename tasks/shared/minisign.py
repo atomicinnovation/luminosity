@@ -19,9 +19,8 @@ def sign(
 ) -> None:
     """Detach-sign `target` with the secret key, writing `signature_path`.
 
-    A password is fed on stdin (minisign reads the passphrase there when the
-    input is not a terminal); a `None` password suits an unencrypted (`-W`) key.
-    Any failure to run or a non-zero exit raises `MinisignError`.
+    A password is fed on stdin; `None` suits an unencrypted key. Any failure
+    raises `MinisignError`.
     """
     command = [
         MINISIGN,
@@ -56,9 +55,7 @@ def sign(
 def verify(target: Path, signature_path: Path, public_key_path: Path) -> None:
     """Verify `target` against its detached `signature_path` and `public_key`.
 
-    Raises `MinisignError` on a genuine verification failure AND on any tooling
-    failure (absent binary, timeout, non-zero exit), so a transient tool hiccup
-    is never mistaken for a passing verification nor for an unrelated error.
+    Raises `MinisignError` on a verification failure or any tooling failure.
     """
     command = [
         MINISIGN,

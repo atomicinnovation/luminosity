@@ -1,10 +1,7 @@
 [graph]
-# The four shipped release triples (ADR-0002) PLUS the two host/CI dev triples,
-# so advisory/license/ban evaluation also covers the graph actually built and
-# run during development and in the test/check CI jobs (gnu on ubuntu,
-# aarch64-darwin locally) — otherwise a banned crate or a dev-triple-only
-# advisory would be compiled and executed yet never deny-evaluated. Extra
-# targets are cheap to evaluate (no build cost).
+# Include the dev/CI host triples alongside the shipped release triples so ban,
+# license, and advisory evaluation also covers what is built and run during
+# development and CI, not just the release binaries. Extra targets are cheap.
 targets = [
     "aarch64-apple-darwin",
     "x86_64-apple-darwin",
@@ -12,35 +9,29 @@ targets = [
     "x86_64-unknown-linux-musl",
     "x86_64-unknown-linux-gnu",
 ]
-# Evaluate the graph as the release ships it (ADR-0010: default-features =
-# false, rustls). NOT all-features — that would enable feature-gated paths the
-# musl-static binaries never build (e.g. reqwest's native-tls feature) and fire
-# false-positive bans. The real static-link guarantee is exercised by
-# build:launcher (Phase 1); this ban is a complementary,
-# necessary-but-not-sufficient guard.
+# Evaluate the graph as shipped (default-features = false, rustls), not
+# all-features: all-features would enable feature-gated paths the static
+# binaries never build (e.g. reqwest's native-tls) and fire false-positive bans.
 
 [advisories]
-# hickory-proto 0.25 DNS-parsing DoS advisories. There is no upgrade path yet:
-# reqwest 0.12 pins hickory-resolver 0.25, which requires hickory-proto 0.25
-# (semver-incompatible with the fixed 0.26.1). The exposure is bounded — the
-# launcher resolves only GitHub CDN hostnames via the host's configured
-# resolvers, and the attacks require a malicious/compromised DNS responder,
-# which can already deny resolution. Remove both when reqwest adopts hickory
-# 0.26 (track the bundled-roots/dep refresh cadence in CONTRIBUTING.md).
+# hickory-proto 0.25 DNS-parsing DoS advisories with no upgrade path yet:
+# reqwest 0.12 pins hickory-resolver 0.25 (needs hickory-proto 0.25,
+# semver-incompatible with the fixed 0.26.1). Exposure is bounded — the launcher
+# resolves only GitHub CDN hostnames and the attack needs a malicious DNS
+# responder, which can already deny resolution. Remove both when reqwest adopts
+# hickory 0.26.
 ignore = [
     "RUSTSEC-2026-0118",  # NSEC3 closest-encloser proof unbounded loop
     "RUSTSEC-2026-0119",  # O(n^2) name-compression CPU exhaustion on encode
 ]
-# Set the policy explicitly rather than leaning on version-sensitive defaults.
+# Explicit policy rather than version-sensitive defaults.
 unmaintained = "all"
 yanked = "deny"
 
 [licenses]
-# Pre-seeded with the permissive licenses the ADR-0010 stack (reqwest, rustls,
-# tokio, clap and their closures) is known to require, so 0007 is not blocked
-# by an unrelated allow-list PR. Any future copyleft / MPL / *GPL license must
-# be justified per-crate via [[licenses.exceptions]], never added to this
-# blanket allow.
+# The permissive licenses the reqwest/rustls/tokio/clap stack requires. Any
+# future copyleft / MPL / *GPL license must be justified per-crate via
+# [[licenses.exceptions]], never added to this blanket allow.
 allow = [
     "MIT",
     "Apache-2.0",
@@ -62,19 +53,18 @@ multiple-versions = "warn"
 wildcards = "deny"
 # Exempt local path deps (launcher -> kernel); registry wildcards stay denied.
 allow-wildcard-paths = true
-# ADR-0010: rustls only — no transitive dep may re-enable default-tls and break
-# the musl-static build. This covers the TLS vector only; other system-C
-# linkers (libgit2-sys, curl-sys, libsqlite3-sys w/o bundled, libz-sys) can
-# also break the static build and are added here if/when they become relevant.
-# The musl build (Phase 1) is the authoritative static-link check.
+# rustls only — no transitive dep may re-enable default-tls and break the
+# musl-static build. Covers the TLS vector; other system-C linkers (libgit2-sys,
+# curl-sys, etc.) can also break static linking and are added here if they
+# become relevant. The musl build is the authoritative static-link check.
 deny = [
     { crate = "native-tls" },
     { crate = "openssl" },
     { crate = "openssl-sys" },
 ]
-# Architectural infra-crate ban-lists (ADR-0009) are scaffolded here and become
-# load-bearing once the workspace splits (config/config-adapters — story 0009;
-# later crates — work item 0012). Inert in the single-crate bootstrap.
+# Cross-crate architectural ban-lists, scaffolded inert for the single-crate
+# bootstrap; they become load-bearing once the workspace splits into multiple
+# crates.
 skip = []
 skip-tree = []
 

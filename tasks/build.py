@@ -29,15 +29,8 @@ def is_statically_linked(
 ) -> bool:
     """Whether a musl release binary is static, per `file`/`ldd` output.
 
-    The native-tls ban is necessary-but-not-sufficient (other system-C `*-sys`
-    crates link dynamically too), so the static guarantee is turned into a
-    checked fact rather than inferred.
-
-    Accepts both the plain-static and static-PIE phrasings each tool emits: the
-    aarch64 musl build links non-PIE static ("statically linked"), while the
-    modern x86_64 musl default links static-PIE, which `file` reports as
-    "static-pie linked" and `ldd` reports as "statically linked" (not "not a
-    dynamic executable"). All denote a binary with no dynamic dependencies.
+    Accepts both the plain-static and static-PIE phrasings the tools emit
+    ("statically linked", "static-pie linked", "not a dynamic executable").
     """
     if "statically linked" in file_output or "static-pie linked" in file_output:
         return True
@@ -52,10 +45,7 @@ def is_statically_linked(
 def has_expected_arch(triple: str, arch_output: str) -> bool:
     """Whether a darwin release binary is the single arch `triple` expects.
 
-    Rejects the wrong arch AND a fat/universal binary carrying both, so the
-    cross-arch slice (x86_64 built on an arm64 runner) is a checked fact.
-    Normalises `llvm-objdump`'s hyphenated "x86-64" to lipo's "x86_64" so both
-    verification tools read the same way.
+    Rejects both the wrong arch and a fat/universal binary carrying both.
     """
     normalised = arch_output.replace("x86-64", "x86_64")
     expected = "x86_64" if "x86_64" in triple else "arm64"
@@ -66,10 +56,8 @@ def has_expected_arch(triple: str, arch_output: str) -> bool:
 def links_only_system_libraries(link_output: str) -> bool:
     """Whether a darwin binary links nothing outside the OS-provided libraries.
 
-    Parses `otool -L` / `llvm-objdump --macho --dylibs-used` output — both list
-    one dylib path per line after a `<binary>:` header — and rejects any dylib
-    that lives outside `/usr/lib/` or `/System/Library/`. An empty list passes
-    vacuously (a fully static-except-libSystem binary lists only system paths).
+    Parses `otool -L` / `llvm-objdump --macho --dylibs-used` output and rejects
+    any dylib outside `/usr/lib/` or `/System/Library/`.
     """
     non_system = []
     for line in link_output.splitlines():
@@ -98,8 +86,6 @@ def _verify_musl_with_ldd(context: Context, binary: str, triple: str) -> None:
 
 
 def _verify_musl_with_file(context: Context, binary: str, triple: str) -> None:
-    # A Linux binary cross-built on macOS: `ldd` is unavailable, so the static
-    # guarantee rests on `file` alone (the musl host leg re-checks with ldd).
     file_output = context.run(f"file {binary}", warn=True, pty=False).stdout
     if not is_statically_linked(file_output):
         raise Exit(f"release binary is not statically linked: {triple}", code=1)
@@ -123,10 +109,6 @@ def _verify_darwin_with_lipo_otool(
 def _verify_darwin_with_objdump(
     context: Context, binary: str, triple: str
 ) -> None:
-    # A darwin binary cross-built on Linux: `lipo`/`otool` are absent, so
-    # verification uses `llvm-objdump --macho` from the pinned
-    # llvm-tools-preview (which travels with the toolchain, keeping the check
-    # host-independent).
     arch_output = context.run(
         f"llvm-objdump --macho {binary}", warn=True, pty=False
     ).stdout
@@ -141,10 +123,8 @@ def _verify_darwin_with_objdump(
         )
 
 
-# The verification tool depends on BOTH the build host and the target family,
-# not the target triple alone — a darwin binary is inspected differently on a
-# macOS host (lipo/otool) than on a Linux host (llvm-objdump). Modelled as an
-# explicit strategy mapping rather than nested conditionals.
+# Verification depends on both the build host and the target family, not the
+# target triple alone.
 _VerifyStrategy = Callable[[Context, str, str], None]
 _VERIFY_STRATEGIES: dict[tuple[str, str], _VerifyStrategy] = {
     ("Darwin", "darwin"): _verify_darwin_with_lipo_otool,
@@ -177,9 +157,7 @@ def _stage_artifacts(
 ) -> str:
     """Copy the built binary into the staging dir, archive it, return its hash.
 
-    The `.debug.tar.gz` carries the release binary as the symbol-bearing
-    artifact the publish flow uploads alongside it; the returned digest is the
-    bare lowercase sha256 hex of the staged binary.
+    The returned digest is the bare lowercase sha256 hex of the staged binary.
     """
     source = _binary(triple)
     destination = binary_path(target_platform)
@@ -204,13 +182,7 @@ def _write_checksums(digests: dict[str, str]) -> None:
 
 @task
 def launcher(context: Context) -> None:
-    """Release-build the host-native triples, checking link/arch invariants.
-
-    Host-native only (the two musl triples on Linux, the two darwin triples on
-    macOS); CI's `build-launcher` matrix covers all four across both OSes.
-    Builds the binary (`--bin`, not just `-p`) so the link step — the whole
-    point of a per-triple build — is always exercised.
-    """
+    """Release-build the host-native triples, checking link/arch invariants."""
     host_system = platform.system()
     with context.cd(str(WORKSPACE_ROOT)):
         for triple in host_targets(host_system):
@@ -229,11 +201,8 @@ def launcher(context: Context) -> None:
 def release(context: Context) -> None:
     """Cross-build all four shipped triples from one host via cargo-zigbuild.
 
-    Iterates every shipped triple (not just the host-native set), stages each
-    binary + debug archive into `cli/launcher/bin/`, and records the per-triple
-    sha256 into `checksums.json`. Verification is host-aware (arch AND linkage
-    for every triple); runtime behaviour is execution-verified on host triples
-    by `build:launcher`.
+    Stages each binary + debug archive into `cli/launcher/bin/` and records the
+    per-triple sha256 into `checksums.json`.
     """
     host_system = platform.system()
     digests: dict[str, str] = {}
@@ -261,9 +230,8 @@ def _build_and_stage_shim(
 ) -> None:
     """Cross-build the root-of-trust verify shim and stage it into the package.
 
-    The per-triple shim is the bootstrap's root verifier and ships committed in
-    the plugin package (it rides the trusted marketplace channel); the launcher
-    is fetched on demand, but the tiny shim is not.
+    The shim ships committed in the plugin package; the launcher is fetched on
+    demand.
     """
     result = context.run(
         f"cargo zigbuild --release --bin {SHIM_CRATE} --target {triple}",

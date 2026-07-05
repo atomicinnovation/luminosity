@@ -1,9 +1,8 @@
-"""Hermetic tests for bin/luminosity, the entry-point bootstrap.
+"""Hermetic tests for bin/luminosity.
 
-No network: the bootstrap's fetch is pointed at a `file://` release directory
-via `LUMINOSITY_RELEASE_BASE_URL`, so real `curl`/`wget` copy local files. The
-launcher is a tiny signed stub. Skips cleanly if `minisign`, a fetcher, or the
-host verify shim is unavailable.
+The fetch is pointed at a `file://` release directory via
+`LUMINOSITY_RELEASE_BASE_URL`, so real `curl`/`wget` copy local files. Skips if
+`minisign`, a fetcher, or the host verify shim is unavailable.
 """
 
 import os
@@ -139,8 +138,6 @@ def test_unset_plugin_root_is_a_named_error() -> None:
 
 
 def test_invalid_plugin_root_is_a_named_error(tmp_path: Path) -> None:
-    # A set-but-non-directory CLAUDE_PLUGIN_ROOT must fail closed with the named
-    # diagnostic, not a raw shell error.
     missing = tmp_path / "does-not-exist"
     result = subprocess.run(
         [BOOTSTRAP, "version"],
@@ -157,13 +154,10 @@ def test_invalid_plugin_root_is_a_named_error(tmp_path: Path) -> None:
 def test_unrunnable_verify_shim_is_a_fail_closed_named_error(
     tmp_path: Path,
 ) -> None:
-    # The shim is the root of trust. If it is present but cannot run, the
-    # bootstrap must fail closed with a named diagnostic and never exec the
-    # launcher — not silently downgrade to a TLS-only trust model.
     public, secret = _make_keypair(tmp_path, "release")
     root = tmp_path / "root"
     _make_plugin_root(root, public)
-    _make_release(tmp_path / "rel", secret)  # a validly signed launcher
+    _make_release(tmp_path / "rel", secret)
     broken = root / "bin" / f"luminosity-verify-{PLATFORM}"
     broken.write_text("not a runnable program\n")
     broken.chmod(broken.stat().st_mode | stat.S_IEXEC)
@@ -232,7 +226,7 @@ def test_non_release_key_launcher_is_refused(tmp_path: Path) -> None:
     public, _ = _make_keypair(tmp_path, "release")
     _, attacker_secret = _make_keypair(tmp_path, "attacker")
     _make_plugin_root(tmp_path / "root", public)
-    _make_release(tmp_path / "rel", attacker_secret)  # signed by attacker
+    _make_release(tmp_path / "rel", attacker_secret)
     result = _run(tmp_path / "root", tmp_path / "rel", tmp_path / "cache", "go")
     assert result.returncode != 0
     assert "LAUNCHER RAN" not in result.stdout
@@ -243,8 +237,6 @@ def test_path_planted_decoy_shim_is_not_used(tmp_path: Path) -> None:
     _, attacker_secret = _make_keypair(tmp_path, "attacker")
     _make_plugin_root(tmp_path / "root", public)
     _make_release(tmp_path / "rel", attacker_secret)
-    # A decoy `luminosity-verify` earlier on PATH that always succeeds; the
-    # bootstrap must invoke the real shim by absolute path, so this is ignored.
     decoy_dir = tmp_path / "decoy"
     decoy_dir.mkdir()
     decoy = decoy_dir / "luminosity-verify"

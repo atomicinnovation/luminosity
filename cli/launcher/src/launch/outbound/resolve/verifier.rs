@@ -1,8 +1,5 @@
-//! Verification: sha256 (corruption check) + minisign (the security boundary).
-//!
-//! The signature is what proves "signed by our key, not merely served over
-//! TLS"; sha256 is only a corruption guard. Both the manifest signature and
-//! each binary signature are checked against the trusted keys.
+//! Verification: sha256 (corruption check) + minisign (the security boundary,
+//! proving "signed by our key", not merely "served over TLS").
 
 use std::fmt::Write as _;
 
@@ -12,23 +9,21 @@ use crate::launch::core::ResolutionError;
 
 use super::keys::TrustedKeys;
 
-/// Lowercase hex sha256 of `bytes` (the bare form the manifest carries).
 #[must_use]
 pub fn sha256_hex(bytes: &[u8]) -> String {
     let digest = Sha256::digest(bytes);
     let mut hex = String::with_capacity(digest.len() * 2);
     for byte in digest {
-        // write! into a String is infallible; the result is discarded.
         let _ = write!(hex, "{byte:02x}");
     }
     hex
 }
 
-/// Verify a binary's sha256 then its minisign signature against a trusted key.
-///
 /// # Errors
 ///
-/// [`ResolutionError::ChecksumMismatch`] or [`ResolutionError::SignatureMismatch`].
+/// [`ResolutionError::ChecksumMismatch`] if `bytes` do not match
+/// `expected_sha256`, or [`ResolutionError::SignatureMismatch`] if no trusted
+/// key verifies the signature.
 pub fn verify_binary(
     asset: &str,
     bytes: &[u8],
@@ -52,11 +47,10 @@ pub fn verify_binary(
     Ok(())
 }
 
-/// Verify the manifest's own detached signature against a trusted key.
-///
 /// # Errors
 ///
-/// [`ResolutionError::ManifestSignature`] if no trusted key verifies it.
+/// [`ResolutionError::ManifestSignature`] if no trusted key verifies the
+/// manifest signature.
 pub fn verify_manifest(
     manifest_bytes: &[u8],
     manifest_signature: &str,

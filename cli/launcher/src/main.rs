@@ -28,9 +28,6 @@ use luminosity::launch::outbound::tls::install_crypto_provider;
 use luminosity::version::core::VersionReporter;
 use luminosity::version::outbound::build_metadata::VergenBuildMetadata;
 
-/// The release-download base URL the real resolver fetches from, pinned to the
-/// plugin's own `v{version}` tag. Overridable by `LUMINOSITY_RELEASE_BASE_URL`
-/// (the hermetic tests point it at a local mock server).
 fn release_base_url() -> String {
     if let Some(override_url) = std::env::var_os("LUMINOSITY_RELEASE_BASE_URL")
     {
@@ -42,9 +39,8 @@ fn release_base_url() -> String {
     )
 }
 
-/// Builds the real resolver lazily, on the first `resolve` call, so a built-in
-/// like `version` never touches the cache root, TLS, or the network — its
-/// construction (and its failure modes) are confined to external dispatch.
+/// Builds the real resolver lazily on the first `resolve` call, so a built-in
+/// like `version` never touches the cache root, TLS, or the network.
 struct LazyProductionResolver;
 
 impl ResolveBinary for LazyProductionResolver {
@@ -59,11 +55,8 @@ impl ResolveBinary for LazyProductionResolver {
     }
 }
 
-/// Load the manifest and build the external-subcommands help section.
-///
-/// Best-effort and offline-tolerant: any failure (no network, no manifest, a
-/// bad key) yields `None`, so `--help` still prints the built-in help rather
-/// than erroring. No cache root is touched — help only reads the manifest.
+/// Best-effort and offline-tolerant: any failure yields `None` so `--help`
+/// still prints the built-in help rather than erroring.
 fn help_section() -> Option<String> {
     let keys = TrustedKeys::embedded().ok()?;
     let fetcher = Fetcher::new().ok()?;
@@ -87,8 +80,6 @@ fn render_augmented_help() -> ExitCode {
 fn run(cli: &Cli) -> Result<(), kernel::Error> {
     let reporter = VersionReporter::new(VergenBuildMetadata);
     let executor = UnixExec;
-    // Tests set FIXTURE_ENV to dispatch against the in-crate fixture; production
-    // never sets it and takes the real resolver.
     if std::env::var_os(FIXTURE_ENV).is_some_and(|value| !value.is_empty()) {
         dispatch(cli, &reporter, &FixtureResolver, &executor)
     } else {
@@ -103,7 +94,7 @@ fn main() -> ExitCode {
     }
 
     // try_parse (not parse) so top-level `--help` can be intercepted and
-    // augmented; `foo --help` routes to External and is delegated to the child.
+    // augmented rather than printed by clap.
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(error) if error.kind() == ErrorKind::DisplayHelp => {

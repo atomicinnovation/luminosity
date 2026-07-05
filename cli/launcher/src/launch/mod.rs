@@ -13,13 +13,11 @@ use crate::launch::inbound::cli::{Cli, Command};
 use crate::version::core::ReportVersion;
 use crate::version::inbound::cli as version_cli;
 
-/// Route the parsed command: built-ins run in-process; an external subcommand
-/// resolves + execs (replacing this process on success).
+/// A successful external exec never returns (it replaces this process).
 ///
 /// # Errors
 ///
 /// A [`kernel::Error`] when an external subcommand cannot be resolved or exec'd.
-/// The `Version` built-in never fails. A successful external exec never returns.
 pub fn dispatch(
     cli: &Cli,
     reporter: &impl ReportVersion,
@@ -33,8 +31,6 @@ pub fn dispatch(
         }
         Command::External(raw) => {
             let command = ExternalCommand::from_raw(raw.clone())?;
-            // run_external only returns on failure — a successful exec replaces
-            // the process — so reaching here always means an error.
             Err(run_external(resolver, executor, &command).into())
         }
     }

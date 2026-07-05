@@ -44,12 +44,7 @@ def deny(context: Context) -> None:
 
 @task
 def pup(context: Context) -> None:
-    """Run the cargo-pup behavioural regression (needs the nightly lane).
-
-    Isolated in tests/integration/pup/ — not the general suite — because it
-    needs the nightly + cargo-pup; it runs only in the check-architecture job,
-    which provisions them.
-    """
+    """Run the cargo-pup behavioural regression (needs the nightly lane)."""
     with context.cd(str(repo_root())):
         result = context.run(
             "uv run pytest tests/integration/pup -v",

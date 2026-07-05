@@ -18,9 +18,7 @@ from tasks.shared.paths import (
 from tasks.shared.rust import LAUNCHER_CRATE
 from tasks.shared.targets import TARGETS
 
-# The manifest read contract's version; bumped only on a breaking shape change.
-# The launcher asserts it equals a supported value and fails closed on an
-# unrecognised higher major.
+# Manifest read-contract version; bumped only on a breaking shape change.
 MANIFEST_SCHEMA_VERSION = 1
 _LAUNCHER_DESCRIPTION = "The luminosity launcher"
 
@@ -35,11 +33,8 @@ def build_manifest(
 ) -> dict[str, Any]:
     """Assemble the launcher's read contract from per-platform artefacts.
 
-    The manifest is keyed by binary NAME with a per-platform inner map, so it
-    expresses the launcher itself and (later) on-demand sub-binaries — each
-    resolved by name, each with its own per-platform checksum/signature and a
-    `description` for the synthesised help. `sha256` is the bare lowercase hex
-    digest (no `sha256:` prefix); `signature` is the full `.minisig` contents.
+    Keyed by binary name; `sha256` is the bare lowercase hex digest (no
+    `sha256:` prefix), `signature` is the full `.minisig` contents.
     """
     return {
         "schema_version": MANIFEST_SCHEMA_VERSION,
@@ -91,9 +86,7 @@ def write_manifest() -> None:
     """Emit `manifest.json` from the staged checksums + emitted signatures.
 
     The inline `signature` is read back from the emitted `.minisig` so the
-    inline copy and the detached asset share one generation point and cannot
-    drift; the launcher reads the inline copy, the detached file is a
-    publish-side convenience asset.
+    inline copy and the detached asset cannot drift.
     """
     version = json.loads(CHECKSUMS.read_text())["version"]
     manifest = build_manifest(version, _checksum_digests(), _signatures())
@@ -104,10 +97,8 @@ def write_manifest() -> None:
 def sign(context: Context) -> None:
     """Sign every binary, build the manifest, and sign the manifest.
 
-    Runs only in the CI publish path: reads the release secret key material
-    from `MINISIGN_SECRET_KEY` (and optional `MINISIGN_KEY_PASSWORD`), writes it
-    to a private temp file, and signs. Local `mise run` never invokes this;
-    unit tests drive the helpers with a fixture keypair instead.
+    Reads the release secret key from `MINISIGN_SECRET_KEY` (and optional
+    `MINISIGN_KEY_PASSWORD`), writing it to a private temp file to sign with.
     """
     key_material = os.environ.get(_SECRET_KEY_ENV)
     if not key_material:

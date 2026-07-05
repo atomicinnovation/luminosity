@@ -5,8 +5,7 @@
 ///
 /// # Errors
 ///
-/// Never currently — an already-installed provider is treated as success. The
-/// `Result` is the seam for a genuinely fallible setup.
+/// Never currently; an already-installed provider is treated as success.
 pub fn install_crypto_provider() -> Result<(), kernel::Error> {
     let _ = rustls::crypto::ring::default_provider().install_default();
     Ok(())
