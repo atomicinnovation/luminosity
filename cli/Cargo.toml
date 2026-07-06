@@ -2,7 +2,7 @@
 # resolver = "3" so `rust-version` drives MSRV-aware version selection (a
 # resolver = "2" workspace ignores rust-version at resolution). Cargo 1.84+.
 resolver = "3"
-members = ["launcher", "kernel", "verify", "config"]
+members = ["launcher", "kernel", "verify", "config", "config-adapters"]
 
 [workspace.dependencies]
 # Versions are MSRV-first (rust-version <= 1.90) and frozen in Cargo.lock.

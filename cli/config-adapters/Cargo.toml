@@ -1,0 +1,15 @@
+[package]
+name = "config-adapters"
+version = "0.1.0-pre.0"
+edition = "2021"
+rust-version = "1.90.0"
+license = "MIT"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+config = { path = "../config" }
+serde = { workspace = true }
+serde-saphyr = { workspace = true }

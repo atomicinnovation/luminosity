@@ -551,41 +551,41 @@ library produces into the serde-free `config::Node`.
 
 #### Automated Verification
 
-- [ ] The crate builds and lints: `mise run cli:check`
-- [ ] Adapter tests pass: `cargo nextest run -p config-adapters`
-- [ ] A test parses a fixture `.md` (nested `core:`/`example:`) into the expected
+- [x] The crate builds and lints: `mise run cli:check`
+- [x] Adapter tests pass: `cargo nextest run -p config-adapters`
+- [x] A test parses a fixture `.md` (nested `core:`/`example:`) into the expected
       `Node`
-- [ ] A test parses a fixture carrying a boolean, an integer, a float, a null, and
+- [x] A test parses a fixture carrying a boolean, an integer, a float, a null, and
       a sequence and asserts each maps to the matching typed `Scalar`/`Sequence`
       variant (types retained from the parse); a further case asserts an integer
       beyond `i64::MAX` maps to `Scalar::String` rather than overflowing
-- [ ] `cargo tree -p config-adapters` shows no `*-sys` / C-linking crate — a
+- [x] `cargo tree -p config-adapters` shows no `*-sys` / C-linking crate — a
       standing check of the pure-Rust, musl-static invariant, not just a one-time
       inspection at adoption
-- [ ] A test writes a nested key into an absent file, creating `.luminosity/` and
+- [x] A test writes a nested key into an absent file, creating `.luminosity/` and
       the `core:` block, then reads it back (round-trip against a tempdir)
-- [ ] A test asserts the markdown body is preserved across a `write`
-- [ ] Body round-trips exactly for the edge cases: a body that itself contains a
+- [x] A test asserts the markdown body is preserved across a `write`
+- [x] Body round-trips exactly for the edge cases: a body that itself contains a
       `---` line, a file with no trailing newline, a file with no frontmatter
       block, and a CRLF-terminated frontmatter (`---\r\n`) that is recognised
       rather than misread as bodyless
-- [ ] A test writes one key into a fixture that already holds a typed sibling
+- [x] A test writes one key into a fixture that already holds a typed sibling
       (e.g. `enabled: true`) and further keys, then asserts the sibling keeps its
       type and the key order is unchanged after the round-trip (no coercion, no
       alphabetising)
-- [ ] A test asserts malformed/unclosed frontmatter yields `MalformedFrontmatter`
-- [ ] A `write` against a present-but-malformed file returns `MalformedFrontmatter`
+- [x] A test asserts malformed/unclosed frontmatter yields `MalformedFrontmatter`
+- [x] A `write` against a present-but-malformed file returns `MalformedFrontmatter`
       and leaves the file byte-for-byte unchanged (fail-closed)
-- [ ] A successful `write` leaves no stray temp file under `.luminosity/tmp/`, and
+- [x] A successful `write` leaves no stray temp file under `.luminosity/tmp/`, and
       the atomic write targets a temp file in `.luminosity/tmp/` (not the system
       temp dir), so the `rename` stays same-filesystem
-- [ ] `FileConfigStore::discover` tests bound the upward walk so it cannot escape
+- [x] `FileConfigStore::discover` tests bound the upward walk so it cannot escape
       into the real repo (see the isolation note in Testing Strategy). Cases:
       `.luminosity/` at the tempdir root with a start dir two levels down roots at
       the tempdir; only a `.git` **directory** present roots there; a `.git` that is
       a **file** (worktree/submodule layout) still roots there; and a neither-marker
       case (isolated tempdir with no ancestor marker) roots at the start dir
-- [ ] Full local CI mirror is green: `mise run`
+- [x] Full local CI mirror is green: `mise run`
 
 #### Manual Verification
 
