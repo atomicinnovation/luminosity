@@ -30,6 +30,8 @@ path = "tests/fixtures/luminosity_fixture.rs"
 
 [dependencies]
 kernel = { path = "../kernel" }
+config = { path = "../config" }
+config-adapters = { path = "../config-adapters" }
 clap = { workspace = true }
 reqwest = { workspace = true }
 rustls = { workspace = true }
