@@ -62,9 +62,13 @@ deny = [
     { crate = "openssl" },
     { crate = "openssl-sys" },
 ]
-# Cross-crate architectural ban-lists, scaffolded inert for the single-crate
-# bootstrap; they become load-bearing once the workspace splits into multiple
-# crates.
+# Duplicate-version suppression for the `multiple-versions` check above: `skip`
+# excludes a package spec, `skip-tree` a whole subtree, from "found N versions of
+# X" detection. These do NOT enforce dependency direction — a crate listed here
+# can still appear anywhere in the graph. Cross-crate architectural enforcement
+# (keeping infrastructure out of a core crate's closure) is expressed via the
+# `deny` list above with a `wrappers` allow-list, as the native-tls ban shows;
+# the config/config-adapters split (work item 0009) adds the first such entry.
 skip = []
 skip-tree = []
 
