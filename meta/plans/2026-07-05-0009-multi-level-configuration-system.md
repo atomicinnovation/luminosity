@@ -589,7 +589,7 @@ library produces into the serde-free `config::Node`.
 
 #### Manual Verification
 
-- [ ] A hand-run `config set`/`get` (once Phase 4 lands) produces well-formed,
+- [x] A hand-run `config set`/`get` (once Phase 4 lands) produces well-formed,
       re-readable `.luminosity/config*.md` files
 
 ---
@@ -824,62 +824,62 @@ invocable — so the protection ships with the capability. The existing
 
 #### Automated Verification
 
-- [ ] Builds, lints, and the release build pass: `mise run cli:check` and
+- [x] Builds, lints, and the release build pass: `mise run cli:check` and
       `mise run build:launcher`
-- [ ] `git check-ignore .luminosity/config.local.md` and
+- [x] `git check-ignore .luminosity/config.local.md` and
       `git check-ignore .luminosity/tmp/scratch` both succeed (personal file and
       temp scratch ignored), and the same holds at a nested depth
       (`git check-ignore sub/dir/.luminosity/config.local.md` succeeds — proving the
       `**/` form), while `git check-ignore .luminosity/config.md` returns nothing
       (team file tracked)
-- [ ] New black-box integration tests pass:
+- [x] New black-box integration tests pass:
       `cargo nextest run -p luminosity -E 'test(config)'`
-- [ ] Full-stack resolution returns the personal value (both levels set)
-- [ ] Team-only fall-through returns the team value (personal absent)
-- [ ] `--level team` returns team and `--level personal` returns personal when
+- [x] Full-stack resolution returns the personal value (both levels set)
+- [x] Team-only fall-through returns the team value (personal absent)
+- [x] `--level team` returns team and `--level personal` returns personal when
       both are set
-- [ ] `set` with no `--level` writes the personal file
+- [x] `set` with no `--level` writes the personal file
       `.luminosity/config.local.md`; `--level team` writes the team file
       `.luminosity/config.md`
-- [ ] `get`/`set` invoked from a subdirectory of a project resolve the ancestor
+- [x] `get`/`set` invoked from a subdirectory of a project resolve the ancestor
       `.luminosity/` (discovery), rather than finding nothing or scaffolding a
       stray nested `.luminosity/`
-- [ ] `set --level personal` then `get` (full-stack) returns the personal value
+- [x] `set --level personal` then `get` (full-stack) returns the personal value
       (round-trip)
-- [ ] Key absent from both levels: `get` exits non-zero, prints nothing to stdout,
+- [x] Key absent from both levels: `get` exits non-zero, prints nothing to stdout,
       and prints a stderr message naming the key (`config key '…' is not set`)
-- [ ] Key present but empty: `get` exits 0 and prints an empty string — covered
+- [x] Key present but empty: `get` exits 0 and prints an empty string — covered
       for both an empty-string value and a bare null value (`example:`)
-- [ ] The inbound `render(&Scalar)` is unit-tested (no binary spawn): `String`
+- [x] The inbound `render(&Scalar)` is unit-tested (no binary spawn): `String`
       verbatim, `Bool` → `true`/`false`, `Int` → decimal, `Float` → canonical form,
       and `Null` → `""` — mirroring `version`'s pure `render`
-- [ ] `set` into a conflicting path (a key whose parent segment is a scalar, or
+- [x] `set` into a conflicting path (a key whose parent segment is a scalar, or
       whose target is an existing section) exits non-zero naming the conflicting
       key and leaves every config file byte-unchanged
-- [ ] A full-stack `get` of a team-only key with a present-but-malformed personal
+- [x] A full-stack `get` of a team-only key with a present-but-malformed personal
       file exits non-zero (fail-loud), prints nothing to stdout, and prints a
       stderr message naming the concrete malformed file path
       (`.luminosity/config.local.md`), not a `Level` word
-- [ ] The `set` `PathConflict` case above asserts the stderr message names the
+- [x] The `set` `PathConflict` case above asserts the stderr message names the
       conflicting segment and its shape (value-vs-section)
-- [ ] `--level bogus` on `get` and `set` exits non-zero, names the invalid level,
+- [x] `--level bogus` on `get` and `set` exits non-zero, names the invalid level,
       and creates/modifies no config file
-- [ ] A degenerate key (e.g. `""` or `core..example`) on both `get` and `set`
+- [x] A degenerate key (e.g. `""` or `core..example`) on both `get` and `set`
       exits non-zero, prints nothing to stdout, names the invalid key on stderr, and
       creates/modifies no config file — the `set` case in particular creates no
       `.luminosity/` directory (validation precedes discovery/scaffolding)
       (`Key::parse` → `InvalidKey`)
-- [ ] `get` on a resolved value prints the value + exactly one trailing newline
+- [x] `get` on a resolved value prints the value + exactly one trailing newline
       and exits 0
-- [ ] `luminosity config --help`, `config get --help`, and `config set --help`
+- [x] `luminosity config --help`, `config get --help`, and `config set --help`
       show non-empty descriptions for the commands, the `key`/`value` args, and
       `--level` (doc comments are wired), and `--level`'s help lists `team`,
       `personal`
-- [ ] Full local CI mirror is green: `mise run`
+- [x] Full local CI mirror is green: `mise run`
 
 #### Manual Verification
 
-- [ ] Running `luminosity config set core.example v` then
+- [x] Running `luminosity config set core.example v` then
       `luminosity config get core.example` from a scratch directory behaves as
       specified and leaves readable files under `.luminosity/`
 

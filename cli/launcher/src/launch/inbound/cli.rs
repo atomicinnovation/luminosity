@@ -2,7 +2,7 @@
 
 use std::ffi::OsString;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 /// The `luminosity` command-line surface.
 #[derive(Parser)]
@@ -16,10 +16,64 @@ pub struct Cli {
 pub enum Command {
     /// Print the version, commit SHA, build date, and target triple.
     Version,
+    /// Read or write configuration values.
+    Config {
+        #[command(subcommand)]
+        action: ConfigAction,
+    },
     /// Any unknown subcommand + its args, forwarded verbatim. `Vec<OsString>`
     /// (not `Vec<String>`) preserves non-UTF-8 arguments through to the child.
     #[command(external_subcommand)]
     External(Vec<OsString>),
+}
+
+/// Read or write a configuration value.
+///
+/// Configuration is a dotted `section.key` tree resolved across two levels:
+/// `team` is the committed, shared `.luminosity/config.md`, and `personal` is
+/// the git-ignored, local `.luminosity/config.local.md` that overrides it.
+#[derive(Subcommand)]
+pub enum ConfigAction {
+    /// Print a configuration value. Without `--level` the value resolves
+    /// personal-over-team; with `--level` only that level is read. Exits
+    /// non-zero if the key is not set.
+    Get {
+        /// The dotted `section.key` to read (e.g. `core.example`).
+        key: String,
+        /// Read only this level instead of resolving across both.
+        #[arg(long)]
+        level: Option<Level>,
+    },
+    /// Write a configuration value. Defaults to the git-ignored personal level;
+    /// pass `--level team` to write the committed, shared file. Creates
+    /// `.luminosity/` and the level's file on first write.
+    Set {
+        /// The dotted `section.key` to write (e.g. `core.example`).
+        key: String,
+        /// The value to store.
+        value: String,
+        /// Write this level instead of the personal default.
+        #[arg(long)]
+        level: Option<Level>,
+    },
+}
+
+/// Which configuration level a command reads or writes.
+#[derive(Clone, Copy, ValueEnum)]
+pub enum Level {
+    /// The committed, shared `.luminosity/config.md`.
+    Team,
+    /// The git-ignored, local `.luminosity/config.local.md` (overrides team).
+    Personal,
+}
+
+impl From<Level> for config::Level {
+    fn from(level: Level) -> Self {
+        match level {
+            Level::Team => Self::Team,
+            Level::Personal => Self::Personal,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -40,7 +94,9 @@ mod tests {
                 raw,
                 vec![OsString::from("frobnicate"), OsString::from("--flag")]
             ),
-            Command::Version => return Err("routed to Version".into()),
+            Command::Version | Command::Config { .. } => {
+                return Err("routed away from External".into())
+            }
         }
         Ok(())
     }
