@@ -1,0 +1,30 @@
+[package]
+# Seeded from plugin.json; subsequent bumps are owned by tasks/version.py,
+# which keeps plugin.json / this Cargo.toml / checksums.json coherent.
+name = "luminosity"
+version = "0.1.0-pre.0"
+edition = "2021"
+license = "MIT"
+# Static binary, not published; also lets cargo-deny's allow-wildcard-paths
+# exempt the kernel path dependency.
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "luminosity"
+path = "src/main.rs"
+
+[dependencies]
+kernel = { path = "../kernel" }
+clap = { workspace = true }
+
+[build-dependencies]
+# vergen is named only to hold the exact pin (see root Cargo.toml); vergen-gitcl
+# re-exports its builders.
+vergen = { workspace = true }
+vergen-gitcl = { workspace = true }
+
+[dev-dependencies]
+time = { workspace = true }

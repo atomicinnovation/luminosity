@@ -193,14 +193,14 @@ def test_check_cli_job_runs_cli_check_and_gates_release(
     assert "check-cli" in _needs(jobs[PRERELEASE_GATE_JOB])
 
 
-def test_build_cli_job_is_a_dual_os_matrix_and_gates_release(
+def test_build_launcher_job_is_a_dual_os_matrix_and_gates_release(
     wf: dict[str, Any],
 ) -> None:
     jobs = wf["jobs"]
-    build_cli = jobs["build-cli"]
-    assert _job_runs_target(build_cli, "mise run build:cli")
-    assert set(_matrix_os(build_cli)) == {"ubuntu-latest", "macos-latest"}
-    assert "build-cli" in _needs(jobs[PRERELEASE_GATE_JOB])
+    build_launcher = jobs["build-launcher"]
+    assert _job_runs_target(build_launcher, "mise run build:launcher")
+    assert set(_matrix_os(build_launcher)) == {"ubuntu-latest", "macos-latest"}
+    assert "build-launcher" in _needs(jobs[PRERELEASE_GATE_JOB])
 
 
 def test_check_supply_chain_job_runs_deny_and_gates_release(

@@ -1,12 +1,12 @@
 from invoke import Context, Exit, task
 
-from tasks.shared.paths import REPO_ROOT
+from tasks.shared.paths import WORKSPACE_ROOT
 
 
 @task
 def check(context: Context) -> None:
     """Check the workspace dependency graph with cargo-deny."""
-    with context.cd(str(REPO_ROOT)):
+    with context.cd(str(WORKSPACE_ROOT)):
         result = context.run(
             "cargo deny check advisories licenses bans sources",
             warn=True,

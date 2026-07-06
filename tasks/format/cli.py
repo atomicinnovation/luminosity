@@ -1,12 +1,12 @@
 from invoke import Context, Exit, task
 
-from tasks.shared.paths import REPO_ROOT
+from tasks.shared.paths import WORKSPACE_ROOT
 
 
 @task
 def check(context: Context) -> None:
-    """Check Rust formatting with rustfmt (read-only; fails on drift)."""
-    with context.cd(str(REPO_ROOT)):
+    """Check formatting across the whole workspace with rustfmt (read-only)."""
+    with context.cd(str(WORKSPACE_ROOT)):
         result = context.run("cargo fmt --all --check", warn=True, pty=False)
     if result.exited != 0:
         raise Exit(
@@ -17,6 +17,6 @@ def check(context: Context) -> None:
 
 @task
 def fix(context: Context) -> None:
-    """Format Rust in place with rustfmt."""
-    with context.cd(str(REPO_ROOT)):
+    """Format the whole workspace in place with rustfmt."""
+    with context.cd(str(WORKSPACE_ROOT)):
         context.run("cargo fmt --all", warn=True, pty=False)

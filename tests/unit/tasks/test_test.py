@@ -6,8 +6,8 @@ from invoke import Context, Exit
 from tasks.shared import rust
 from tasks.test import cli, integration, unit
 
-INSTRUMENTED = "cargo llvm-cov nextest -p luminosity --summary-only"
-PLAIN = "cargo nextest run -p luminosity"
+CLI_INSTRUMENTED = "cargo llvm-cov nextest --workspace --summary-only"
+CLI_PLAIN = "cargo nextest run --workspace"
 
 
 @pytest.fixture
@@ -37,19 +37,21 @@ class TestCoverageEnabled:
 
 
 class TestTestUnitCli:
+    """The workspace-wide coverage pass folded into test:unit."""
+
     def test_instrumented_by_default(
         self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
     ):
         monkeypatch.delenv("LUMINOSITY_COVERAGE", raising=False)
         cli.run(ctx)
-        assert _command(ctx) == INSTRUMENTED
+        assert _command(ctx) == CLI_INSTRUMENTED
 
     def test_plain_nextest_when_coverage_off(
         self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
     ):
         monkeypatch.setenv("LUMINOSITY_COVERAGE", "off")
         cli.run(ctx)
-        assert _command(ctx) == PLAIN
+        assert _command(ctx) == CLI_PLAIN
 
     def test_instrumented_command_carries_no_coverage_threshold(
         self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch

@@ -1,30 +1,29 @@
-[package]
-# Seeded from plugin.json; subsequent bumps are owned by tasks/version.py,
-# which keeps plugin.json / this Cargo.toml / checksums.json coherent.
-name = "luminosity"
-version = "0.1.0-pre.0"
-edition = "2021"
-license = "MIT"
-# Static binary, not published; also lets cargo-deny's allow-wildcard-paths
-# exempt the kernel path dependency.
-publish = false
+[workspace]
+resolver = "2"
+members = ["launcher", "kernel"]
 
-[lints]
-workspace = true
+[workspace.dependencies]
+# Versions are MSRV-first (rust-version <= 1.90) and frozen in Cargo.lock.
+clap = { version = "4.6", features = ["derive"] }
+# vergen pinned EXACTLY: 9.1.0's vergen-lib bump is incompatible with
+# vergen-gitcl 1.0.8 (two vergen-lib versions break the Emitter); 10.x needs 1.95.
+vergen = { version = "=9.0.6", default-features = false }
+vergen-gitcl = { version = "1", features = ["build", "cargo"] }
+time = { version = "0.3", features = ["parsing"] }  # dev-only
 
-[[bin]]
-name = "luminosity"
-path = "src/main.rs"
+[workspace.lints.rust]
+# In-manifest equivalent of `-D warnings`; CI also passes it explicitly.
+warnings = "deny"
 
-[dependencies]
-kernel = { path = "../kernel" }
-clap = { workspace = true }
-
-[build-dependencies]
-# vergen is named only to hold the exact pin (see root Cargo.toml); vergen-gitcl
-# re-exports its builders.
-vergen = { workspace = true }
-vergen-gitcl = { workspace = true }
-
-[dev-dependencies]
-time = { workspace = true }
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+# restriction is allow-by-default; these are the cherry-picked opt-ins.
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"

@@ -29,7 +29,7 @@ The Rust guard-rail jobs (work item 0006) contribute these required checks:
 | Job id                | Required-check name(s)                                   |
 |-----------------------|----------------------------------------------------------|
 | `check-cli`           | `Check cli`                                              |
-| `build-cli`           | `Build cli (ubuntu-latest)` **and** `Build cli (macos-latest)` |
+| `build-launcher`      | `Build launcher (ubuntu-latest)` **and** `Build launcher (macos-latest)` |
 | `check-supply-chain`  | `Check supply chain`                                     |
 | `check-architecture`  | `Check architecture`                                     |
 
@@ -38,10 +38,10 @@ The Rust guard-rail jobs (work item 0006) contribute these required checks:
 
 ### Two gotchas
 
-- **A matrix job surfaces one required check *per leg*.** `build-cli` runs on
-  `[ubuntu-latest, macos-latest]`, so it contributes **two** names —
-  `Build cli (ubuntu-latest)` and `Build cli (macos-latest)`. Both must be
-  added, or the un-added OS's release build is not actually gating (e.g.
+- **A matrix job surfaces one required check *per leg*.** `build-launcher` runs
+  on `[ubuntu-latest, macos-latest]`, so it contributes **two** names —
+  `Build launcher (ubuntu-latest)` and `Build launcher (macos-latest)`. Both
+  must be added, or the un-added OS's release build is not actually gating (e.g.
   omitting the macOS leg leaves a darwin build break ungated). The matrix legs
   build their host-native triples, so dropping a leg drops real triple coverage.
 - **A job only appears as a selectable required check *after it has run at least

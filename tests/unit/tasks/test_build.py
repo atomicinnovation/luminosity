@@ -5,7 +5,7 @@ import pytest
 from invoke import Context, Exit
 
 from tasks import build
-from tasks.shared.rust import CLI_CRATE
+from tasks.shared.rust import LAUNCHER_CRATE
 from tasks.shared.targets import TARGETS, host_targets
 
 DARWIN_TRIPLES = ("aarch64-apple-darwin", "x86_64-apple-darwin")
@@ -99,16 +99,16 @@ def _build_commands(ctx: MagicMock) -> list[str]:
     ]
 
 
-class TestBuildCli:
+class TestBuildLauncher:
     def test_builds_each_host_triple_with_bin_flag(
         self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
     ):
         monkeypatch.setattr(build.platform, "system", lambda: "Darwin")
         ctx.run.side_effect = _fake_run
-        build.cli(ctx)
+        build.launcher(ctx)
         commands = _build_commands(ctx)
         assert commands == [
-            f"cargo build --release --bin {CLI_CRATE} --target {triple}"
+            f"cargo build --release --bin {LAUNCHER_CRATE} --target {triple}"
             for triple in host_targets("Darwin")
         ]
 
@@ -118,7 +118,7 @@ class TestBuildCli:
         monkeypatch.setattr(build.platform, "system", lambda: "Darwin")
         ctx.run.return_value = MagicMock(exited=1, stdout="", stderr="")
         with pytest.raises(Exit):
-            build.cli(ctx)
+            build.launcher(ctx)
 
     def test_raises_on_wrong_arch_output(
         self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
@@ -132,4 +132,4 @@ class TestBuildCli:
 
         ctx.run.side_effect = wrong_arch
         with pytest.raises(Exit):
-            build.cli(ctx)
+            build.launcher(ctx)
