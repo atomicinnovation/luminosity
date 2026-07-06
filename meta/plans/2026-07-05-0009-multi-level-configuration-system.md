@@ -687,20 +687,20 @@ headline deliverable.
 
 #### Automated Verification
 
-- [ ] Negative check: `mise run deny:check` passes on the clean tree with the new
+- [x] Negative check: `mise run deny:check` passes on the clean tree with the new
       entries — proving every legitimate direct dependent (including `serde_json`
       and `serde-saphyr` depending on `serde`) is present in the `wrappers` lists;
       an incomplete list fails here and names the omitted parent
-- [ ] `cargo tree -p config` shows no serde, serde_json, or `serde-saphyr`
-- [ ] Positive check (automated, committed): the regression test injects `serde`
+- [x] `cargo tree -p config` shows no serde, serde_json, or `serde-saphyr`
+- [x] Positive check (automated, committed): the regression test injects `serde`
       into a throwaway copy of `config` and asserts `cargo deny check bans` fails
       naming `serde`/`config` — this is the authoritative guard and runs in CI; a
       build failure is a secondary signal
-- [ ] Full local CI mirror is green: `mise run`
+- [x] Full local CI mirror is green: `mise run`
 
 #### Manual Verification
 
-- [ ] Eyeball the failure output the regression test captures: it names the banned
+- [x] Eyeball the failure output the regression test captures: it names the banned
       `serde` crate and the `config` dependent, so the guardrail reads legibly to a
       developer who trips it (not just a bare non-zero exit)
 
