@@ -7,5 +7,5 @@
     "email": "toby@go-atomic.io"
   },
   "license": "MIT",
-  "skills": []
+  "skills": ["./skills/config/"]
 }
