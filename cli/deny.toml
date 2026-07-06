@@ -53,24 +53,52 @@ multiple-versions = "warn"
 wildcards = "deny"
 # Exempt local path deps (launcher -> kernel); registry wildcards stay denied.
 allow-wildcard-paths = true
-# rustls only — no transitive dep may re-enable default-tls and break the
-# musl-static build. Covers the TLS vector; other system-C linkers (libgit2-sys,
-# curl-sys, etc.) can also break static linking and are added here if they
-# become relevant. The musl build is the authoritative static-link check.
-deny = [
-    { crate = "native-tls" },
-    { crate = "openssl" },
-    { crate = "openssl-sys" },
-]
-# Duplicate-version suppression for the `multiple-versions` check above: `skip`
-# excludes a package spec, `skip-tree` a whole subtree, from "found N versions of
-# X" detection. These do NOT enforce dependency direction — a crate listed here
-# can still appear anywhere in the graph. Cross-crate architectural enforcement
-# (keeping infrastructure out of a core crate's closure) is expressed via the
-# `deny` list above with a `wrappers` allow-list, as the native-tls ban shows;
-# the config/config-adapters split (work item 0009) adds the first such entry.
+# `skip` excludes a package spec and `skip-tree` a whole subtree from the
+# `multiple-versions` "found N versions of X" detection only. They do not
+# enforce dependency direction — a crate listed here can still appear anywhere
+# in the graph. The cross-crate dependency-direction ban is the `[[bans.deny]]`
+# block below.
 skip = []
 skip-tree = []
+
+# `[[bans.deny]]` bans a crate everywhere except through the direct parents
+# named in its `wrappers`. Two bans share the mechanism. The TLS/system-C ban
+# keeps native-tls/openssl out of the graph entirely — a re-enabled default-tls
+# would pull openssl-sys and break the musl-static build (the musl build is the
+# authoritative static-link check). The serde-family ban keeps serde,
+# serde_json, and the YAML crate reachable only through the crates that
+# legitimately use them, so a core crate such as `config` cannot grow a direct
+# serde edge. Each `wrappers` list must name every direct dependent in the
+# resolved graph; when a dependency bump adds one, reconcile with
+# `cargo tree -i <crate>` and add the omitted parent — a failure there is an
+# allow-list gap, not an architectural violation.
+[[bans.deny]]
+crate = "native-tls"
+
+[[bans.deny]]
+crate = "openssl"
+
+[[bans.deny]]
+crate = "openssl-sys"
+
+[[bans.deny]]
+crate = "serde"
+wrappers = [
+    "cargo-platform",
+    "cargo_metadata",
+    "config-adapters",
+    "luminosity",
+    "reqwest",
+    "serde_urlencoded",
+]
+
+[[bans.deny]]
+crate = "serde_json"
+wrappers = ["cargo_metadata", "luminosity"]
+
+[[bans.deny]]
+crate = "serde-saphyr"
+wrappers = ["config-adapters"]
 
 [sources]
 unknown-registry = "deny"
