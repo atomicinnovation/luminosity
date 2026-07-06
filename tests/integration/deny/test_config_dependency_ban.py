@@ -47,10 +47,13 @@ def test_adding_serde_to_config_fails_the_bans_check(
 ) -> None:
     _require_tools()
     workspace = tmp_path / "cli"
+    # Exclude the build-output dirs: cargo/cargo-deny reconstruct the graph from
+    # the manifests and lockfile, and a concurrent build churns those trees mid
+    # copy.
     shutil.copytree(
         _WORKSPACE,
         workspace,
-        ignore=shutil.ignore_patterns("target"),
+        ignore=shutil.ignore_patterns("target", ".pup"),
     )
     _inject_serde_into_config(workspace)
 

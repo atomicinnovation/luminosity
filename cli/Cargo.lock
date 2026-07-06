@@ -910,6 +910,8 @@ name = "luminosity"
 version = "0.1.0-pre.0"
 dependencies = [
  "clap",
+ "config",
+ "config-adapters",
  "kernel",
  "minisign-verify",
  "reqwest",

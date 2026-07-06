@@ -10,6 +10,11 @@
 *~
 .DS_Store
 .accelerator/config.local.md
+# Personal config (git-ignored) and the atomic-write scratch dir; the team file
+# `.luminosity/config.md` stays tracked. `**/` keeps the rule depth-independent
+# so a `.luminosity/` discovered below the repo root is still matched.
+**/.luminosity/config.local.md
+**/.luminosity/tmp/
 .claude/settings.local.json
 .idea/
 .playwright-mcp/
