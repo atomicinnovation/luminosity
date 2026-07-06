@@ -384,48 +384,48 @@ own message naming the invalid value and the valid `team`/`personal` set.
 
 #### Automated Verification
 
-- [ ] The crate builds and lints: `mise run cli:check`
-- [ ] Core unit tests pass: `cargo nextest run -p config`
-- [ ] Personal-over-team override, team-only fall-through, and level-scoped reads
+- [x] The crate builds and lints: `mise run cli:check`
+- [x] Core unit tests pass: `cargo nextest run -p config`
+- [x] Personal-over-team override, team-only fall-through, and level-scoped reads
       are each covered by a named test (asserted by inspecting
       `cargo nextest run -p config` output for the test names)
-- [ ] Presence is covered: a present **null** (`Scalar::Null`) and a present empty
+- [x] Presence is covered: a present **null** (`Scalar::Null`) and a present empty
       string both resolve to `Found(_)`, while a key absent from all levels resolves
       to `Resolved::Absent`
-- [ ] `get` returns the matching typed `Scalar` for a resolved value — a `Bool` key
+- [x] `get` returns the matching typed `Scalar` for a resolved value — a `Bool` key
       resolves to `Found(Scalar::Bool)`, an `Int` to `Found(Scalar::Int)` — leaving
       display formatting to the inbound `render` (tested in Phase 4)
-- [ ] `get` that must descend through a non-mapping, or that ends on a
+- [x] `get` that must descend through a non-mapping, or that ends on a
       `Mapping`/`Sequence`, yields `Resolved::Absent`; a test covers full-stack
       fall-through where the personal level holds a mapping at the path and the
       team level holds the scalar (team value resolves)
-- [ ] Nested-path walk and nested `set` (creating an absent `core:` block) are
+- [x] Nested-path walk and nested `set` (creating an absent `core:` block) are
       each covered by a test, including a **≥3-level** path (`a.b.c.d`) that both
       walks and, on `set`, creates every intermediate mapping — so no two-level
       ceiling is hard-coded
-- [ ] `set` `PathConflict` is covered by two tests: descending through an existing
+- [x] `set` `PathConflict` is covered by two tests: descending through an existing
       scalar segment, and replacing a `Mapping`/`Sequence` leaf — each returns
       `ConfigError::PathConflict` and produces no document for the writer
-- [ ] `Key::parse` accepts `core.example` and a ≥3-level key, and rejects the empty
+- [x] `Key::parse` accepts `core.example` and a ≥3-level key, and rejects the empty
       key, a leading/trailing dot, and consecutive dots with `ConfigError::InvalidKey`
-- [ ] Fail-loud `get` is covered at the core against fakes: a `ReadConfigLevel` that
+- [x] Fail-loud `get` is covered at the core against fakes: a `ReadConfigLevel` that
       returns `Err` for the personal level while the team level holds the value
       makes `get` return `Err` (not the team scalar), and symmetrically an erroring
       team read fails a full-stack `get` even when the personal level resolves
-- [ ] Fail-closed `set` is covered at the core against fakes: a `ReadConfigLevel`
+- [x] Fail-closed `set` is covered at the core against fakes: a `ReadConfigLevel`
       that returns `Err` makes `set` return `Err` and the fake `WriteConfigLevel` is
       never invoked (no clobber)
-- [ ] A `set` that mutates one path leaves untouched sibling nodes' types and the
+- [x] A `set` that mutates one path leaves untouched sibling nodes' types and the
       mapping's key order unchanged — a test builds a `Node` with a typed sibling
       (e.g. a bool) ahead of the target key, sets the target, and asserts the
       sibling's variant and the key order both survive
-- [ ] `cargo tree -p config` lists no serde, YAML, filesystem, or `indexmap` crate
+- [x] `cargo tree -p config` lists no serde, YAML, filesystem, or `indexmap` crate
       — the typed `Node` stays kernel-only
-- [ ] Full local CI mirror is green: `mise run`
+- [x] Full local CI mirror is green: `mise run`
 
 #### Manual Verification
 
-- [ ] The core reads as domain-first: no presentation, I/O, or serde types leak
+- [x] The core reads as domain-first: no presentation, I/O, or serde types leak
       into `cli/config/src/`
 
 ---
