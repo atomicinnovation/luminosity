@@ -923,11 +923,11 @@ the current `"skills": []` into `"skills": ["./skills/config/"]`.
 
 #### Automated Verification
 
-- [ ] Grep over the skill body finds only `luminosity config get`/`set` for config
+- [x] Grep over the skill body finds only `luminosity config get`/`set` for config
       access and no direct read of `.luminosity/config*.md`, no YAML parsing, and
       no precedence/path-construction command
-- [ ] `plugin.json` is valid JSON and lists the skill: `mise run check`
-- [ ] Full local CI mirror is green: `mise run`
+- [x] `plugin.json` is valid JSON and lists the skill: `mise run check`
+- [x] Full local CI mirror is green: `mise run`
 
 #### Manual Verification
 
