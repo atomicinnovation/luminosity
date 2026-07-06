@@ -78,3 +78,18 @@ class TestShellSourcesDiscovery:
         _write(tmp_path / "scripts/keep.sh")
 
         assert shell_sources(root=tmp_path) == ["scripts/keep.sh"]
+
+    def test_includes_the_registered_extensionless_bootstrap(
+        self, tmp_path: Path
+    ):
+        # The bootstrap is extensionless, so the `*.sh` walk misses it; it must
+        # be discovered via the registered-extensionless list.
+        _write(tmp_path / "bin/luminosity")
+        _write(tmp_path / "scripts/keep.sh")
+
+        assert "bin/luminosity" in shell_sources(root=tmp_path)
+
+
+class TestRealRepoCoversBootstrap:
+    def test_the_committed_bootstrap_is_in_scope(self):
+        assert "bin/luminosity" in shell_sources()

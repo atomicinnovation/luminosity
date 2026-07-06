@@ -224,14 +224,13 @@ jobs:
       - name: Cache cargo build
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          # The Cargo workspace root is cli/, so Cargo.lock + target live there.
           workspaces: cli
 
       # No built-binary cache for cargo-pup: a trustworthy out-of-band per-OS
-      # checksum cannot be maintained from the dev environment, so per the
-      # plan's fallback we rebuild from source every run (correctness over
-      # speed for a compiler plugin). pup:check self-provisions the nightly +
-      # cargo-pup via its deps:install:pup dependency on the clean runner.
+      # checksum cannot be maintained from the dev environment, so we rebuild
+      # from source every run (correctness over speed for a compiler plugin).
+      # pup:check self-provisions the nightly + cargo-pup via its
+      # deps:install:pup dependency on the clean runner.
       - name: Run architecture check (self-provisions the nightly lane)
         run: mise run pup:check
 
@@ -289,6 +288,8 @@ jobs:
       - name: Finalise prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
         run: mise run prerelease:finalise
 
   approve-release:
@@ -344,6 +345,8 @@ jobs:
       - name: Finalise stable release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
         run: mise run release:finalise
 
       - name: Prepare post-stable prerelease
@@ -359,4 +362,6 @@ jobs:
       - name: Finalise post-stable prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
         run: mise run prerelease:finalise

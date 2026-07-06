@@ -8,13 +8,12 @@ from tasks.shared.rust import coverage_enabled
 def run(context: Context) -> None:
     """Run the whole workspace's unit tests (instrumented unless disabled).
 
-    A single `--workspace` pass covers every crate in one process, so coverage
-    is folded into the test run (default `cargo llvm-cov nextest`) and there is
-    no cross-crate profraw collision to isolate. It is report-only — no
-    `--fail-under`/threshold, by design.
+    The arg-driven test fixture (`tests/fixtures/`) is excluded from the
+    coverage report: spawned as a subprocess, it is never instrumented in-run.
     """
     command = (
-        "cargo llvm-cov nextest --workspace --summary-only"
+        "cargo llvm-cov nextest --workspace --summary-only "
+        "--ignore-filename-regex 'tests/fixtures/'"
         if coverage_enabled()
         else "cargo nextest run --workspace"
     )

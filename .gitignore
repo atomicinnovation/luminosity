@@ -19,3 +19,12 @@ workspaces/
 node_modules/
 target/
 .pup/
+# Staged release binaries + debug archives + per-binary signatures and the
+# signed-manifest asset are build output; the committed release metadata beside
+# them (checksums.json, manifest.json, keys) is not.
+cli/launcher/bin/luminosity-*
+cli/launcher/bin/manifest.minisig
+# minisign secret keys must never be committed — the release secret lives in
+# the GitHub `release` environment; only public keys are tracked.
+*.key
+/keys/*.sec

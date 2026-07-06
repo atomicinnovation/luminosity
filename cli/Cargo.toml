@@ -1,6 +1,8 @@
 [workspace]
-resolver = "2"
-members = ["launcher", "kernel"]
+# resolver = "3" so `rust-version` drives MSRV-aware version selection (a
+# resolver = "2" workspace ignores rust-version at resolution). Cargo 1.84+.
+resolver = "3"
+members = ["launcher", "kernel", "verify"]
 
 [workspace.dependencies]
 # Versions are MSRV-first (rust-version <= 1.90) and frozen in Cargo.lock.
@@ -10,6 +12,22 @@ clap = { version = "4.6", features = ["derive"] }
 vergen = { version = "=9.0.6", default-features = false }
 vergen-gitcl = { version = "1", features = ["build", "cargo"] }
 time = { version = "0.3", features = ["parsing"] }  # dev-only
+# The launcher HTTP/verification stack (kernel stays dependency-light).
+# reqwest MUST be default-features = false: its default native-tls feature pulls
+# openssl-sys and trips deny.toml. Bundled webpki-roots means no host cert store;
+# the `-no-provider` variant plus a direct rustls `ring` dep keeps the crypto
+# provider off aws-lc-rs (C + per-arch asm, hostile to the cross-build).
+# hickory-dns makes name resolution bypass the host getaddrinfo/nsswitch.
+reqwest = { version = "0.12", default-features = false, features = [
+    "blocking",
+    "rustls-tls-webpki-roots-no-provider",
+    "hickory-dns",
+] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+minisign-verify = "0.2.5"
+sha2 = "0.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [workspace.lints.rust]
 # In-manifest equivalent of `-D warnings`; CI also passes it explicitly.

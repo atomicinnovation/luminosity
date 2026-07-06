@@ -2,16 +2,11 @@ import os
 
 from invoke import Context, task
 
-from . import changelog, git, github, marketplace, version
+from . import build, changelog, git, github, marketplace, sign, version
 
 
 def _refuse_under_ci(task_name: str) -> None:
-    """Raise if called from a CI environment.
-
-    Local-dev convenience tasks skip SLSA attestation because they run outside
-    GitHub Actions. CI must use the prepare/finalise split so the workflow can
-    interleave actions/attest-build-provenance between build and publish.
-    """
+    """Raise if called from a CI environment."""
     if os.environ.get("GITHUB_ACTIONS") or os.environ.get("CI"):
         raise RuntimeError(
             f"{task_name} is the local-dev convenience task; CI must use "
@@ -21,6 +16,8 @@ def _refuse_under_ci(task_name: str) -> None:
 
 
 def _publish(context: Context) -> None:
+    version.check(context)
+    sign.sign(context)
     resolved_version = str(version.read(context, print_to_stdout=False))
     git.commit_version(context)
     git.tag_version(context)
@@ -31,11 +28,12 @@ def _publish(context: Context) -> None:
 
 @task
 def prerelease_prepare(context: Context) -> None:
-    """CI prerelease part 1: bump version."""
+    """CI prerelease part 1: bump version, cross-build binaries, checksum."""
     git.configure(context)
     git.pull(context)
     version.bump(context, bump_type=[version.BumpType.PRE])
     marketplace.update_prerelease_version(context, plugin="accelerator")
+    build.release(context)
 
 
 @task
@@ -46,20 +44,18 @@ def prerelease_finalise(context: Context) -> None:
 
 @task
 def release_prepare(context: Context) -> None:
-    """CI stable release part 1: finalise version.
-
-    Also updates the marketplace version and changelog.
-    """
+    """CI stable release part 1: finalise version, marketplace, changelog."""
     git.configure(context)
     git.pull(context)
     version.bump(context, bump_type=[version.BumpType.FINALISE])
     marketplace.update_version(context, plugin="luminosity")
     changelog.release(context)
+    build.release(context)
 
 
 @task
 def release_finalise(context: Context) -> None:
-    """CI stable release halve 2: commit, tag, push, release, publish."""
+    """CI stable release part 2: commit, tag, push, release, publish."""
     _publish(context)
 
 
@@ -73,11 +69,7 @@ def prerelease(context: Context) -> None:
 
 @task
 def release(context: Context) -> None:
-    """Local-dev only: full stable release flow without SLSA attestation.
-
-    Runs: release prepare → release finalise → prerelease prepare →
-    prerelease finalise (the post-stable pre.0 cut is a standard prerelease).
-    """
+    """Local-dev only: full stable release flow without SLSA attestation."""
     _refuse_under_ci("release")
     release_prepare(context)
     release_finalise(context)

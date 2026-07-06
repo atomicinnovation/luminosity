@@ -9,6 +9,10 @@ rust = { version = "1.90.0", components = "rustfmt,clippy,llvm-tools-preview" }
 "aqua:nextest-rs/nextest/cargo-nextest" = "0.9.138"
 "aqua:taiki-e/cargo-llvm-cov" = "0.8.7"
 "aqua:EmbarkStudios/cargo-deny" = "0.19.8"
+# minisign via ubi (direct GitHub-release binary): the aqua registry entry
+# self-verifies its own .minisig with an unset Asset template var and fails to
+# install, so ubi fetches the pinned release asset directly instead.
+"ubi:jedisct1/minisign[exe=minisign]" = "0.12"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
 "aqua:rhysd/actionlint" = "1.7.12"
@@ -31,6 +35,10 @@ run = "invoke deps.install-rust-targets"
 description = "Install the rustfmt + clippy rustup components the cli checks need (mise [tools] `components` is not honoured for an already-present toolchain)"
 run = "invoke deps.install-rust-components"
 
+[tasks."deps:install:zigbuild"]
+description = "Provision the zig + cargo-zigbuild cross-compile toolchain and rustup targets for the four-triple release build"
+run = "invoke deps.install-zigbuild"
+
 [tasks."deps:install:pup"]
 description = "Provision the cargo-pup nightly toolchain + pinned cargo-pup (rustup-managed, not a mise [tool])"
 run = "invoke deps.install-pup"
@@ -49,6 +57,11 @@ run = "invoke test.integration.tasks"
 description = "Run the cargo-deny ban-violation regression suite"
 depends = ["deps:install:python"]
 run = "invoke test.integration.deny"
+
+[tasks."test:integration:scripts"]
+description = "Run the pytest integration tests for the shell wrappers"
+depends = ["deps:install:python"]
+run = "invoke test.integration.scripts"
 
 [tasks."test:integration:pup"]
 description = "Run the cargo-pup behavioural regression (requires the nightly lane; check-architecture only, not the test roll-up)"
@@ -76,7 +89,7 @@ depends = ["test:unit:tasks", "test:unit:cli"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"
-depends = ["test:integration:tasks", "test:integration:deny"]
+depends = ["test:integration:tasks", "test:integration:deny", "test:integration:scripts"]
 
 [tasks.test]
 description = "Run all tests in parallel"
@@ -191,6 +204,11 @@ description = "Release-build the host-native triples (link/arch guard; in `mise 
 depends = ["deps:install:rust-targets"]
 run = "invoke build.launcher"
 
+[tasks."build:release"]
+description = "Cross-build all four shipped triples from one host via cargo-zigbuild, staging binaries + debug archives + checksums"
+depends = ["deps:install:zigbuild"]
+run = "invoke build.release"
+
 [tasks."deny:check"]
 description = "Check the workspace dependency graph with cargo-deny (advisories, licenses, bans, sources)"
 run = "invoke deny.check"
@@ -254,8 +272,8 @@ description = "Apply all formatters + safe lint fixes (MECHANICAL only — no ty
 depends = ["format:fix", "lint:fix"]
 
 [tasks.check]
-description = "Read-only format, lint, and type checks plus the cargo-deny/cargo-pup static checks (test-free, build-free; the subset CI mirrors)"
-depends = ["build-system:check", "scripts:check", "cli:check", "deny:check", "pup:check"]
+description = "Read-only format, lint, and type checks plus the version-coherence and cargo-deny/cargo-pup static checks (test-free, build-free; the subset CI mirrors)"
+depends = ["build-system:check", "scripts:check", "cli:check", "version:check", "deny:check", "pup:check"]
 
 [tasks.default]
 description = "Full local CI mirror: format-fix, lint, type-check, the whole test roll-up (cli tests carry coverage), the build:launcher host-native release build, and the deny/pup static checks (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
@@ -273,9 +291,19 @@ run = "invoke version.write"
 description = "Bump plugin version"
 run = "invoke version.bump"
 
+[tasks."version:check"]
+description = "Enforce version coherence across plugin.json / Cargo.toml / checksums.json / manifest.json (names the drifted files)"
+depends = ["deps:install:python"]
+run = "invoke version.check"
+
 [tasks."github:check-auth"]
 description = "Verify the GitHub CLI is authenticated"
 run = "invoke github.check-auth"
+
+[tasks."keys:generate"]
+description = "Generate the release minisign keypair (public key committed, secret key gitignored; store the secret in the GitHub MINISIGN_SECRET_KEY secret)"
+depends = ["deps:install:python"]
+run = "invoke keys.generate"
 
 [tasks."git:check-clean"]
 description = "Abort if the working tree has any uncommitted changes"
@@ -283,7 +311,7 @@ run = "invoke git.check-clean"
 
 [tasks."prerelease:prepare"]
 description = "CI prerelease halve 1: bump version, build binaries, compute checksums"
-depends = ["deps:install:rust-targets", "github:check-auth", "git:check-clean"]
+depends = ["deps:install:zigbuild", "github:check-auth", "git:check-clean"]
 run = "invoke prerelease.prepare"
 
 [tasks."prerelease:finalise"]
@@ -292,7 +320,7 @@ run = "invoke prerelease.finalise"
 
 [tasks."release:prepare"]
 description = "CI stable release halve 1: finalise version, update marketplace and changelog, build binaries"
-depends = ["deps:install:rust-targets", "github:check-auth", "git:check-clean"]
+depends = ["deps:install:zigbuild", "github:check-auth", "git:check-clean"]
 run = "invoke release.prepare"
 
 [tasks."release:finalise"]

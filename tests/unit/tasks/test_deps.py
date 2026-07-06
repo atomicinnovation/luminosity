@@ -47,6 +47,35 @@ class TestInstallRustComponents:
         )
 
 
+class TestInstallZigbuild:
+    def test_verifies_ziglang_and_cargo_zigbuild_then_adds_targets(
+        self, ctx: MagicMock
+    ):
+        deps.install_zigbuild(ctx)
+        commands = _commands(ctx)
+        assert any("import ziglang" in c for c in commands)
+        assert any("cargo-zigbuild --version" in c for c in commands)
+        assert any(c.startswith("rustup target add") for c in commands)
+
+    def test_raises_when_ziglang_is_not_importable(self, ctx: MagicMock):
+        def run(command: str, **_kwargs: Any) -> MagicMock:
+            exited = 1 if "import ziglang" in command else 0
+            return MagicMock(exited=exited, stdout="")
+
+        ctx.run.side_effect = run
+        with pytest.raises(Exit):
+            deps.install_zigbuild(ctx)
+
+    def test_raises_when_cargo_zigbuild_is_not_runnable(self, ctx: MagicMock):
+        def run(command: str, **_kwargs: Any) -> MagicMock:
+            exited = 1 if "cargo-zigbuild --version" in command else 0
+            return MagicMock(exited=exited, stdout="")
+
+        ctx.run.side_effect = run
+        with pytest.raises(Exit):
+            deps.install_zigbuild(ctx)
+
+
 class TestInstallPup:
     def test_installs_the_pinned_nightly_with_all_components(
         self, ctx: MagicMock

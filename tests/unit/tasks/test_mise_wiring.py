@@ -1,12 +1,6 @@
-"""Assert the mise task wiring the plan relies on.
+"""Assert the mise task wiring by parsing mise.toml and the Rust configs."""
 
-The other task tests mock invoke's `Context` and assert command strings; none
-reads `mise.toml`, so the `depends`/aggregate edges are otherwise untested. This
-module parses `mise.toml` (and the Rust config files) directly so the wiring
-prose becomes executable assertions. Introduced in Phase 1 and extended each
-phase as edges are added.
-"""
-
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -14,6 +8,7 @@ from typing import Any
 import pytest
 
 from tasks.shared.rust import LAUNCHER_CRATE
+from tasks.shared.targets import TARGETS
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKSPACE_ROOT = REPO_ROOT / "cli"
@@ -188,12 +183,7 @@ class TestTestUnitCliWiring:
 
 
 class TestPytestSuiteWiring:
-    """The pytest suites run via invoke tasks, not pytest invoked directly.
-
-    Suites are separated by directory (tests/integration/{tasks,deny,pup}),
-    not pytest markers. The actual pytest command strings are asserted in
-    test_test.py.
-    """
+    """The pytest suites run via invoke tasks, not pytest directly."""
 
     def test_unit_tasks_wraps_an_invoke_task(self, mise: Mise):
         assert (
@@ -212,12 +202,22 @@ class TestPytestSuiteWiring:
             == "invoke test.integration.deny"
         )
 
-    def test_integration_roll_up_includes_tasks_and_deny(self, mise: Mise):
-        # The deny ban regression rides the general test-integration job; the
-        # nightly-only pup suite does not (asserted in TestPupWiring).
+    def test_integration_scripts_wraps_an_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["test:integration:scripts"]["run"]
+            == "invoke test.integration.scripts"
+        )
+
+    def test_integration_roll_up_includes_tasks_deny_and_scripts(
+        self, mise: Mise
+    ):
+        # The deny ban regression and the shell-wrapper suite ride the general
+        # test-integration job; the nightly-only pup suite does not (asserted in
+        # TestPupWiring).
         assert _depends(mise, "test:integration") == [
             "test:integration:tasks",
             "test:integration:deny",
+            "test:integration:scripts",
         ]
 
 
@@ -255,17 +255,14 @@ class TestPupWiring:
 
 
 class TestFinalEnumeratedArrays:
-    """Pin the complete top-level arrays the plan enumerates.
-
-    Together with test_workflows.py these are the automated backstop for the
-    whole mise + CI wiring.
-    """
+    """Pin the complete top-level task arrays."""
 
     def test_check_array(self, mise: Mise):
         assert _depends(mise, "check") == [
             "build-system:check",
             "scripts:check",
             "cli:check",
+            "version:check",
             "deny:check",
             "pup:check",
         ]
@@ -288,18 +285,75 @@ class TestFinalEnumeratedArrays:
         ]
 
 
-class TestToolchainCoherence:
-    """The clippy msrv and rustfmt edition mirror the mise rust pin by hand.
+class TestVersionCheckWiring:
+    def test_version_check_is_in_check(self, mise: Mise):
+        assert "version:check" in _depends(mise, "check")
 
-    A rust bump that updates mise.toml but forgets these silently applies
-    MSRV-gated lints against a different stable than CI provisions, so the
-    fourth-hand-synced-mirror hazard is converted into a tested invariant. The
-    configs live in the workspace root (`cli/`) alongside Cargo.toml.
-    """
+    def test_version_check_wraps_the_invoke_task(self, mise: Mise):
+        assert _tasks(mise)["version:check"]["run"] == "invoke version.check"
+
+
+class TestZigbuildProvisioning:
+    """The four-triple release build provisions its cross-compile toolchain."""
+
+    def test_build_release_provisions_zigbuild(self, mise: Mise):
+        assert "deps:install:zigbuild" in _depends(mise, "build:release")
+
+    def test_release_prepare_tasks_provision_zigbuild(self, mise: Mise):
+        # The prepare halves run the cross-build, so they must provision zig +
+        # cargo-zigbuild (which itself adds the rustup targets), not merely the
+        # rustup targets the host-native build needed.
+        assert "deps:install:zigbuild" in _depends(mise, "prerelease:prepare")
+        assert "deps:install:zigbuild" in _depends(mise, "release:prepare")
+
+
+class TestZigbuildPins:
+    """zig + cargo-zigbuild are exact-pinned and coherent with uv.lock."""
+
+    _PINNED = ("ziglang", "cargo-zigbuild")
+
+    def _build_group(self) -> list[str]:
+        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+        return pyproject["dependency-groups"]["build"]
+
+    def _locked_versions(self) -> dict[str, str]:
+        lock = tomllib.loads((REPO_ROOT / "uv.lock").read_text())
+        return {
+            p["name"]: p["version"] for p in lock["package"] if "version" in p
+        }
+
+    @pytest.mark.parametrize("name", _PINNED)
+    def test_pinned_exactly(self, name: str):
+        constraints = [
+            dep for dep in self._build_group() if dep.startswith(name)
+        ]
+        assert constraints == [f"{name}=={self._locked_versions()[name]}"]
+
+
+class TestToolchainCoherence:
+    """The clippy msrv and rustfmt edition mirror the mise rust pin by hand."""
 
     def test_clippy_msrv_matches_mise_rust_pin(self, mise: Mise):
         clippy = tomllib.loads((WORKSPACE_ROOT / "clippy.toml").read_text())
         assert clippy["msrv"] == mise["tools"]["rust"]["version"]
+
+    def test_launcher_rust_version_matches_mise_rust_pin(self, mise: Mise):
+        # rust-version drives MSRV-aware resolution (resolver = "3"); it is a
+        # further hand-synced mirror of the mise rust pin. A drift would resolve
+        # the dep graph against a different floor than CI builds on.
+        launcher_cargo = tomllib.loads(
+            (WORKSPACE_ROOT / "launcher" / "Cargo.toml").read_text()
+        )
+        assert (
+            launcher_cargo["package"]["rust-version"]
+            == mise["tools"]["rust"]["version"]
+        )
+
+    def test_workspace_uses_msrv_aware_resolver(self):
+        # resolver = "3" is what makes rust-version actually gate resolution;
+        # resolver = "2" would silently ignore it.
+        workspace = tomllib.loads((WORKSPACE_ROOT / "Cargo.toml").read_text())
+        assert workspace["workspace"]["resolver"] == "3"
 
     def test_rustfmt_edition_matches_launcher_crate_edition(self):
         rustfmt = tomllib.loads((WORKSPACE_ROOT / "rustfmt.toml").read_text())
@@ -313,3 +367,40 @@ class TestToolchainCoherence:
             (WORKSPACE_ROOT / "launcher" / "Cargo.toml").read_text()
         )
         assert launcher_cargo["package"]["name"] == LAUNCHER_CRATE
+
+
+class TestPlatformAliasCoherence:
+    """The triple→alias map is single-sourced across Python, launcher, bash."""
+
+    _RESOLVE_RS = (
+        WORKSPACE_ROOT
+        / "launcher"
+        / "src"
+        / "launch"
+        / "outbound"
+        / "resolve"
+        / "mod.rs"
+    )
+
+    def _launcher_alias_map(self) -> dict[tuple[str, str], str]:
+        pattern = re.compile(
+            r'#\[cfg\(all\(target_arch = "([^"]+)", target_os = "([^"]+)"\)\)\]'
+            r'\s*pub const HOST_PLATFORM: &str = "([^"]+)";'
+        )
+        source = self._RESOLVE_RS.read_text()
+        return {
+            (arch, os): alias for arch, os, alias in pattern.findall(source)
+        }
+
+    def _expected_alias_map(self) -> dict[tuple[str, str], str]:
+        arch_of = {"aarch64": "aarch64", "x86_64": "x86_64"}
+        os_of = {"apple-darwin": "macos", "unknown-linux": "linux"}
+        expected: dict[tuple[str, str], str] = {}
+        for triple, alias in TARGETS:
+            arch = next(a for a in arch_of if triple.startswith(a))
+            os_marker = next(marker for marker in os_of if marker in triple)
+            expected[(arch, os_of[os_marker])] = alias
+        return expected
+
+    def test_launcher_host_platform_map_matches_targets(self):
+        assert self._launcher_alias_map() == self._expected_alias_map()
