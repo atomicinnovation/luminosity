@@ -10,9 +10,9 @@ kind: story
 priority: high
 parent: "work-item:0001"
 blocks: ["work-item:0008", "work-item:0009"]
-relates_to: ["work-item:0002", "work-item:0006"]
+relates_to: ["work-item:0002", "work-item:0006", "work-item:0014"]
 tags: [story, rust, cli, hexagonal, scaffold]
-last_updated: "2026-06-28T19:37:46+00:00"
+last_updated: "2026-07-02T23:46:13+00:00"
 last_updated_by: Toby Clemson
 schema_version: 1
 ---
@@ -44,7 +44,11 @@ Cargo workspace whose *eventual* shape is one crate per subdomain alongside
 `kernel`, `config`, `config-adapters`, and `cli` — with hexagonal layers as
 modules, split into separate crates only under pressure (ADR-0009, ADR-0010).
 This version-only scaffold deliberately does not reach that shape: it creates
-just `cli` and `kernel`. ADR-0009 governs the hexagonal pattern and
+just `cli` and `kernel`. (Work item 0014 subsequently relocates both crates
+under a top-level `cli/` container — `cli/` → `cli/launcher/`, `kernel/` →
+`cli/kernel/` — and renames the launcher crate's directory `cli` → `launcher`;
+the package/binary name `luminosity` is unchanged.) ADR-0009 governs the
+hexagonal pattern and
 the inward-dependency rule; ADR-0010 governs the binary axis (what is split into
 independently-shippable units) and reserves git-style external-subcommand
 dispatch for the distribution story. The `version` subcommand is deliberately
@@ -160,6 +164,10 @@ feature itself.
   skeleton via the configuration story (0009), not directly — 0010's own
   Dependencies list 0003 and 0009, not 0007 — so closing this story does not by
   itself unblock 0010.
+- Relates to: the workspace relocation (0014) — relocates the `cli` and `kernel`
+  crates under a top-level `cli/` container and renames the `cli` launcher
+  crate's directory to `launcher` (package/binary `luminosity` unchanged); 0014
+  follows this scaffold.
 - Parent: epic 0001.
 
 ## Assumptions
@@ -212,6 +220,12 @@ feature itself.
   single-source-of-truth crate version feeds its version-coherence obligation.
 - Kind set to `story`: a concrete, bounded deliverable (workspace + one
   subcommand).
+- **0014 cross-link (this pass)**: added a forward-reference to work item 0014,
+  which relocates the `cli`/`kernel` crates under a top-level `cli/` container
+  and renames the `cli` launcher crate's directory to `launcher` (package/binary
+  `luminosity` unchanged). 0007's own description of scaffolding root-level `cli`
+  + `kernel` is kept as-is — it is accurate to what this story builds before 0014
+  relocates it.
 - Updated 2026-06-27 from codebase research
   (`meta/research/codebase/2026-06-27-0006-rust-toolchain-guard-rails.md`):
   replaced the stale `core` / `adapters` / `cli` crate triple — superseded by the
@@ -223,6 +237,7 @@ feature itself.
 
 - Source: `meta/work/0001-baseline-architecture-and-engineering-guard-rails.md`
 - Spike: `meta/work/0002-modular-rust-cli-architecture-and-hexagonal-workspace-layout.md`
+- Relocation: `meta/work/0014-relocate-workspace-crates-under-cli-and-rename-launcher-crate.md`
 - `meta/decisions/ADR-0009-thin-cli-over-a-hexagonal-ports-and-adapters-core.md`
 - `meta/decisions/ADR-0010-git-style-modular-cli-of-on-demand-static-binaries.md`
 - `meta/decisions/ADR-0002-zero-setup-static-binary-distribution.md`

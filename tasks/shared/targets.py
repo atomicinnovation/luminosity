@@ -7,6 +7,10 @@ TARGETS = (
     ("x86_64-unknown-linux-musl", "linux-x64"),
 )
 
+# Minimum macOS supported by the cross-built darwin artifacts, exported as
+# MACOSX_DEPLOYMENT_TARGET. 11.0 (Big Sur) is the floor for arm64 and x86_64.
+MACOS_DEPLOYMENT_TARGET = "11.0"
+
 # platform.system() value -> the OS substring its release triples carry.
 _HOST_OS_MARKERS = {
     "Darwin": "apple-darwin",
@@ -17,11 +21,8 @@ _HOST_OS_MARKERS = {
 def host_targets(system: str) -> tuple[str, ...]:
     """Release triples whose OS matches `system` (a `platform.system()` value).
 
-    Partitions the single `TARGETS` tuple by OS substring so the per-OS build
-    set provably shares one definition with the install and shipped sets.
-    Exits — rather than returning empty — on an unsupported host: an empty
-    result would make `build:launcher` run zero builds and exit 0, a
-    false-green on the static-link guard.
+    Raises on an unsupported host rather than returning empty, which would make
+    `build:launcher` run zero builds and false-green the static-link guard.
     """
     marker = _HOST_OS_MARKERS.get(system)
     if marker is None:

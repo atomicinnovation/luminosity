@@ -1,13 +1,17 @@
 import json
+from collections import Counter
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import semver
 import tomlkit
-from invoke import Context, task
+from invoke import Context, Exit, task
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from .shared.files import atomic_write_text
-from .shared.paths import CARGO_TOML, CHECKSUMS, PLUGIN_JSON
+from .shared.paths import CARGO_TOML, CHECKSUMS, MANIFEST, PLUGIN_JSON
 
 
 class BumpType(StrEnum):
@@ -41,16 +45,21 @@ def _render_checksums_version(version: str) -> str:
     return json.dumps(data, indent=2) + "\n"
 
 
+def _render_manifest_version(version: str) -> str:
+    data = json.loads(MANIFEST.read_text())
+    data["version"] = version
+    return json.dumps(data, indent=2) + "\n"
+
+
 _PRERELEASE_IDENTIFIER = "pre"
 
 
 def _bump_to_next_prerelease(version: semver.Version) -> semver.Version:
     """Advance to the next prerelease, opening a fresh line off a stable cut.
 
-    Bumping a finalised release's prerelease directly would re-cut
-    `<x.y.z>-pre.1`, colliding with the prerelease tags that led up to that
-    release; advancing to the next minor's first prerelease avoids the clash.
-    An in-progress prerelease simply increments.
+    An in-progress prerelease increments; a finalised release advances to the
+    next minor's first prerelease, avoiding a clash with the tags that led up
+    to it.
     """
     already_in_prerelease = version.prerelease is not None
     if already_in_prerelease:
@@ -70,14 +79,73 @@ def read(_context: Context, print_to_stdout: bool = True) -> semver.Version:
 
 @task
 def write(_context: Context, version: str) -> None:
-    """Write plugin version to plugin.json, Cargo.toml, and checksums.json."""
+    """Write the version to every version-bearing file, coherently.
+
+    Single writer for plugin.json, the launcher Cargo.toml, checksums.json, and
+    the release manifest, so a normal bump cannot drift the anchors apart.
+    """
     rendered_plugin_json = _render_plugin_json(version)
     rendered_cargo_toml = _render_cargo_toml(version)
     rendered_checksums = _render_checksums_version(version)
+    rendered_manifest = _render_manifest_version(version)
 
     atomic_write_text(PLUGIN_JSON, rendered_plugin_json)
     atomic_write_text(CARGO_TOML, rendered_cargo_toml)
     atomic_write_text(CHECKSUMS, rendered_checksums)
+    atomic_write_text(MANIFEST, rendered_manifest)
+
+
+def _cargo_version() -> str:
+    return tomlkit.parse(CARGO_TOML.read_text())["package"]["version"]
+
+
+def _json_version(path: Path) -> str:
+    return json.loads(path.read_text())["version"]
+
+
+def _anchor_versions() -> dict[str, str]:
+    """Return each guarded anchor's declared version, keyed by filename."""
+    return {
+        "plugin.json": read_plugin_metadata()["version"],
+        "cli/launcher/Cargo.toml": _cargo_version(),
+        "cli/launcher/bin/checksums.json": _json_version(CHECKSUMS),
+        "cli/launcher/bin/manifest.json": _json_version(MANIFEST),
+    }
+
+
+def _mismatching_anchor_files(versions: dict[str, str]) -> list[str]:
+    """Files whose version differs from the reference — empty when all agree.
+
+    A strict majority is the reference. With no strict majority (an even split
+    or all-distinct), every anchor is named rather than an order-dependent
+    subset.
+    """
+    counts = Counter(versions.values())
+    if len(counts) == 1:
+        return []
+    (top_version, top_count), *rest = counts.most_common()
+    has_strict_majority = not rest or rest[0][1] < top_count
+    if has_strict_majority:
+        return sorted(
+            name for name, value in versions.items() if value != top_version
+        )
+    return sorted(versions)
+
+
+@task
+def check(_context: Context) -> None:
+    """Fail (naming the culprits) if the release-contract anchors have drifted.
+
+    Enforces version coherence across plugin.json, the launcher Cargo.toml,
+    checksums.json, and manifest.json.
+    """
+    mismatching = _mismatching_anchor_files(_anchor_versions())
+    if mismatching:
+        raise Exit(
+            "version:check failed: version mismatch across anchors: "
+            + ", ".join(mismatching),
+            code=1,
+        )
 
 
 @task(iterable=["bump_type"])

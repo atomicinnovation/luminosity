@@ -9,9 +9,9 @@ status: draft
 kind: story
 priority: medium
 parent: "work-item:0001"
-relates_to: ["work-item:0006", "work-item:0009", "adr:ADR-0009", "adr:ADR-0010"]
+relates_to: ["work-item:0006", "work-item:0009", "work-item:0014", "adr:ADR-0009", "adr:ADR-0010"]
 tags: [story, rust, architecture-enforcement, cargo-deny, guard-rails]
-last_updated: "2026-06-27T11:51:56+00:00"
+last_updated: "2026-07-02T23:46:13+00:00"
 last_updated_by: Toby Clemson
 schema_version: 1
 ---
@@ -27,7 +27,7 @@ schema_version: 1
 
 Extend the cargo-deny ban-lists and verify the inward dependency direction at each
 new crate boundary as the workspace grows beyond the scaffold and config —
-specifically the `cli`-never-depends-on-a-subdomain rule, the
+specifically the `launcher`-never-depends-on-a-subdomain rule, the
 `kernel`-stays-dependency-light rule, and each new `luminosity-<sub>` crate's clean
 dependency closure — so the hexagonal direction stays mechanically enforced as
 subdomains are added.
@@ -46,16 +46,17 @@ crates exist.
 
 It exists because that enforcement currently has no home: 0006 owns the mechanism,
 0009 owns the first application, but the rules that guard the growing workspace
-(`cli` ↛ subdomain, `kernel` stays light, each subdomain's closure) are designed
-in ADR-0009 / ADR-0010 and otherwise unowned. Note there is **no subdomain
+(`launcher` ↛ subdomain, `kernel` stays light, each subdomain's closure) are
+designed in ADR-0009 / ADR-0010 and otherwise unowned. Note there is **no subdomain
 (e.g. ads, video) work item yet**, so this story is forward-looking: its concrete
 work is triggered by the first such crate.
 
 ## Requirements
 
-- **`cli` never depends on a subdomain crate** (ADR-0010): a cargo-deny ban-list
-  entry forbidding any `luminosity-<sub>` crate from entering the `cli` launcher's
-  dependency closure. The launcher reaches subdomains only via on-demand `exec`
+- **`launcher` never depends on a subdomain crate** (ADR-0010): a cargo-deny
+  ban-list entry forbidding any `luminosity-<sub>` crate from entering the
+  `launcher` crate's (the `luminosity` launcher's) dependency closure. The
+  launcher reaches subdomains only via on-demand `exec`
   dispatch, never as a compile-time dependency.
 - **`kernel` stays dependency-light** (ADR-0010): a cargo-deny ban-list keeping
   dependency tails out of `kernel`'s closure (it is linked by everything), so a
@@ -69,9 +70,9 @@ work is triggered by the first such crate.
 
 ## Acceptance Criteria
 
-- [ ] The `cli` launcher's dependency closure contains no `luminosity-<sub>`
-      subdomain crate; introducing such a dependency trips cargo-deny and fails the
-      build.
+- [ ] The `launcher` crate's (the `luminosity` launcher's) dependency closure
+      contains no `luminosity-<sub>` subdomain crate; introducing such a
+      dependency trips cargo-deny and fails the build.
 - [ ] `kernel`'s dependency closure stays within its declared light-dependency
       allow-set; adding a disallowed (heavy) dependency trips cargo-deny.
 - [ ] For each subdomain crate that exists, its domain/application core has no
@@ -83,8 +84,9 @@ work is triggered by the first such crate.
 ## Open Questions
 
 - There is no subdomain (ads/video) work item yet, so the trigger for the
-  per-subdomain rules is unscheduled. The `cli` ↛ subdomain and `kernel`-light
-  bans could be authored **preventively** (they cost nothing while matching no
+  per-subdomain rules is unscheduled. The `launcher` ↛ subdomain and
+  `kernel`-light bans could be authored **preventively** (they cost nothing while
+  matching no
   crates); whether to do that early or defer until the first subdomain lands is a
   sequencing call.
 - The exact light-dependency allow-set for `kernel` (what counts as a permitted
@@ -106,13 +108,17 @@ work is triggered by the first such crate.
 
 - The cargo-deny ban-list is the chosen cross-crate enforcement mechanism per
   ADR-0009; this story extends it rather than introducing a new tool.
-- The `cli` ↛ subdomain and `kernel`-light rules are static cargo-deny bans that
-  can be authored independently of whether the guarded crates exist yet.
+- The `launcher` ↛ subdomain and `kernel`-light rules are static cargo-deny bans
+  that can be authored independently of whether the guarded crates exist yet.
 
 ## Technical Notes
 
 - ADR-0009 (enforcement model) and ADR-0010 (crate layout: `kernel`, `config`,
-  `config-adapters`, `cli`, `luminosity-<sub>`) are the source of these rules.
+  `config-adapters`, the `launcher` crate, `luminosity-<sub>`) are the source of
+  these rules. Per 0014 these crates live under a top-level `cli/` container (the
+  launcher crate's directory was renamed `cli` → `launcher`; package/binary
+  `luminosity` unchanged), so `cli` now names the workspace, not the launcher
+  crate.
 - cargo-deny has no per-crate notion — it runs once over the workspace dependency
   graph — so these are additional entries in the single workspace `deny.toml`, not
   new per-crate tasks.
@@ -129,12 +135,18 @@ work is triggered by the first such crate.
   the workspace grows.
 - Priority set to `medium`: forward-looking, with no immediate trigger until a
   subdomain crate exists, though the preventive bans are cheap to land earlier.
+- **0014 alignment (this pass)**: reconciled the launcher-crate terminology to
+  the post-relocation layout — the launcher crate is `launcher` (at
+  `cli/launcher/`), and `cli` now names the whole workspace. Added a bridging note
+  that per 0014 the workspace crates live under a top-level `cli/` container, and
+  added 0014 to `relates_to`.
 
 ## References
 
 - Source: `meta/work/0001-baseline-architecture-and-engineering-guard-rails.md`
 - Toolchain: `meta/work/0006-establish-rust-toolchain-guard-rails-in-mise-and-ci.md`
 - Config (first application): `meta/work/0009-multi-level-configuration-system.md`
+- Relocation: `meta/work/0014-relocate-workspace-crates-under-cli-and-rename-launcher-crate.md`
 - `meta/decisions/ADR-0009-thin-cli-over-a-hexagonal-ports-and-adapters-core.md`
 - `meta/decisions/ADR-0010-git-style-modular-cli-of-on-demand-static-binaries.md`
 - Research: `meta/research/codebase/2026-06-27-0006-rust-toolchain-guard-rails.md`

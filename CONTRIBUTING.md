@@ -60,3 +60,74 @@ gh api repos/{owner}/{repo}/branches/main/protection \
 ```
 
 and confirm the five Rust-job names above are present.
+
+## Release signing (minisign) — standing operational responsibilities
+
+Releases are integrity-protected with **minisign** (sha256 alone is not trust;
+in-process signature verification is, per ADR-0002). These are ongoing
+maintainer duties, not one-offs.
+
+### Key provisioning (do this before the first real release)
+
+The single public key committed at `keys/luminosity-release.pub` is currently a
+**placeholder** generated during implementation. It is the one source of truth:
+the bootstrap ships it, and `cli/launcher/build.rs` copies it into the launcher's
+`OUT_DIR` at build time for the launcher to embed, so the two never diverge (no
+coherence check needed). Before cutting a real release:
+
+1. Generate the production keypair: `mise run keys:generate` (choose a strong
+   passphrase; pass `--force` to replace the placeholder). It writes the public
+   key to `keys/luminosity-release.pub` (commit it) and the secret key to the
+   gitignored `keys/luminosity-release.key`, then prints these next steps.
+2. Store the **secret** in the GitHub `MINISIGN_SECRET_KEY` secret (the full
+   `keys/luminosity-release.key` contents) and its passphrase in
+   `MINISIGN_KEY_PASSWORD`, then delete the local secret key. It is **never**
+   committed (`.gitignore` blocks `*.key`).
+3. Rebuild so the launcher re-embeds the new public key
+   (`mise run build:launcher` re-embeds it via `build.rs`).
+
+### Publishing `.minisig` assets
+
+Every release publishes, per binary, a `.minisig` alongside the binary and its
+`.sha256`, plus a signed `manifest.json` (`manifest.minisig`). This is automatic
+in the release pipeline (`tasks/sign.py` → `upload_and_verify`), which
+re-downloads every asset and re-verifies its signature against the committed
+public key **before** un-drafting — so a key/secret mismatch is caught at publish
+time, not at a user's first fetch.
+
+### Key rotation
+
+Rotate using the **verify-any-of overlap window** (the launcher trusts a small
+set of keys): (1) add the new public key to the trusted set and ship a plugin
+release trusting **both** old and new; (2) switch signing to the new key; (3)
+after the window, drop the old key in a later release. **Bound the window** — an
+indefinitely-trusted retired key widens the forgery surface.
+
+### Compromise response
+
+There is **no launcher self-update**, so revoking a leaked key requires cutting a
+plugin release that drops it from the trusted set; exposure lasts until users
+upgrade. Treat a leaked `MINISIGN_SECRET_KEY` as an incident: rotate immediately
+and cut a release dropping the compromised key.
+
+### Bundled-roots refresh cadence
+
+The launcher carries a frozen `webpki-roots` snapshot (it does not read the host
+cert store). Bump `webpki-roots` on each release cut so the Mozilla root
+snapshot cannot go stale against GitHub's TLS chain under no-self-update.
+
+### Vendored verify shim
+
+The per-triple `minisign-verify` shim (the bootstrap's root-of-trust verifier)
+is a trusted, no-self-update component: a shim-side flaw likewise persists until
+users upgrade. Refresh its pin on the same cadence and treat a shim
+vulnerability as an upgrade-forcing event.
+
+### Signing/build isolation (known follow-up)
+
+The plan calls for signing to run in a **separate CI job** that never shares an
+environment with crate compilation (so a compromised build dependency cannot
+exfiltrate `MINISIGN_SECRET_KEY`). The current pipeline signs within the release
+job's finalise step (after the build step, secret scoped to finalise). Splitting
+signing into an isolated job that consumes the built artefacts via job artifacts
+is a tracked hardening follow-up.

@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+#
+# Thin bootstrap fronting the luminosity launcher. On first use it fetches the
+# launcher, verifies its minisign signature with the vendored per-triple verify
+# shim (the root of trust — a binary cannot verify itself), caches it, and execs
+# it; thereafter it re-verifies the cached copy before every exec. Fail-closed:
+# any fetch or verification failure exits non-zero and never execs an unverified
+# binary. Bash 3.2 floor (macOS system bash).
+set -uo pipefail
+
+fail() {
+	printf 'luminosity: %s\n' "$1" >&2
+	exit 1
+}
+
+[[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]] || fail "CLAUDE_PLUGIN_ROOT is not set"
+[[ -d "${CLAUDE_PLUGIN_ROOT}" ]] ||
+	fail "CLAUDE_PLUGIN_ROOT is not a directory: ${CLAUDE_PLUGIN_ROOT}"
+
+host_arch=$(uname -m)
+host_os=$(uname -s)
+case "${host_arch}" in
+arm64 | aarch64) arch_alias=arm64 ;;
+x86_64 | amd64) arch_alias=x64 ;;
+*) fail "unsupported architecture: ${host_arch}" ;;
+esac
+case "${host_os}" in
+Darwin) os_alias=darwin ;;
+Linux) os_alias=linux ;;
+*) fail "unsupported operating system: ${host_os}" ;;
+esac
+platform="${os_alias}-${arch_alias}"
+
+plugin_json="${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"
+[[ -f "${plugin_json}" ]] || fail "plugin.json not found: ${plugin_json}"
+version=$(sed -n \
+	's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${plugin_json}")
+version=${version%%$'\n'*}
+[[ -n "${version}" ]] || fail "could not read version from plugin.json"
+
+if command -v curl >/dev/null 2>&1; then
+	fetch() { curl -fsSL "$1" -o "$2"; }
+elif command -v wget >/dev/null 2>&1; then
+	fetch() { wget -q "$1" -O "$2"; }
+else
+	fail "need curl or wget on PATH to fetch the launcher"
+fi
+
+shim_source="${CLAUDE_PLUGIN_ROOT}/bin/luminosity-verify-${platform}"
+[[ -x "${shim_source}" ]] ||
+	fail "verify shim missing for ${platform}: ${shim_source}"
+public_key="${CLAUDE_PLUGIN_ROOT}/keys/luminosity-release.pub"
+[[ -f "${public_key}" ]] || fail "release public key missing: ${public_key}"
+
+# Probes write AND exec (a noexec mount passes a write-only check but breaks
+# exec), so it catches read-only/immutable installs and noexec mounts alike.
+probe_dir() {
+	mkdir -p "$1" 2>/dev/null || return 1
+	probe="$1/.luminosity-probe-$$"
+	printf '#!/bin/sh\nexit 0\n' >"${probe}" 2>/dev/null || return 1
+	chmod +x "${probe}" 2>/dev/null || {
+		rm -f "${probe}"
+		return 1
+	}
+	if "${probe}" >/dev/null 2>&1; then
+		rm -f "${probe}"
+		return 0
+	fi
+	rm -f "${probe}"
+	return 1
+}
+
+resolve_cache_dir() {
+	if [[ -n "${LUMINOSITY_CACHE_DIR:-}" ]]; then
+		probe_dir "${LUMINOSITY_CACHE_DIR}" || return 1
+		printf '%s\n' "${LUMINOSITY_CACHE_DIR}"
+		return 0
+	fi
+	primary="${CLAUDE_PLUGIN_ROOT}/bin"
+	if probe_dir "${primary}"; then
+		printf '%s\n' "${primary}"
+		return 0
+	fi
+	if [[ -n "${XDG_CACHE_HOME:-}" ]]; then
+		fallback="${XDG_CACHE_HOME}/luminosity"
+	elif [[ "${host_os}" = Darwin ]]; then
+		fallback="${HOME:-}/Library/Caches/luminosity"
+	else
+		fallback="${HOME:-}/.cache/luminosity"
+	fi
+	probe_dir "${fallback}" || return 1
+	printf '%s\n' "${fallback}"
+}
+
+cache_dir=$(resolve_cache_dir) ||
+	fail "no writable, exec-capable cache directory (plugin root and XDG both \
+unusable)"
+
+# Stage the shim into the exec-capable cache dir (the plugin root may be
+# noexec/read-only) and invoke it by absolute path so a PATH-planted decoy
+# cannot stand in for the root verifier.
+shim="${cache_dir}/luminosity-verify"
+cp "${shim_source}" "${shim}" 2>/dev/null ||
+	fail "could not stage the verify shim into ${cache_dir}"
+chmod +x "${shim}" 2>/dev/null ||
+	fail "could not make the verify shim executable"
+
+launcher="${cache_dir}/luminosity-launcher-${version}-${platform}"
+launcher_sig="${launcher}.minisig"
+base_url="${LUMINOSITY_RELEASE_BASE_URL:-https://github.com/atomicinnovation/luminosity/releases/download/v${version}}"
+
+verify_launcher() {
+	# An unrunnable shim, not only a bad signature, counts as not verified.
+	"${shim}" "${public_key}" "${launcher_sig}" "${launcher}" >/dev/null 2>&1
+}
+
+fetch_and_verify() {
+	tmp_bin="${cache_dir}/.tmp-launcher-$$"
+	tmp_sig="${tmp_bin}.minisig"
+	if ! fetch "${base_url}/luminosity-${platform}" "${tmp_bin}"; then
+		rm -f "${tmp_bin}"
+		return 1
+	fi
+	if ! fetch "${base_url}/luminosity-${platform}.minisig" "${tmp_sig}"; then
+		rm -f "${tmp_bin}" "${tmp_sig}"
+		return 1
+	fi
+	chmod +x "${tmp_bin}" 2>/dev/null
+	# minisign verifies integrity and authenticity; only fully-verified bytes are
+	# atomically renamed into place (verified in the temp file first).
+	if ! "${shim}" "${public_key}" "${tmp_sig}" "${tmp_bin}" >/dev/null 2>&1; then
+		rm -f "${tmp_bin}" "${tmp_sig}"
+		return 1
+	fi
+	mv "${tmp_sig}" "${launcher_sig}" && mv "${tmp_bin}" "${launcher}"
+}
+
+if ! { [[ -x "${launcher}" ]] && [[ -f "${launcher_sig}" ]] && verify_launcher; }; then
+	rm -f "${launcher}" "${launcher_sig}"
+	fetch_and_verify ||
+		fail "could not fetch and verify the luminosity launcher for ${platform}"
+fi
+
+# Process-replacing exec with an argv list (no shell interpolation).
+# CLAUDE_PLUGIN_ROOT stays set so the launcher resolves the same cache root.
+exec "${launcher}" "$@"

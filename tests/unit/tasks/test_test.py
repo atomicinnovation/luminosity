@@ -6,7 +6,10 @@ from invoke import Context, Exit
 from tasks.shared import rust
 from tasks.test import cli, integration, unit
 
-CLI_INSTRUMENTED = "cargo llvm-cov nextest --workspace --summary-only"
+CLI_INSTRUMENTED = (
+    "cargo llvm-cov nextest --workspace --summary-only "
+    "--ignore-filename-regex 'tests/fixtures/'"
+)
 CLI_PLAIN = "cargo nextest run --workspace"
 
 
