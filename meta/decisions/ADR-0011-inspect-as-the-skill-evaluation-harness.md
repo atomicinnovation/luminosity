@@ -167,6 +167,30 @@ native variance/repeat and its small-company longevity risk.
   not `test_*`), keeping the eval tier on the Inspect runner while sharing the
   `tests/` root — an implementation detail owned by story 0010.
 
+## Implementation Notes (2026-07-08, story 0010)
+
+Applying the harness surfaced one correction to this ADR's mechanism, recorded
+here rather than by superseding the decision (the decision — Inspect, pass^k,
+dev-time/committed — stands unchanged):
+
+- **`pass_k(k)` is real and correct as of `inspect-ai==0.3.244`.** Earlier 0010
+  research (written against an older Inspect) concluded Inspect had *no* `pass_k`
+  and that the pass^k gate needed a custom all-succeed reducer or `at_least(k)`.
+  Verified against the installed 0.3.244 source, `inspect_ai.scorer.pass_k(k)`
+  exists and computes *"the probability that all k epoch attempts succeed"* — the
+  draw-without-replacement estimator `C(correct, k) / C(total, k)`. With
+  `epochs == k` (this eval's configuration) it collapses to 1.0 iff all k trials
+  pass, else 0.0, so its `accuracy` metric over the tasks *is* pass^k. This ADR's
+  original `Epochs(k, pass_k(k))` wording is therefore literally correct; the
+  implementation wires the native reducer directly (no custom reducer), reading
+  the fraction off `log.results.scores[*]` where `reducer == "pass_k_<k>"` and
+  `metrics["accuracy"].value`. (`pass_at(k)` remains the *lenient* pass@k and is
+  not used.)
+- The full Phase-0 integration findings (Python 3.14 resolution, the required
+  `httpx<1` constraint, the `claude_code()` signature, the file-path loader's
+  absolute-import requirement) are recorded in
+  `meta/research/codebase/2026-07-08-0010-inspect-integration-findings.md`.
+
 ## References
 
 - `meta/work/0003-skill-evaluation-framework-selection.md` — Feeding spike; its

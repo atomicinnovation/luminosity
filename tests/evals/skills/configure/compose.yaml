@@ -1,0 +1,12 @@
+# The build context is the repo root (four levels up) so the Dockerfile can COPY
+# the staged cross-built launcher from cli/launcher/bin/; the repo-root
+# .dockerignore keeps the multi-GB trees (cli/target, .venv, .git) out of it.
+services:
+  default:
+    build:
+      context: ../../../..
+      dockerfile: tests/evals/skills/configure/Dockerfile
+    platform: linux/amd64
+    working_dir: /work
+    command: ["sleep", "infinity"]
+    init: true

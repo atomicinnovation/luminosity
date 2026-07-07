@@ -73,6 +73,11 @@ description = "Run the whole Rust workspace's unit tests in one --workspace pass
 depends = ["deps:install:rust-components"]
 run = "invoke test.cli.run"
 
+[tasks."test:unit:evals"]
+description = "Run the eval-logic unit tests (scorer, dataset, coherence); the live eval tier stays out of CI"
+depends = ["deps:install:python"]
+run = "invoke test.evals.run"
+
 [tasks."test:unit:launcher"]
 description = "Run launcher-crate unit tests only (ad-hoc; the aggregate covers it via test:unit:cli)"
 depends = ["deps:install:rust-components"]
@@ -85,7 +90,7 @@ run = "invoke test.kernel.run"
 
 [tasks."test:unit"]
 description = "Run all unit tests in parallel"
-depends = ["test:unit:tasks", "test:unit:cli"]
+depends = ["test:unit:tasks", "test:unit:cli", "test:unit:evals"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"
@@ -97,7 +102,7 @@ depends = ["test:unit", "test:integration"]
 
 [tasks."eval:skills:configure"]
 description = "Run the configure skill Inspect eval on demand (live model + Docker; excluded from CI for token cost)"
-depends = ["deps:install:python"]
+depends = ["deps:install:python", "build:release"]
 run = "invoke eval.skills.configure"
 
 [tasks."eval:skills"]

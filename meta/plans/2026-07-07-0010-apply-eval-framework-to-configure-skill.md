@@ -1060,23 +1060,27 @@ Extend `test_mise_wiring.py` to assert `test:unit:evals` **is** in `test:unit`'s
 
 #### Automated Verification
 
-- [ ] Scorer/reducer/dataset/collection/read-back/coherence unit tests pass, wired into the
+- [x] Scorer/dataset/collection/read-back/coherence unit tests pass, wired into the
       tier: `mise run test:unit:evals` (plus the task-side
-      `uv run pytest tests/unit/tasks/test_eval_collection.py tests/unit/tasks/test_eval_readback.py tests/unit/tasks/test_eval_docker_coherence.py -v`)
-- [ ] `configure_eval.py` is not collected by pytest:
+      `uv run pytest tests/unit/tasks/test_eval_collection.py tests/unit/tasks/test_eval_readback.py tests/unit/tasks/test_eval_docker_coherence.py -v`).
+      **The custom `all_correct` reducer + `tests/evals/shared/reducers.py` were dropped**
+      per the native-`pass_k` decision, so there is no `test_reducers.py`; the pass^k
+      semantic is covered by the `pass_k_3` readback tests and the Phase-0 probe.
+- [x] `configure_eval.py` is not collected by pytest:
       `uv run pytest tests/evals --collect-only` reports no items
-- [ ] Python lint + types clean across the new modules:
+- [x] Python lint + types clean across the new modules:
       `mise run build-system:check`
-- [ ] The eval still runs guarded-off without a model call:
+- [x] The eval still runs guarded-off without a model call:
       `LUMINOSITY_EVAL_LIVE=off mise run eval:skills:configure` exits 0
-- [ ] Full read-only sweep green and still eval-free: `mise run check`
+- [x] Full read-only sweep green and still eval-free: `mise run check`
 
 #### Manual Verification
 
-- [ ] ADR-0011 renders with the correction note and reads coherently.
-- [ ] The `dataset.jsonl` expected values match `cli/launcher/tests/config.rs`
-      (markers are substring-checked against the message templates in the
-      dataset-validity test; a final read-through confirms the lifted values).
+- [x] ADR-0011 renders with the implementation note (inverted to *confirm* `pass_k`
+      exists as of inspect-ai 0.3.244) and reads coherently.
+- [x] The `dataset.jsonl` expected values match `cli/launcher/tests/config.rs` — validated
+      by running the real launcher against every fixture/task (markers, exit codes, and
+      stdout all confirmed); markers are also substring-checked in the dataset-validity test.
 
 ---
 

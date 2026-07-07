@@ -26,6 +26,9 @@ build = [
     # tasks/eval imports inspect_ai, so both live in `build`, not `dev`.
     "inspect-ai==0.3.244",
     "inspect-swe==0.2.65",
+    # The Anthropic model provider inspect resolves for `model="anthropic/…"` —
+    # required at Task-construction time, not just at run time.
+    "anthropic==0.116.0",
     # inspect-ai declares httpx unbounded; with prerelease = "allow" the resolver
     # otherwise drifts to httpx 1.0.dev*, which breaks inspect-ai at import
     # (cannot import HTTPStatusError). Constrain to the stable line.

@@ -288,6 +288,28 @@ class TestEvalTierWiring:
         assert leaf["run"] == "invoke eval.skills.configure"
         assert "deps:install:python" in leaf.get("depends", [])
 
+    def test_configure_leaf_provisions_the_release_binary(self, mise: Mise):
+        # The Docker sandbox COPYs the cross-built linux-musl launcher that
+        # build:release stages, so the leaf must provision it.
+        assert "build:release" in _depends(mise, "eval:skills:configure")
+
+
+class TestEvalUnitSuiteWiring:
+    """The eval-logic unit suite runs in the default sweep; the live tier does
+    not.
+    """
+
+    def test_test_unit_evals_wraps_an_invoke_task(self, mise: Mise):
+        assert _tasks(mise)["test:unit:evals"]["run"] == "invoke test.evals.run"
+
+    def test_test_unit_evals_is_folded_into_test_unit(self, mise: Mise):
+        # Mirror of the live-tier exclusion: the eval unit suite MUST run in CI
+        # so the scorer/dataset/coherence tests cannot silently fall out.
+        assert "test:unit:evals" in _depends(mise, "test:unit")
+
+    def test_test_unit_evals_provisions_python(self, mise: Mise):
+        assert "deps:install:python" in _depends(mise, "test:unit:evals")
+
 
 class TestFinalEnumeratedArrays:
     """Pin the complete top-level task arrays."""
@@ -317,6 +339,7 @@ class TestFinalEnumeratedArrays:
         assert _depends(mise, "test:unit") == [
             "test:unit:tasks",
             "test:unit:cli",
+            "test:unit:evals",
         ]
 
 

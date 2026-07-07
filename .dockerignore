@@ -1,0 +1,9 @@
+# The eval sandbox build context is the repo root but needs only the staged
+# launcher under cli/launcher/bin/; keep the heavy trees out of the context.
+cli/target/
+.venv/
+node_modules/
+.git/
+.jj/
+meta/
+workspaces/
