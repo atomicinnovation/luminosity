@@ -6,6 +6,9 @@ pub mod help;
 pub mod inbound;
 pub mod outbound;
 
+use config::ConfigAccess;
+
+use crate::config_command::inbound::cli as config_cli;
 use crate::launch::core::{
     run_external, ExecBinary, ExternalCommand, ResolveBinary,
 };
@@ -17,10 +20,12 @@ use crate::version::inbound::cli as version_cli;
 ///
 /// # Errors
 ///
-/// A [`kernel::Error`] when an external subcommand cannot be resolved or exec'd.
+/// A [`kernel::Error`] when a built-in fails or an external subcommand cannot
+/// be resolved or exec'd.
 pub fn dispatch(
     cli: &Cli,
     reporter: &impl ReportVersion,
+    config: &impl ConfigAccess,
     resolver: &impl ResolveBinary,
     executor: &impl ExecBinary,
 ) -> Result<(), kernel::Error> {
@@ -29,6 +34,7 @@ pub fn dispatch(
             version_cli::report(reporter);
             Ok(())
         }
+        Command::Config { action } => Ok(config_cli::run(config, action)?),
         Command::External(raw) => {
             let command = ExternalCommand::from_raw(raw.clone())?;
             Err(run_external(resolver, executor, &command).into())
