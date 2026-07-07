@@ -18,6 +18,7 @@ from . import (
     types,
     version,
 )
+from . import eval as eval_
 from . import format as format_
 
 ns = Collection()
@@ -41,6 +42,7 @@ ns.add_collection(Collection.from_module(build))
 ns.add_collection(Collection.from_module(changelog))
 ns.add_collection(Collection.from_module(deny))
 ns.add_collection(Collection.from_module(deps))
+ns.add_collection(Collection.from_module(eval_))
 ns.add_collection(Collection.from_module(git))
 ns.add_collection(Collection.from_module(github))
 ns.add_collection(Collection.from_module(keys))

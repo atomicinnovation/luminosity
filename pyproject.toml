@@ -20,7 +20,16 @@ build = [
     "ziglang==0.16.0",
     "cargo-zigbuild==0.23.0",
     "tomlkit>=0.13.2",
-    "pathspec>=0.12.1"
+    "pathspec>=0.12.1",
+    # Skill-eval harness (matched pair): inspect_swe builds on inspect_ai's
+    # sandbox agent bridge, so the two are exact-pinned and bumped in lockstep.
+    # tasks/eval imports inspect_ai, so both live in `build`, not `dev`.
+    "inspect-ai==0.3.244",
+    "inspect-swe==0.2.65",
+    # inspect-ai declares httpx unbounded; with prerelease = "allow" the resolver
+    # otherwise drifts to httpx 1.0.dev*, which breaks inspect-ai at import
+    # (cannot import HTTPStatusError). Constrain to the stable line.
+    "httpx<1"
 ]
 dev = [
     "pytest>=8",
@@ -84,6 +93,8 @@ project-includes = [
     "tests/**/*.py"
 ]
 replace-imports-with-any = [
+    "inspect_ai.*",
+    "inspect_swe.*",
     "invoke.*",
     "keepachangelog.*",
     "pathspec.*",

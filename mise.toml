@@ -95,6 +95,19 @@ depends = ["test:integration:tasks", "test:integration:deny", "test:integration:
 description = "Run all tests in parallel"
 depends = ["test:unit", "test:integration"]
 
+[tasks."eval:skills:configure"]
+description = "Run the configure skill Inspect eval on demand (live model + Docker; excluded from CI for token cost)"
+depends = ["deps:install:python"]
+run = "invoke eval.skills.configure"
+
+[tasks."eval:skills"]
+description = "Run all skill evals on demand (excluded from CI for token cost)"
+depends = ["eval:skills:configure"]
+
+[tasks.eval]
+description = "Run every eval tier on demand (excluded from CI for token cost)"
+depends = ["eval:skills"]
+
 [tasks."format:scripts:check"]
 description = "Check shell formatting with shfmt (read-only; fails on drift)"
 run = "invoke format.scripts.check"

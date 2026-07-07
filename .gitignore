@@ -16,9 +16,13 @@
 **/.luminosity/config.local.md
 **/.luminosity/tmp/
 .claude/settings.local.json
+# Local mise overrides may carry secrets (e.g. ANTHROPIC_API_KEY for the eval
+# tier's live run) — never commit them.
+mise.local.toml
 .idea/
 .playwright-mcp/
 .pytest_cache/
+.venv/
 __pycache__/
 workspaces/
 node_modules/

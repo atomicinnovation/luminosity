@@ -254,6 +254,41 @@ class TestPupWiring:
         assert "test:integration:pup" not in _depends(mise, "test:integration")
 
 
+class TestEvalTierWiring:
+    """The eval tier is declared but excluded from every CI aggregate."""
+
+    @pytest.mark.parametrize(
+        "name", ["eval", "eval:skills", "eval:skills:configure"]
+    )
+    def test_eval_task_is_declared(self, mise: Mise, name: str):
+        assert name in _tasks(mise)
+
+    @pytest.mark.parametrize(
+        "name", ["eval", "eval:skills", "eval:skills:configure"]
+    )
+    def test_eval_task_is_absent_from_check(self, mise: Mise, name: str):
+        assert name not in _depends(mise, "check")
+
+    @pytest.mark.parametrize(
+        "name", ["eval", "eval:skills", "eval:skills:configure"]
+    )
+    def test_eval_task_is_absent_from_default(self, mise: Mise, name: str):
+        assert name not in _depends(mise, "default")
+
+    def test_eval_roll_ups_are_pure_depends(self, mise: Mise):
+        # The intermediate tiers mirror the test:unit roll-up shape: no `run`,
+        # only `depends`, so a second skill slots under eval:skills cleanly.
+        assert "run" not in _tasks(mise)["eval"]
+        assert "run" not in _tasks(mise)["eval:skills"]
+        assert _depends(mise, "eval") == ["eval:skills"]
+        assert _depends(mise, "eval:skills") == ["eval:skills:configure"]
+
+    def test_configure_leaf_wraps_the_invoke_task(self, mise: Mise):
+        leaf = _tasks(mise)["eval:skills:configure"]
+        assert leaf["run"] == "invoke eval.skills.configure"
+        assert "deps:install:python" in leaf.get("depends", [])
+
+
 class TestFinalEnumeratedArrays:
     """Pin the complete top-level task arrays."""
 

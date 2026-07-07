@@ -215,16 +215,19 @@ sanitised) — the captured `Bash`/`Skill` shapes the later unit tests reference
 
 #### Manual Verification
 
-- [ ] `uv lock` resolves the candidate pins on Python 3.14 (or the contingency is chosen
-      and recorded).
-- [ ] The `claude_code()` kwargs the plan wires all exist in the resolved `inspect_swe`.
+- [x] `uv lock` resolves the candidate pins on Python 3.14 (or the contingency is chosen
+      and recorded). — `inspect-ai==0.3.244`, `inspect-swe==0.2.65`; **plus a required
+      `httpx<1`** constraint (see findings note item 1). No contingency needed.
+- [x] The `claude_code()` kwargs the plan wires all exist in the resolved `inspect_swe`.
 - [ ] The CLI-provisioning model is determined, and the Phase-2 §5 sandbox shape is
       confirmed to match it (sandbox-present launcher vs. `version=`-provisioned).
-- [ ] The `file.py@task` specifier loads under the `__init__.py`-free tree with the chosen
-      import form.
+      **Deferred to the credentialed live run (needs Docker + model API).**
+- [x] The `file.py@task` specifier loads under the `__init__.py`-free tree with the chosen
+      import form. — **fully-absolute `from tests.evals.…` imports only** (relative
+      imports fail under Inspect's loader); repo root on `sys.path`.
 - [ ] The captured transcript sample shows the real `Bash`/`Skill` fields, and whether
       stdout is raw (if normalised, Phase 2 grades get-tasks via the `sandbox().exec`
-      re-read fallback).
+      re-read fallback). **Deferred to the credentialed live run.**
 
 ## Phase 1: Eval tier scaffold and pass^k gate
 
@@ -465,18 +468,18 @@ def test_skips_when_live_run_disabled(ctx, monkeypatch):
 
 #### Automated Verification
 
-- [ ] Dependencies resolve and lock: `mise run deps:install:python`
-- [ ] Gate + task + wiring unit tests pass:
+- [x] Dependencies resolve and lock: `mise run deps:install:python`
+- [x] Gate + task + wiring unit tests pass:
       `uv run pytest tests/unit/tasks/shared/test_env.py tests/unit/tasks/test_eval_gate.py tests/unit/tasks/test_eval_skills.py tests/unit/tasks/test_mise_wiring.py -v`
-- [ ] Python lint + types clean: `mise run build-system:check`
-- [ ] The eval tier is invocable: `mise run eval:skills:configure` with
+- [x] Python lint + types clean: `mise run build-system:check`
+- [x] The eval tier is invocable: `mise run eval:skills:configure` with
       `LUMINOSITY_EVAL_LIVE=off` exits 0 without a model call
-- [ ] The full read-only sweep still excludes evals and stays green:
+- [x] The full read-only sweep still excludes evals and stays green:
       `mise run check`
 
 #### Manual Verification
 
-- [ ] `mise tasks` lists `eval` and `eval:skills:configure` and nothing under
+- [x] `mise tasks` lists `eval` and `eval:skills:configure` and nothing under
       the eval tier appears in `check`/`default` output.
 
 ---

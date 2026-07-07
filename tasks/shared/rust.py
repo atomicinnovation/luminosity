@@ -1,5 +1,7 @@
 import os
 
+from tasks.shared.env import env_flag_enabled
+
 LAUNCHER_CRATE = "luminosity"  # matches cli/launcher/Cargo.toml [package] name
 KERNEL_CRATE = "kernel"  # must equal cli/kernel/Cargo.toml [package] name
 # PUP_NIGHTLY + PUP_VERSION are a matched pair (cargo-pup's rustc-driver only
@@ -7,7 +9,6 @@ KERNEL_CRATE = "kernel"  # must equal cli/kernel/Cargo.toml [package] name
 PUP_NIGHTLY = "nightly-2026-01-22"  # cargo-pup v0.1.8 rust-toolchain.toml
 PUP_VERSION = "0.1.8"
 
-_FALSEY = {"off", "false", "0", "no"}
 _PUP_MODES = {"deny", "warn"}
 
 
@@ -16,13 +17,11 @@ def coverage_enabled() -> bool:
 
     True -> `cargo llvm-cov nextest` (coverage reported); False -> plain
     `cargo nextest run` (faster inner loop). Env-sourced so a developer can
-    drop coverage without a source edit; CI leaves it on. Must be called inside
-    the task body — a module-level constant would freeze the value at import
-    and ignore the env. Any of off/false/0/no (case-insensitive) disables it,
-    so a plausible falsey value does not silently leave the slow path on.
+    drop coverage without a source edit; CI leaves it on. Any of off/false/0/no
+    (case-insensitive) disables it, so a plausible falsey value does not
+    silently leave the slow path on.
     """
-    raw = os.environ.get("LUMINOSITY_COVERAGE", "on").strip().lower()
-    return raw not in _FALSEY
+    return env_flag_enabled("LUMINOSITY_COVERAGE", default="on")
 
 
 def pup_mode() -> str:
