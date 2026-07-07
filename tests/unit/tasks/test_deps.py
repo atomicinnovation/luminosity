@@ -35,11 +35,16 @@ def ctx() -> MagicMock:
 
 
 class TestInstallRustComponents:
-    def test_adds_rustfmt_and_clippy_to_the_active_toolchain(
+    def test_adds_rustfmt_clippy_and_llvm_tools_to_the_active_toolchain(
         self, ctx: MagicMock
     ):
+        # llvm-tools-preview is provisioned here so the parallel coverage tasks
+        # don't each trigger cargo-llvm-cov's implicit `rustup component add`.
         deps.install_rust_components(ctx)
-        assert "rustup component add rustfmt clippy" in _commands(ctx)
+        assert (
+            "rustup component add rustfmt clippy llvm-tools-preview"
+            in _commands(ctx)
+        )
 
 
 class TestInstallPup:

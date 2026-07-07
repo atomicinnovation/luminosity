@@ -425,21 +425,23 @@ exact command string" convention.
 
 #### Automated Verification
 
-- [ ] Targeted kernel check passes: `mise run kernel:check`
-- [ ] The kernel test task is wired and green: `mise run test:unit:kernel`
-      (it runs zero Rust tests in Phase 1 — the empty enum has nothing to test —
-      and nextest exits 0 on an empty set; the task's existence and wiring are
-      what this verifies, alongside its Python command-string unit test)
-- [ ] Wiring + command-string unit tests pass:
+- [x] Targeted kernel check passes: `mise run kernel:check`
+- [x] The kernel test task is wired and green: `mise run test:unit:kernel`
+      (it runs zero Rust tests in Phase 1 — the empty enum has nothing to test.
+      NOTE: this nextest (0.9.138) treats an empty test set as a hard error
+      (exit 4), NOT exit 0 as the plan assumed — so the kernel test task carries
+      `--no-tests=pass` to stay green with no tests. The flag is inert once the
+      first real kernel test lands.)
+- [x] Wiring + command-string unit tests pass:
       `uv run pytest tests/unit/tasks/test_mise_wiring.py -v` and the new
-      `test_kernel.py` (or equivalent) suites
-- [ ] Workspace-wide checks still green and now cover `kernel`:
+      `test_kernel.py` suite
+- [x] Workspace-wide checks still green and now cover `kernel`:
       `mise run cli:check` and `mise run check`
-- [ ] Full local CI mirror green: `mise run`
+- [x] Full local CI mirror green: `mise run`
 
 #### Manual Verification
 
-- [ ] `cargo metadata` (or `cargo tree`) shows exactly two members, `cli` and
+- [x] `cargo metadata` (or `cargo tree`) shows exactly two members, `cli` and
       `kernel`, with `kernel` carrying no dependencies.
 
 ---
@@ -723,26 +725,42 @@ composition root + clap dispatch.
 
 #### Automated Verification
 
-- [ ] Core-against-fake unit test passes (AC4):
+- [x] Core-against-fake unit test passes (AC4):
       `cargo nextest run -p luminosity -E 'test(reports_the_injected_build_metadata)'`
-- [ ] Black-box binary test passes (AC1, AC5):
+- [x] Black-box binary test passes (AC1, AC5):
       `cargo nextest run -p luminosity -E 'test(version)'` (or the
       `cli/tests/version.rs` test name)
-- [ ] All cli unit tests + coverage pass: `mise run test:unit:cli`
-- [ ] Lint wall satisfied (incl. build.rs and tests):
-      `mise run cli:check`
-- [ ] Supply chain clean with the new deps (clap, vergen backend, time) —
-      licences in the allow-list (extend `deny.toml` exceptions only if
-      vergen/gitoxide require it): `mise run deny:check`
-- [ ] New deps resolve MSRV-compatibly and `Cargo.lock` is committed: the
-      resolved `clap`/`vergen`/`time` versions each declare `rust-version` ≤
-      `1.90.0` (cross-check against `clippy.toml` `msrv`).
-- [ ] The build-dep tree compiles under cargo-pup's pinned nightly (not only the
+- [x] All cli unit tests + coverage pass: `mise run test:unit:cli`
+      (100% region/line coverage on the version modules)
+- [x] Lint wall satisfied (incl. build.rs and tests):
+      `mise run cli:check`. NOTE deviations forced by the lint wall: the
+      `BuildMetadata` port returns `&'static str` (build facts are baked-in
+      literals — satisfies `clippy::unnecessary_literal_bound` naturally rather
+      than per-method `#[expect]`s); module/item doc first-paragraphs were split
+      (`clippy::too_long_first_doc_paragraph`); `dispatch` carries an `# Errors`
+      doc section (`clippy::missing_errors_doc`). The planned
+      `#[expect(unnecessary_wraps)]` was NOT needed — clippy does not flag the
+      always-Ok dispatch seam — so it was omitted.
+- [x] Supply chain clean with the new deps (clap, vergen backend, time):
+      `mise run deny:check`. Two deny.toml/manifest changes were required (not
+      licence exceptions): `[bans] allow-wildcard-paths = true` plus
+      `publish = false` on both crates, so the `cli -> kernel` path dep is not
+      flagged as a wildcard (the exemption does not apply to publishable
+      crates). No licence exceptions were needed — vergen/gitcl/clap/time all
+      fall under the pre-seeded allow-list.
+- [x] New deps resolve MSRV-compatibly and `Cargo.lock` is committed: every
+      resolved crate declares `rust-version` ≤ `1.90.0`. NOTE: vergen 10.x needs
+      Rust 1.95, so the **9.x line** is used (`vergen 9.0.6` + `vergen-gitcl
+      1.0.8`), exactly as the plan's Decision-4 / 9.x pin anticipated. `vergen`
+      is pinned EXACTLY to `=9.0.6` (9.1.0 bumped its vergen-lib incompatibly
+      with vergen-gitcl 1.0.8), and the transitive `cargo-platform` is pinned to
+      `0.3.2` in the lock (0.3.3 needs Rust 1.91).
+- [x] The build-dep tree compiles under cargo-pup's pinned nightly (not only the
       stable pin): `cargo +nightly-2026-01-22 pup print-modules` succeeds with
-      `cli`'s new `build.rs` + `[build-dependencies]` present. (If it fails,
-      choose a compatible vergen version or bump `PUP_NIGHTLY` / `PUP_VERSION`
-      together in `tasks/shared/rust.py`.)
-- [ ] Release build still links/arches correctly with the build script:
+      `cli`'s new `build.rs` + `[build-dependencies]` present (no
+      PUP_NIGHTLY/PUP_VERSION bump needed). It reports
+      `luminosity::version::core` — the path Phase 3's rule binds to.
+- [x] Release build still links/arches correctly with the build script:
       `mise run build:cli`. Note: the embedded target triple is one of ADR-0002's
       four shipped triples **by construction** here — `build:cli` only builds the
       host-native shipped triples (the two musl triples on Linux, the two darwin
@@ -754,16 +772,18 @@ composition root + clap dispatch.
       assert its embedded triple is not feasible (cross-compiled musl/darwin
       artefacts are not all host-runnable), so the structural guarantee is the
       coverage — recorded here rather than left implicit.
-- [ ] Full local CI mirror green: `mise run`
+- [x] Full local CI mirror green: `mise run`
 
 #### Manual Verification
 
-- [ ] `cargo run -p luminosity -- version` prints version, commit SHA, build
+- [x] `cargo run -p luminosity -- version` prints version, commit SHA, build
       date, and target triple, all populated and plausible.
-- [ ] Re-running after a new commit changes the printed commit SHA (metadata is
-      genuinely build-time, not cached/hard-coded).
-- [ ] The core module has no `use` of the `outbound`/`inbound` adapter modules
-      (read the source) — confirmed mechanically in Phase 3.
+- [x] Re-running after a new commit changes the printed commit SHA (metadata is
+      genuinely build-time, not cached/hard-coded) — verified after the Phase 2
+      commit.
+- [x] The core module has no `use` of the `outbound`/`inbound` adapter modules
+      (read the source) — `core.rs` imports nothing infrastructural; confirmed
+      mechanically in Phase 3.
 
 ---
 
@@ -876,19 +896,26 @@ is rejected by default.
 
 #### Automated Verification
 
-- [ ] Real `pup.ron` loads and the inward rule is active:
+- [x] Real `pup.ron` loads and the inward rule is active:
       `mise run pup:check`
-- [ ] The enforcer is proven live (violation rejected, removal passes) **and the
+- [x] The enforcer is proven live (violation rejected, removal passes) **and the
       real rule is proven attached to the real core** (the binding test):
-      `mise run test:integration:pup`
-- [ ] Full local CI mirror green: `mise run`
+      `mise run test:integration:pup` (4 tests pass). NOTE: the binding test
+      asserts the rule appears on the `::version::core` line of
+      `print-modules`, and the `allowed_only` patterns match the LITERAL
+      `use`-path text (`crate::version::core`, not the resolved
+      `luminosity::version::core`) — a correction to the plan's snippet, since
+      cargo-pup matches use-path segments verbatim while the module `matches`
+      regex uses the resolved path.
+- [x] Full local CI mirror green: `mise run`
 
 #### Manual Verification
 
-- [ ] Temporarily add `use crate::version::outbound::build_metadata;` (unused)
-      into `version/core.rs`, run `mise run pup:check`, observe it **fails**,
-      then revert and observe it **passes** — the AC3 behaviour, confirmed by
-      hand against the real tree once before relying on the automated test.
+- [x] Temporarily add `use crate::version::outbound::build_metadata;` into
+      `version/core.rs`, run `mise run pup:check`, observe it **fails** ("Use of
+      module 'crate::version::outbound::build_metadata' is not allowed"), then
+      revert and observe it **passes** — AC3 confirmed by hand against the real
+      tree.
 
 ---
 

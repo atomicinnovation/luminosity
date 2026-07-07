@@ -1,0 +1,9 @@
+[package]
+name = "kernel"
+version = "0.1.0-pre.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[lints]
+workspace = true

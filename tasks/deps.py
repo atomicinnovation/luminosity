@@ -24,15 +24,19 @@ def install_rust_targets(context: Context) -> None:
 
 @task
 def install_rust_components(context: Context) -> None:
-    """Install the rustfmt + clippy components the cli checks need.
+    """Install the rustfmt, clippy, and llvm-tools-preview components.
 
     Not trusted to mise's [tools] rust `components` field: that is silently
     skipped when the toolchain is already present (a cached/pre-installed
     stable on a CI runner), so the components must be provisioned explicitly —
     mirroring deps:install:rust-targets and deps:install:pup. Adds to the
     active (RUSTUP_TOOLCHAIN-pinned) toolchain, the one cli:check runs against.
+
+    llvm-tools-preview is included so the coverage test tasks do not each
+    trigger `cargo llvm-cov`'s implicit `rustup component add` at runtime —
+    two such installs racing on ~/.rustup fails the parallel test:unit roll-up.
     """
-    context.run("rustup component add rustfmt clippy")
+    context.run("rustup component add rustfmt clippy llvm-tools-preview")
 
 
 def _pup_already_installed(context: Context) -> bool:
