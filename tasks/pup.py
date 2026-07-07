@@ -1,6 +1,6 @@
 from invoke import Context, Exit, task
 
-from tasks.shared.paths import REPO_ROOT
+from tasks.shared.paths import WORKSPACE_ROOT
 from tasks.shared.rust import PUP_NIGHTLY, pup_mode
 
 
@@ -12,7 +12,7 @@ def check(context: Context) -> None:
     (mirroring how every Python check depends on deps:install:python), so the
     body simply runs the tool.
     """
-    with context.cd(str(REPO_ROOT)):
+    with context.cd(str(WORKSPACE_ROOT)):
         result = context.run(f"cargo +{PUP_NIGHTLY} pup", warn=True, pty=False)
     if result.exited != 0:
         if pup_mode() == "warn":

@@ -1,11 +1,12 @@
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-WORKSPACE_MANIFEST = REPO_ROOT / "Cargo.toml"
-CLI_DIR = REPO_ROOT / "cli"
-BIN_DIR = CLI_DIR / "bin"
+WORKSPACE_ROOT = REPO_ROOT / "cli"
+WORKSPACE_MANIFEST = WORKSPACE_ROOT / "Cargo.toml"
+LAUNCHER_DIR = WORKSPACE_ROOT / "launcher"
+BIN_DIR = LAUNCHER_DIR / "bin"
 CHECKSUMS = BIN_DIR / "checksums.json"
-CARGO_TOML = CLI_DIR / "Cargo.toml"
+CARGO_TOML = LAUNCHER_DIR / "Cargo.toml"
 PLUGIN_JSON = REPO_ROOT / ".claude-plugin/plugin.json"
 MARKETPLACE_JSON = REPO_ROOT / ".claude-plugin/marketplace.json"
 PRERELEASE_MARKETPLACE_JSON = (

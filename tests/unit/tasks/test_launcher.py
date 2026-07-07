@@ -3,13 +3,13 @@ from unittest.mock import MagicMock
 import pytest
 from invoke import Context, Exit
 
-from tasks.format import kernel as fmt_kernel
-from tasks.lint import kernel as lint_kernel
+from tasks.format import launcher as fmt_launcher
+from tasks.lint import launcher as lint_launcher
 from tasks.shared import rust
-from tasks.test import kernel as test_kernel
+from tasks.test import launcher as test_launcher
 
-INSTRUMENTED = "cargo llvm-cov nextest -p kernel --summary-only"
-PLAIN = "cargo nextest run -p kernel"
+INSTRUMENTED = "cargo llvm-cov nextest -p luminosity --summary-only"
+PLAIN = "cargo nextest run -p luminosity"
 
 
 @pytest.fixture
@@ -23,41 +23,42 @@ def _command(ctx: MagicMock) -> str:
     return ctx.run.call_args.args[0]
 
 
-class TestFormatKernelCheck:
-    def test_runs_cargo_fmt_kernel_check(self, ctx: MagicMock):
-        fmt_kernel.check(ctx)
-        assert _command(ctx) == "cargo fmt -p kernel --check"
+class TestFormatLauncherCheck:
+    def test_runs_cargo_fmt_launcher_check(self, ctx: MagicMock):
+        fmt_launcher.check(ctx)
+        assert _command(ctx) == "cargo fmt -p luminosity --check"
 
     def test_raises_on_drift(self, ctx: MagicMock):
         ctx.run.return_value = MagicMock(exited=1)
         with pytest.raises(Exit):
-            fmt_kernel.check(ctx)
+            fmt_launcher.check(ctx)
 
 
-class TestFormatKernelFix:
-    def test_runs_cargo_fmt_kernel(self, ctx: MagicMock):
-        fmt_kernel.fix(ctx)
-        assert _command(ctx) == "cargo fmt -p kernel"
+class TestFormatLauncherFix:
+    def test_runs_cargo_fmt_launcher(self, ctx: MagicMock):
+        fmt_launcher.fix(ctx)
+        assert _command(ctx) == "cargo fmt -p luminosity"
 
 
-class TestLintKernelCheck:
+class TestLintLauncherCheck:
     def test_runs_clippy_with_deny_warnings(self, ctx: MagicMock):
-        lint_kernel.check(ctx)
+        lint_launcher.check(ctx)
         assert _command(ctx) == (
-            "cargo clippy -p kernel --all-targets --all-features -- -D warnings"
+            "cargo clippy -p luminosity --all-targets --all-features "
+            "-- -D warnings"
         )
 
     def test_raises_on_findings(self, ctx: MagicMock):
         ctx.run.return_value = MagicMock(exited=1)
         with pytest.raises(Exit):
-            lint_kernel.check(ctx)
+            lint_launcher.check(ctx)
 
 
-class TestLintKernelFix:
+class TestLintLauncherFix:
     def test_runs_clippy_fix_rewriting_dirty_tree(self, ctx: MagicMock):
-        lint_kernel.fix(ctx)
+        lint_launcher.fix(ctx)
         assert _command(ctx) == (
-            "cargo clippy -p kernel --all-targets --all-features "
+            "cargo clippy -p luminosity --all-targets --all-features "
             "--fix --allow-dirty --allow-staged"
         )
 
@@ -65,30 +66,30 @@ class TestLintKernelFix:
         self, ctx: MagicMock, capsys: pytest.CaptureFixture[str]
     ):
         ctx.run.return_value = MagicMock(exited=1)
-        lint_kernel.fix(ctx)
+        lint_launcher.fix(ctx)
         assert "WARNING" in capsys.readouterr().out
 
 
-class TestTestUnitKernel:
+class TestTestUnitLauncher:
     def test_instrumented_by_default(
         self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
     ):
         monkeypatch.delenv("LUMINOSITY_COVERAGE", raising=False)
-        test_kernel.run(ctx)
+        test_launcher.run(ctx)
         assert _command(ctx) == INSTRUMENTED
 
     def test_plain_nextest_when_coverage_off(
         self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
     ):
         monkeypatch.setenv("LUMINOSITY_COVERAGE", "off")
-        test_kernel.run(ctx)
+        test_launcher.run(ctx)
         assert _command(ctx) == PLAIN
 
     def test_instrumented_command_carries_no_coverage_threshold(
         self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
     ):
         monkeypatch.delenv("LUMINOSITY_COVERAGE", raising=False)
-        test_kernel.run(ctx)
+        test_launcher.run(ctx)
         assert "--fail-under" not in _command(ctx)
 
     def test_raises_when_inner_tests_fail_on_instrumented_path(
@@ -97,7 +98,7 @@ class TestTestUnitKernel:
         monkeypatch.delenv("LUMINOSITY_COVERAGE", raising=False)
         ctx.run.return_value = MagicMock(exited=1)
         with pytest.raises(Exit):
-            test_kernel.run(ctx)
+            test_launcher.run(ctx)
 
-    def test_kernel_crate_constant_matches_manifest(self):
-        assert rust.KERNEL_CRATE == "kernel"
+    def test_launcher_crate_constant_matches_manifest(self):
+        assert rust.LAUNCHER_CRATE == "luminosity"

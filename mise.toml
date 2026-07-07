@@ -56,18 +56,23 @@ depends = ["deps:install:python", "deps:install:pup"]
 run = "invoke test.integration.pup"
 
 [tasks."test:unit:cli"]
-description = "Run cli-crate unit tests (instrumented coverage unless LUMINOSITY_COVERAGE=off)"
+description = "Run the whole Rust workspace's unit tests in one --workspace pass (instrumented coverage unless LUMINOSITY_COVERAGE=off)"
 depends = ["deps:install:rust-components"]
 run = "invoke test.cli.run"
 
+[tasks."test:unit:launcher"]
+description = "Run launcher-crate unit tests only (ad-hoc; the aggregate covers it via test:unit:cli)"
+depends = ["deps:install:rust-components"]
+run = "invoke test.launcher.run"
+
 [tasks."test:unit:kernel"]
-description = "Run kernel-crate unit tests (instrumented coverage unless LUMINOSITY_COVERAGE=off)"
+description = "Run kernel-crate unit tests only (ad-hoc; the aggregate covers it via test:unit:cli)"
 depends = ["deps:install:rust-components"]
 run = "invoke test.kernel.run"
 
 [tasks."test:unit"]
 description = "Run all unit tests in parallel"
-depends = ["test:unit:tasks", "test:unit:cli", "test:unit:kernel"]
+depends = ["test:unit:tasks", "test:unit:cli"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"
@@ -86,14 +91,24 @@ description = "Format shell scripts in place with shfmt"
 run = "invoke format.scripts.fix"
 
 [tasks."format:cli:check"]
-description = "Check Rust formatting with rustfmt (read-only; fails on drift)"
+description = "Check formatting across the whole Rust workspace with rustfmt (read-only; fails on drift)"
 depends = ["deps:install:rust-components"]
 run = "invoke format.cli.check"
 
 [tasks."format:cli:fix"]
-description = "Format Rust in place with rustfmt"
+description = "Format the whole Rust workspace in place with rustfmt"
 depends = ["deps:install:rust-components"]
 run = "invoke format.cli.fix"
+
+[tasks."format:launcher:check"]
+description = "Check launcher-crate Rust formatting with rustfmt (read-only; fails on drift)"
+depends = ["deps:install:rust-components"]
+run = "invoke format.launcher.check"
+
+[tasks."format:launcher:fix"]
+description = "Format the launcher crate in place with rustfmt"
+depends = ["deps:install:rust-components"]
+run = "invoke format.launcher.fix"
 
 [tasks."format:kernel:check"]
 description = "Check kernel-crate Rust formatting with rustfmt (read-only; fails on drift)"
@@ -130,14 +145,24 @@ description = "Run all shell format and lint checks (shfmt + ShellCheck + bashis
 depends = ["format:scripts:check", "lint:scripts:check"]
 
 [tasks."lint:cli:check"]
-description = "Lint Rust with clippy (pedantic + nursery + restriction, -D warnings)"
+description = "Lint the whole Rust workspace with clippy (pedantic + nursery + restriction, -D warnings)"
 depends = ["deps:install:rust-components"]
 run = "invoke lint.cli.check"
 
 [tasks."lint:cli:fix"]
-description = "Apply clippy's machine-applicable fixes"
+description = "Apply clippy's machine-applicable fixes across the whole workspace"
 depends = ["deps:install:rust-components"]
 run = "invoke lint.cli.fix"
+
+[tasks."lint:launcher:check"]
+description = "Lint the launcher crate with clippy (pedantic + nursery + restriction, -D warnings)"
+depends = ["deps:install:rust-components"]
+run = "invoke lint.launcher.check"
+
+[tasks."lint:launcher:fix"]
+description = "Apply clippy's machine-applicable fixes to the launcher crate"
+depends = ["deps:install:rust-components"]
+run = "invoke lint.launcher.fix"
 
 [tasks."lint:kernel:check"]
 description = "Lint the kernel crate with clippy (pedantic + nursery + restriction, -D warnings)"
@@ -150,17 +175,21 @@ depends = ["deps:install:rust-components"]
 run = "invoke lint.kernel.fix"
 
 [tasks."cli:check"]
-description = "Run all cli-crate format and lint checks (read-only; no tests)"
+description = "Run all workspace-wide format and lint checks (read-only; no tests)"
 depends = ["format:cli:check", "lint:cli:check"]
 
+[tasks."launcher:check"]
+description = "Targeted launcher-crate rustfmt+clippy for ad-hoc runs; excluded from aggregate `check`, which covers it via the workspace-wide `cli:check` pass"
+depends = ["format:launcher:check", "lint:launcher:check"]
+
 [tasks."kernel:check"]
-description = "Targeted kernel rustfmt+clippy for ad-hoc runs; deliberately excluded from aggregate `check`, which covers kernel via the single workspace-wide `cli:check` pass"
+description = "Targeted kernel-crate rustfmt+clippy for ad-hoc runs; excluded from aggregate `check`, which covers it via the workspace-wide `cli:check` pass"
 depends = ["format:kernel:check", "lint:kernel:check"]
 
-[tasks."build:cli"]
+[tasks."build:launcher"]
 description = "Release-build the host-native triples (link/arch guard; in `mise run` default, not `check`)"
 depends = ["deps:install:rust-targets"]
-run = "invoke build.cli"
+run = "invoke build.launcher"
 
 [tasks."deny:check"]
 description = "Check the workspace dependency graph with cargo-deny (advisories, licenses, bans, sources)"
@@ -229,8 +258,8 @@ description = "Read-only format, lint, and type checks plus the cargo-deny/cargo
 depends = ["build-system:check", "scripts:check", "cli:check", "deny:check", "pup:check"]
 
 [tasks.default]
-description = "Full local CI mirror: format-fix, lint, type-check, the whole test roll-up (cli tests carry coverage), the build:cli host-native release build, and the deny/pup static checks (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
-depends = ["format:fix", "lint:check", "types:check", "test", "build:cli", "deny:check", "pup:check"]
+description = "Full local CI mirror: format-fix, lint, type-check, the whole test roll-up (cli tests carry coverage), the build:launcher host-native release build, and the deny/pup static checks (heavy — reformats in place + compiles Rust several times; for a fast inner loop use a single <component>:check)"
+depends = ["format:fix", "lint:check", "types:check", "test", "build:launcher", "deny:check", "pup:check"]
 
 [tasks."version:read"]
 description = "Read plugin version"

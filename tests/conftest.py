@@ -13,12 +13,12 @@ def fake_repo_tree(tmp_path: Path) -> Path:
     (tmp_path / ".claude-plugin/plugin.json").write_text(
         '{"name":"luminosity","version":"1.20.0"}'
     )
-    cargo_dir = tmp_path / "cli"
+    cargo_dir = tmp_path / "cli" / "launcher"
     cargo_dir.mkdir(parents=True)
     (cargo_dir / "Cargo.toml").write_text(
         '[package]\nname = "x"\nversion = "1.20.0"\n'
     )
-    bin_dir = tmp_path / "cli/bin"
+    bin_dir = tmp_path / "cli/launcher/bin"
     bin_dir.mkdir(parents=True)
     shutil.copy(
         _TASKS_FIXTURES / "checksums.example.json", bin_dir / "checksums.json"

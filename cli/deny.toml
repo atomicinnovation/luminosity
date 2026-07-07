@@ -15,8 +15,9 @@ targets = [
 # Evaluate the graph as the release ships it (ADR-0010: default-features =
 # false, rustls). NOT all-features — that would enable feature-gated paths the
 # musl-static binaries never build (e.g. reqwest's native-tls feature) and fire
-# false-positive bans. The real static-link guarantee is exercised by build:cli
-# (Phase 1); this ban is a complementary, necessary-but-not-sufficient guard.
+# false-positive bans. The real static-link guarantee is exercised by
+# build:launcher (Phase 1); this ban is a complementary,
+# necessary-but-not-sufficient guard.
 
 [advisories]
 ignore = []
@@ -46,7 +47,7 @@ confidence-threshold = 0.8
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
-# Exempt local path deps (cli -> kernel); registry wildcards stay denied.
+# Exempt local path deps (launcher -> kernel); registry wildcards stay denied.
 allow-wildcard-paths = true
 # ADR-0010: rustls only — no transitive dep may re-enable default-tls and break
 # the musl-static build. This covers the TLS vector only; other system-C

@@ -11,28 +11,36 @@ Each component has a `<component>:check` roll-up that folds that component's for
 |----------------|----------------------|----------------------------------------------|
 | Python tooling | `build-system:check` | format + lint + types (ruff, pyrefly)        |
 | Shell          | `scripts:check`      | format + lint (shfmt, ShellCheck + bashisms) |
-| Rust cli crate | `cli:check`          | format + lint (rustfmt, clippy `-D warnings`); **no tests** |
-| Rust kernel crate | `kernel:check`    | format + lint (`-p kernel` rustfmt + clippy); **no tests** |
+| Rust workspace | `cli:check`          | format + lint across the whole workspace (rustfmt `--all`, clippy `--workspace -D warnings`); **no tests** |
 
-`kernel:check` is the one deliberate departure from the
-"`<component>:check` folds into `check`" pattern: it is a **targeted,
-single-crate** (`-p kernel`) roll-up for ad-hoc runs and is **kept out of the
-aggregate `check`**. The aggregate covers `kernel` through the single
-workspace-wide rustfmt + clippy pass that `cli:check` already runs (plus
-`deny:check` / `pup:check`), so adding `kernel:check` to `check` would only pay
-a second per-crate tool startup for no extra coverage.
+The Rust workspace is `cli/` — `cli/Cargo.toml`, `cli/Cargo.lock`, and the four
+tool configs (`clippy.toml`, `rustfmt.toml`, `deny.toml`, `pup.ron`) all live
+there, so the invoke tasks `cd` into `cli/` before running cargo. `cli` names the
+**whole workspace**: `cli:check` / `format:cli:*` / `lint:cli:*` /
+`test:unit:cli` are workspace-wide aggregates (one `--workspace` / `--all` cargo
+invocation each), and `cli:check` is the component roll-up folded into `check`.
+
+Crate **directory names** name a **single crate**: `launcher:check` /
+`format:launcher:*` / `lint:launcher:*` / `test:unit:launcher` (`-p luminosity`)
+and `kernel:check` / `format:kernel:*` / `lint:kernel:*` / `test:unit:kernel`
+(`-p kernel`) exist for ad-hoc single-crate runs. They are **deliberately kept
+out of the aggregates** — the workspace-wide `cli:check` / `test:unit:cli`
+already cover every crate in one pass, so folding a per-crate roll-up into
+`check` would only pay a second tool startup for no extra coverage.
 
 `build-system` is the repo-root Python automation toolchain (this `tasks/`
 package + its tests). It is the *component* `build-system:check`, distinct from
-the `build:*` *artifact* namespace below (which `build:cli` now populates); the
+the `build:*` *artifact* namespace below (which `build:launcher` now populates); the
 two are unrelated. Its task descriptions name Python/ruff/pyrefly so
 `mise tasks | grep -i python` finds it.
 
 Like the other `<component>:check` roll-ups, `cli:check` is **test-free** —
-rustfmt + clippy only. The cli unit tests run via `test:unit:cli` → `test:unit`
-→ `test` (the same path the Python suite takes), with **coverage folded into the
-test run** (`cargo llvm-cov nextest` by default; `LUMINOSITY_COVERAGE=off` drops
-to a plain `cargo nextest run`). There is no separate coverage task.
+rustfmt + clippy only. The workspace unit tests run via `test:unit:cli` →
+`test:unit` → `test` (the same path the Python suite takes) as a single
+`cargo llvm-cov nextest --workspace` pass, with **coverage folded into the test
+run** (`LUMINOSITY_COVERAGE=off` drops to a plain `cargo nextest run
+--workspace`). There is no separate coverage task, and — because it is one
+process — no cross-crate profraw collision to isolate.
 
 ## Workspace-scope checks
 
@@ -55,12 +63,13 @@ for a nightly/cargo-pup break).
 
 `build:<crate>` is a **verb-less, per-crate release build** — it compiles and
 links the binary (the link step is the point), so it is not a read-only
-`:check`. Only binary-producing crates get one (`build:cli`; a library crate
-like `kernel` would not). `build:cli` is OS-aware: it release-builds the host's
-native triples (the two musl triples on Linux, the two darwin triples on macOS)
-and asserts the static-link / arch invariants. It lives in the bare `mise run`
-default but **not** in `check` (a release build is heavier than the read-only
-checks); CI's `build-cli` matrix covers all four triples across both OSes.
+`:check`. Only binary-producing crates get one (`build:launcher`; a library
+crate like `kernel` would not). `build:launcher` is OS-aware: it release-builds
+the host's native triples (the two musl triples on Linux, the two darwin triples
+on macOS) and asserts the static-link / arch invariants. It lives in the bare
+`mise run` default but **not** in `check` (a release build is heavier than the
+read-only checks); CI's `build-launcher` matrix covers all four triples across
+both OSes.
 
 ## Family aggregates
 
@@ -70,7 +79,7 @@ changes only).
 
 `check` is the read-only/static subset CI mirrors — it runs **no tests and no
 release build**. The tests run via the `test` roll-up in the `test-unit` /
-`test-integration` jobs, and `build:cli` runs in the `build-cli` matrix job;
+`test-integration` jobs, and `build:launcher` runs in the `build-launcher` matrix job;
 none of those are in `mise run check`. So a green `check` does **not** imply a
 green CI run — the tests and the release build gate separately.
 
