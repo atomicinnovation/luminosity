@@ -21,14 +21,11 @@ build = [
     "cargo-zigbuild==0.23.0",
     "tomlkit>=0.13.2",
     "pathspec>=0.12.1",
-    # Skill-eval harness (matched pair): inspect_swe builds on inspect_ai's
-    # sandbox agent bridge, so the two are exact-pinned and bumped in lockstep.
-    # tasks/eval imports inspect_ai, so both live in `build`, not `dev`.
+    # Skill-eval harness: the eval tier uses inspect-ai's framework (epochs,
+    # pass_k reducer, scorer, EvalLog) while driving the real Claude Code CLI
+    # host-natively via `claude -p`, so no model-provider (anthropic) or bridge
+    # (inspect-swe) dependency is needed. tasks/eval imports inspect_ai.
     "inspect-ai==0.3.244",
-    "inspect-swe==0.2.65",
-    # The Anthropic model provider inspect resolves for `model="anthropic/…"` —
-    # required at Task-construction time, not just at run time.
-    "anthropic==0.116.0",
     # inspect-ai declares httpx unbounded; with prerelease = "allow" the resolver
     # otherwise drifts to httpx 1.0.dev*, which breaks inspect-ai at import
     # (cannot import HTTPStatusError). Constrain to the stable line.
@@ -97,7 +94,6 @@ project-includes = [
 ]
 replace-imports-with-any = [
     "inspect_ai.*",
-    "inspect_swe.*",
     "invoke.*",
     "keepachangelog.*",
     "pathspec.*",

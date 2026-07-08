@@ -4,6 +4,12 @@ _.python.venv = { path = ".venv", create = true }
 [tools]
 uv = "0.11.6"
 python = "3.14.4"
+# Node + the Claude Code CLI back the dev-time skill-eval tier only (host-native
+# `claude -p`, excluded from CI); they do not expand the shipped product's
+# three-toolchain surface (ADR-0004). Pinned so the committed eval log records a
+# known CLI version at or above the v2.1.144 skill-preload floor.
+node = "22.12.0"
+"npm:@anthropic-ai/claude-code" = "2.1.203"
 gh = "2.89.0"
 rust = { version = "1.90.0", components = "rustfmt,clippy,llvm-tools-preview" }
 "aqua:nextest-rs/nextest/cargo-nextest" = "0.9.138"
@@ -42,6 +48,10 @@ run = "invoke deps.install-zigbuild"
 [tasks."deps:install:pup"]
 description = "Provision the cargo-pup nightly toolchain + pinned cargo-pup (rustup-managed, not a mise [tool])"
 run = "invoke deps.install-pup"
+
+[tasks."deps:install:claude-native"]
+description = "Fetch the platform-native Claude Code binary the pinned npm shim bootstraps (mise's npm backend skips the postinstall); needed by the skill-eval tier"
+run = "invoke deps.install-claude-native"
 
 [tasks."test:unit:tasks"]
 description = "Run pytest unit tests for invoke tasks"
@@ -101,8 +111,8 @@ description = "Run all tests in parallel"
 depends = ["test:unit", "test:integration"]
 
 [tasks."eval:skills:configure"]
-description = "Run the configure skill Inspect eval on demand (live model + Docker; excluded from CI for token cost)"
-depends = ["deps:install:python", "build:release"]
+description = "Run the configure skill Inspect eval on demand (host-native claude -p; excluded from CI for token/subscription cost)"
+depends = ["deps:install:python", "deps:install:claude-native", "build:launcher"]
 run = "invoke eval.skills.configure"
 
 [tasks."eval:skills"]

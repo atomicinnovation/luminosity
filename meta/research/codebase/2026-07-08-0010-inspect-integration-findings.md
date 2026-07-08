@@ -167,6 +167,52 @@ Phase-0 items 3 and 5 are correspondingly still only partially answered (the
 CLI is driven via the sandbox bridge; the full Bash/Skill transcript shape was
 not captured before the billing error).
 
+## Host-native pivot (2026-07-08)
+
+The `inspect_swe` bridge routes every model call through Inspect's metered
+`anthropic/…` provider (`ANTHROPIC_BASE_URL=localhost:{bridge.port}` →
+`AsyncAnthropic(api_key=…)`), so it **cannot** run on a Claude subscription. To
+use a subscription, the eval was re-architected to drive the real `claude` CLI
+host-natively — dropping the bridge and Docker while keeping the Inspect
+framework (epochs, `pass_k` reducer, scorer, `EvalLog`):
+
+- **Auth:** a custom `@solver` shells out to `claude -p --output-format
+  stream-json`, which uses the CLI's own subscription OAuth. Validated live:
+  `STATUS: success`, no billing error (the metered-API path is gone).
+- **CLI pin:** `node` + `npm:@anthropic-ai/claude-code@2.1.203` via mise
+  `[tools]`. mise's npm backend installs with `--ignore-scripts`, so the
+  platform-native binary the shim bootstraps isn't fetched — a
+  `deps:install:claude-native` task runs the postinstall (the
+  rustup-provisions-cargo-pup pattern). Node is dev-tier only (ADR-0004 note).
+- **Launcher:** `build:launcher` (host-native) stages the real binary into a
+  plugin tree (`stage_plugin`) at `bin/luminosity`; `claude -p --plugin-dir`
+  loads it, and the with-skill agent resolves
+  `${CLAUDE_PLUGIN_ROOT}/bin/luminosity`. Confirmed live: the init event lists
+  `plugins: [{name: luminosity, source: luminosity@inline}]` and the agent runs
+  the staged binary.
+- **Transcript shape (now known, not assumed):** stream-json `assistant` events
+  carry `tool_use` blocks — Bash `{"command": …, "description": …}` and Skill
+  `{"skill": "luminosity:configure", "args": …}` (namespace-qualified). The
+  scorer's `skill_was_invoked` was corrected to this shape; `parse_transcript`
+  is unit-tested against it.
+
+**Open eval-design findings (need calibration before the gated run):**
+
+1. **Skill invocation is stochastic and prompt-sensitive.** Clear get requests
+   trigger `Skill(luminosity:configure)` and pass (2/3 smoke samples CORRECT
+   with the skill invoked); phrasings like "…at the team level" made the model
+   explore the filesystem instead of invoking the skill.
+2. **The model bypasses the CLI.** With `--allowedTools Bash Skill` the agent
+   still used `Read` to open `.luminosity/config.md` directly — getting the
+   value the *wrong* way (no `luminosity config` call → graded INCORRECT).
+   `--allowedTools` did not restrict `Read`. To test skill-based CLI *routing*,
+   the harness must disallow the file-reading tools (Read/Grep/Glob and a bare
+   `cat`) that shortcut around the CLI.
+
+These are eval-authoring decisions (prompt wording, tool restriction, possibly
+improving the skill's own triggering) that consume subscription usage to iterate
+— left for a collaborative calibration pass, then the full gated run.
+
 ## Environment notes
 
 - Docker daemon is up (Docker 29.5.3); Claude Code CLI 2.1.203 is installed

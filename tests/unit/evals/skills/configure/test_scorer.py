@@ -27,10 +27,15 @@ def _bash(command: str) -> ChatMessageAssistant:
 
 
 def _skill(name: str) -> ChatMessageAssistant:
+    # Claude Code names the skill namespace-qualified in the Skill tool call.
     return ChatMessageAssistant(
         content="",
         tool_calls=[
-            ToolCall(id="s", function="Skill", arguments={"name": name})
+            ToolCall(
+                id="s",
+                function="Skill",
+                arguments={"skill": f"luminosity:{name}", "args": "get x"},
+            )
         ],
     )
 

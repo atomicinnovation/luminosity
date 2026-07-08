@@ -1086,17 +1086,20 @@ Extend `test_mise_wiring.py` to assert `test:unit:evals` **is** in `test:unit`'s
 
 ## Phase 3: Live run and committed eval log
 
-> **Status (2026-07-08): BLOCKED on Anthropic API credit.** A 1-sample/1-epoch
-> smoke test validated the full integration chain — `build:release` →
-> host-independent Docker sandbox → in-container launcher (amd64 emulation) →
-> `inspect_swe`-driven Claude Code 2.1.203 → Anthropic model proxy — discharging
-> the story's chief residual risk. The run then fails at the model call with
-> `400: "Your credit balance is too low to access the Anthropic API"` (the
-> `mise.local.toml` key is unfunded). The Phase-3 deliverables below (committed
-> log, golden transcript fixture, CLI-version assertion, skill-attribution
-> promotion) require a completed run and are **deferred pending funded credit**;
-> once funded, `mise run eval:skills:configure` produces them. See the findings
-> note for the validated-vs-blocked breakdown.
+> **Status (2026-07-08): re-architected host-native onto the Claude
+> subscription; mechanism validated live, eval-design calibration remains.**
+> `inspect_swe`'s bridge routes model calls through Inspect's metered API
+> provider, so it cannot use a subscription. The eval was rebuilt to drive
+> `claude -p` host-natively (no Docker, no inspect-swe; `claude`+`node` pinned
+> via mise), keeping the Inspect framework. A live smoke run **succeeded on the
+> subscription** (no billing) — plugin loads, the skill invokes
+> (`Skill(luminosity:configure)`), the agent runs the real staged
+> `bin/luminosity`, and the scorer grades correctly (2/3 smoke samples CORRECT
+> with the skill invoked). Two eval-design findings remain before the gated run:
+> skill invocation is prompt-sensitive/stochastic, and the agent can bypass the
+> CLI via `Read` unless the file-reading tools are disallowed. The Phase-3
+> deliverables (committed log, golden fixture, skill-attribution promotion)
+> await that calibration pass + a full run. See the findings note.
 
 ### Overview
 

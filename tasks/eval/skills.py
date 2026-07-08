@@ -1,19 +1,22 @@
+import os
+import platform
 import sys
 from pathlib import Path
 
 from invoke import Context, Exit, task
 
-from tasks.eval import readback
+from tasks.eval import readback, staging
 from tasks.eval.gate import below_floor, live_run_enabled
-from tasks.shared.paths import REPO_ROOT
+from tasks.shared.paths import REPO_ROOT, binary_path
 
 _EVAL_DIR = REPO_ROOT / "tests" / "evals" / "skills" / "configure"
 _EVAL_FILE = _EVAL_DIR / "configure_eval.py"
 _RESULTS_DIR = _EVAL_DIR / "results"
+_STAGING_DIR = REPO_ROOT / "cli" / "target" / "eval-plugin"
 
-# The sandbox is pinned to a single arch so the committed log is reproducible;
-# on Apple Silicon this runs under Docker's amd64 emulation.
-_DOCKER_PLATFORM = "linux/amd64"
+# The env var the eval solver + scorer read to find the staged plugin (its
+# bin/luminosity is the real launcher, and its dir is claude's --plugin-dir).
+PLUGIN_DIR_ENV = "LUMINOSITY_EVAL_PLUGIN_DIR"
 
 
 def _ensure_repo_on_path() -> None:
@@ -25,41 +28,42 @@ def _ensure_repo_on_path() -> None:
         sys.path.insert(0, root)
 
 
-def _require_docker(context: Context) -> None:
-    """Fail fast with an actionable message when Docker cannot run the sandbox.
+def _host_binary() -> Path:
+    machine = platform.machine()
+    arch = "arm64" if machine in ("arm64", "aarch64") else "x64"
+    os_name = "darwin" if platform.system() == "Darwin" else "linux"
+    return binary_path(f"{os_name}-{arch}")
 
-    Guards the out-of-band prerequisite (Docker cannot be mise-pinned): both a
-    dead daemon and — given the linux/amd64 pin — missing amd64 emulation on
-    Apple Silicon, rather than failing deep inside Inspect's sandbox setup.
+
+def _preflight_claude(context: Context) -> None:
+    """Fail fast with an actionable message when the pinned claude cannot run.
+
+    Guards the out-of-band prerequisite: the native binary must be provisioned
+    (deps:install:claude-native) and the CLI authenticated (a Claude
+    subscription login), rather than failing deep inside a per-sample run.
     """
-    daemon = context.run("docker info", warn=True, pty=False, hide=True)
-    if daemon.exited != 0:
+    if (
+        context.run("claude --version", warn=True, pty=False, hide=True).exited
+        != 0
+    ):
         raise Exit(
-            "eval:skills:configure: the Docker daemon is unreachable — "
-            "start Docker and retry",
-            code=1,
-        )
-    emulation = context.run(
-        f"docker run --rm --platform {_DOCKER_PLATFORM} alpine true",
-        warn=True,
-        pty=False,
-        hide=True,
-    )
-    if emulation.exited != 0:
-        raise Exit(
-            "eval:skills:configure: cannot run linux/amd64 containers — "
-            "enable Docker Desktop's x86/amd64 emulation (Rosetta) and retry",
+            "eval:skills:configure: `claude` is not runnable — run "
+            "`mise run deps:install:claude-native`, then `claude login`",
             code=1,
         )
 
 
 def _run_configure_eval(context: Context) -> float:
-    # Lazy: inspect_ai pulls in numpy/anthropic and is heavy — importing it at
-    # module top would tax every unrelated `invoke` command.
+    # Lazy: inspect_ai pulls in numpy and is heavy — importing it at module top
+    # would tax every unrelated `invoke` command.
     from inspect_ai import eval as inspect_eval  # noqa: PLC0415
 
-    _require_docker(context)
+    _preflight_claude(context)
     _ensure_repo_on_path()
+    plugin_dir = staging.stage_plugin(
+        repo_root=REPO_ROOT, host_binary=_host_binary(), dest=_STAGING_DIR
+    )
+    os.environ[PLUGIN_DIR_ENV] = str(plugin_dir)
     _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     logs = inspect_eval(
         [

@@ -11,10 +11,10 @@ two observable facts:
   graded one.
 - **Outcome** — grade the CLI's real stdout / exit code / stderr by re-running
   the canonical command (or, for a `set`, the level-scoped reads that reveal the
-  end state) via `sandbox().exec`, whose `ExecResult` carries a structured
-  `returncode`. The transcript's Bash *result* content cannot reliably surface a
-  numeric exit code, so it cannot distinguish clap's exit 2 from a domain exit 1
-  — the sandbox re-read can, which the bad-`--level` task requires.
+  end state) as a host subprocess in the sample's seeded temp dir, whose
+  structured `returncode` distinguishes clap's exit 2 from a domain exit 1 (the
+  bad-`--level` task requires this — the transcript's Bash *result* content
+  cannot reliably surface a numeric exit code).
 
 The pure decision/extraction helpers (`grade_value`, `grade_error`,
 `grade_precedence`, `config_command_ran`, `skill_was_invoked`) are split from
@@ -25,6 +25,7 @@ tool-use event structure. Skill attribution is a **logged diagnostic** here, not
 a hard pass/fail conjunct; Phase 3 promotes it once the event shape is captured.
 """
 
+import asyncio
 import shlex
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -38,10 +39,9 @@ from inspect_ai.scorer import (
     scorer,
     stderr,
 )
-from inspect_ai.util import sandbox
 
 from tests.evals.shared.names import SKILL_NAME
-from tests.evals.skills.configure.environment import LUMINOSITY_BIN, WORKDIR
+from tests.evals.skills.configure.environment import luminosity_binary
 
 if TYPE_CHECKING:
     from inspect_ai.solver import TaskState
@@ -157,24 +157,32 @@ def config_command_ran(
 
 
 def skill_was_invoked(messages: list[Any], name: str) -> bool:
+    # Claude Code's Skill tool call names the skill namespace-qualified, e.g.
+    # {"skill": "luminosity:configure"} — match the bare name after the colon.
     for message in messages:
         if getattr(message, "role", None) != "assistant":
             continue
         for call in message.tool_calls or []:
-            if (
-                call.function == "Skill"
-                and (call.arguments or {}).get("name") == name
-            ):
-                return True
+            if call.function == "Skill":
+                invoked = str((call.arguments or {}).get("skill", ""))
+                if invoked.rsplit(":", 1)[-1] == name:
+                    return True
     return False
 
 
-async def _exec(argv: list[str]) -> CommandResult:
-    result = await sandbox().exec([LUMINOSITY_BIN, *argv], cwd=WORKDIR)
+async def _exec(argv: list[str], *, workdir: str) -> CommandResult:
+    process = await asyncio.create_subprocess_exec(
+        str(luminosity_binary()),
+        *argv,
+        cwd=workdir,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await process.communicate()
     return CommandResult(
-        exit_code=result.returncode,
-        stdout=result.stdout,
-        stderr=result.stderr,
+        exit_code=process.returncode if process.returncode is not None else -1,
+        stdout=stdout.decode(),
+        stderr=stderr.decode(),
     )
 
 
@@ -190,13 +198,21 @@ async def _grade(state: TaskState, target: Target) -> bool:
     ):
         return False
 
+    workdir = metadata["workdir"]
+
     if metadata.get("expect_error"):
-        result = await _exec(canonical_command(action, key, level, value))
+        result = await _exec(
+            canonical_command(action, key, level, value), workdir=workdir
+        )
         return grade_error(result, metadata["marker"], metadata.get("exit"))
 
     if action == "set":
-        personal = await _exec(canonical_command("get", key, "personal", None))
-        team = await _exec(canonical_command("get", key, "team", None))
+        personal = await _exec(
+            canonical_command("get", key, "personal", None), workdir=workdir
+        )
+        team = await _exec(
+            canonical_command("get", key, "team", None), workdir=workdir
+        )
         return grade_precedence(
             personal.stdout,
             team.stdout,
@@ -204,7 +220,9 @@ async def _grade(state: TaskState, target: Target) -> bool:
             metadata["expected_team"] + "\n",
         )
 
-    result = await _exec(canonical_command(action, key, level, value))
+    result = await _exec(
+        canonical_command(action, key, level, value), workdir=workdir
+    )
     return result.exit_code == 0 and grade_value(
         result.stdout, target.text + "\n"
     )

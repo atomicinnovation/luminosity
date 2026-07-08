@@ -288,10 +288,37 @@ class TestEvalTierWiring:
         assert leaf["run"] == "invoke eval.skills.configure"
         assert "deps:install:python" in leaf.get("depends", [])
 
-    def test_configure_leaf_provisions_the_release_binary(self, mise: Mise):
-        # The Docker sandbox COPYs the cross-built linux-musl launcher that
-        # build:release stages, so the leaf must provision it.
-        assert "build:release" in _depends(mise, "eval:skills:configure")
+    def test_configure_leaf_provisions_the_host_launcher(self, mise: Mise):
+        # Host-native `claude -p` runs the host launcher (build:launcher stages
+        # it) at the plugin's bin/luminosity — not the cross-built release.
+        depends = _depends(mise, "eval:skills:configure")
+        assert "build:launcher" in depends
+        assert "build:release" not in depends
+
+    def test_configure_leaf_provisions_the_native_claude(self, mise: Mise):
+        assert "deps:install:claude-native" in _depends(
+            mise, "eval:skills:configure"
+        )
+
+
+class TestClaudeCodePin:
+    """The Claude Code CLI is pinned via mise's npm backend for the evals."""
+
+    _CLAUDE_TOOL = "npm:@anthropic-ai/claude-code"
+    # At or above the plugin's v2.1.144 skill-preload floor; recorded in the
+    # committed eval log.
+    _EXPECTED = "2.1.203"
+
+    def test_claude_and_node_are_pinned(self, mise: Mise):
+        tools = mise["tools"]
+        assert tools[self._CLAUDE_TOOL] == self._EXPECTED
+        assert "node" in tools
+
+    def test_native_provisioning_task_wraps_an_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["deps:install:claude-native"]["run"]
+            == "invoke deps.install-claude-native"
+        )
 
 
 class TestEvalUnitSuiteWiring:

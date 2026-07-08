@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import pytest
 from inspect_ai import Task
 from inspect_ai._eval.loader import load_tasks
 
@@ -10,19 +9,11 @@ from tests.evals.skills.configure import configure_eval
 _EVAL_FILE = Path(configure_eval.__file__).resolve()
 
 
-@pytest.fixture(autouse=True)
-def _fake_anthropic_key(monkeypatch: pytest.MonkeyPatch):
-    # Constructing a Task with model="anthropic/…" eagerly initialises the
-    # provider client, which needs the key present (never called here). A dummy
-    # keeps the construction test hermetic on a keyless CI runner.
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-construction-only")
-
-
 class TestTaskConstruction:
-    """Both arms build against the pinned claude_code signature without raising.
+    """Both arms build without raising (mockllm model needs no API key).
 
-    Pins that version=, message_limit, time_limit, fail_on_error, and the
-    Epochs(k, pass_k(k)) reducer are all accepted.
+    Pins that the custom solver, scorer, and Epochs(k, pass_k(k)) reducer wire
+    together into a Task.
     """
 
     def test_with_skill_arm_constructs(self):
