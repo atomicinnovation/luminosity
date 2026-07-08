@@ -97,13 +97,19 @@ class TestClaudeArgv:
         assert "--plugin-dir" in argv
         assert argv[argv.index("--plugin-dir") + 1] == str(tmp_path)
         assert "Skill" in argv
-        assert "--disallowedTools" not in argv
         assert argv[argv.index("--model") + 1] == CLAUDE_MODEL
+
+    def test_both_arms_disallow_the_file_reading_bypass_tools(
+        self, tmp_path: Path
+    ):
+        for with_skill in (True, False):
+            argv = _claude_argv("q", with_skill=with_skill, plugin=tmp_path)
+            assert "Read" in argv
+            assert "Grep" in argv
 
     def test_baseline_suppresses_skill_and_loads_no_plugin(
         self, tmp_path: Path
     ):
         argv = _claude_argv("q", with_skill=False, plugin=tmp_path)
         assert "--plugin-dir" not in argv
-        assert "--disallowedTools" in argv
-        assert argv[argv.index("--disallowedTools") + 1] == "Skill"
+        assert "Skill" in argv[argv.index("--disallowedTools") + 1 :]

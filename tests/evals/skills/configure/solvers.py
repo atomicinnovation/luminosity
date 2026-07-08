@@ -32,6 +32,21 @@ CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 # for a precedence set) with headroom, so a looping agent is bounded.
 MAX_TURNS = 8
 
+# The configure skill's contract is to manage config ONLY through the CLI, never
+# to read/parse the files itself. Disallowing the file-access tools removes the
+# shortcut of reading .luminosity/config.md directly, so the eval measures
+# skill-driven CLI routing rather than the model's file-reading instincts.
+_BYPASS_TOOLS = (
+    "Read",
+    "Edit",
+    "Write",
+    "Grep",
+    "Glob",
+    "NotebookEdit",
+    "WebFetch",
+    "WebSearch",
+)
+
 
 def parse_transcript(stdout: str) -> list[ChatMessageAssistant]:
     """Build assistant messages (with tool calls) from a stream-json transcript.
@@ -84,6 +99,9 @@ def _seed(workdir: Path, fixture: str) -> None:
 
 def _claude_argv(prompt: str, *, with_skill: bool, plugin: Path) -> list[str]:
     allowed = ["Bash", "Skill"] if with_skill else ["Bash"]
+    # Baseline additionally suppresses the skill so the bare model must
+    # self-discover the CLI on PATH.
+    disallowed = [*_BYPASS_TOOLS] if with_skill else ["Skill", *_BYPASS_TOOLS]
     argv = [
         "claude",
         "-p",
@@ -97,11 +115,11 @@ def _claude_argv(prompt: str, *, with_skill: bool, plugin: Path) -> list[str]:
         str(MAX_TURNS),
         "--allowedTools",
         *allowed,
+        "--disallowedTools",
+        *disallowed,
     ]
     if with_skill:
         argv += ["--plugin-dir", str(plugin)]
-    else:
-        argv += ["--disallowedTools", "Skill"]
     return argv
 
 
