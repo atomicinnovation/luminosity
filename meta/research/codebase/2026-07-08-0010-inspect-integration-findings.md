@@ -205,11 +205,13 @@ formatter-safe.
 
 **Eval-design findings (all resolved during calibration):**
 
-1. **Stray `ANTHROPIC_API_KEY` overrode the subscription.** The agent inherited
-   the key from `mise.local.toml`; the CLI prefers it over the claude.ai login
-   → every turn hit the unfunded metered API ("credit balance too low"). Fixed:
-   the solver strips `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` from the agent
-   env (`_agent_env`), so `claude -p` always uses the subscription.
+1. **Auth is inherited from the environment.** During calibration an unfunded
+   `ANTHROPIC_API_KEY` left in `mise.local.toml` overrode the claude.ai login and
+   sent every turn to the metered API ("credit balance too low"). That was a
+   local misconfiguration, not a design need: the agent env is passed through
+   verbatim, so `claude -p` uses whatever the environment provides — the
+   subscription login by default, or a deliberately-set API key for operators
+   without a subscription.
 2. **The model bypassed the CLI via `Read`.** Fixed by `--disallowedTools
    Read/Edit/Write/Grep/Glob/…`, so the only path to the answer is the CLI.
 3. **Skill invocation was model-sensitive.** Haiku under-triggered on `--level`

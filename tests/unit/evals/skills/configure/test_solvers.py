@@ -119,14 +119,11 @@ class TestClaudeArgv:
 
 
 class TestAgentEnv:
-    def test_strips_the_metered_api_auth_so_the_subscription_is_used(
+    def test_inherits_ambient_auth_so_it_can_be_overridden(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-stray")
-        monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "tok")
-        env = _agent_env(tmp_path)
-        assert "ANTHROPIC_API_KEY" not in env
-        assert "ANTHROPIC_AUTH_TOKEN" not in env
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-override")
+        assert _agent_env(tmp_path)["ANTHROPIC_API_KEY"] == "sk-ant-override"
 
     def test_puts_the_staged_plugin_bin_first_on_path(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -1093,10 +1093,12 @@ Extend `test_mise_wiring.py` to assert `test:unit:evals` **is** in `test:unit`'s
 > inspect-swe; `claude`+`node` pinned via mise), keeping the Inspect framework.
 > The first full gated run on the subscription (model `claude-sonnet-5`, CLI
 > 2.1.203) scored **with-skill pass^k = 0.889 (≥ 0.8)** and **baseline pass^k =
-> 0.000**, committed under `results/`. Calibration resolved three findings: a
-> stray `ANTHROPIC_API_KEY` was overriding the subscription (now stripped by the
-> solver); Haiku under-triggered the skill on `--level` requests (switched to
-> Sonnet, the realistic target); and the bad-`--level` task penalised correct
+> 0.000**, committed under `results/`. Calibration resolved three findings: an
+> unfunded `ANTHROPIC_API_KEY` left in `mise.local.toml` overrode the
+> subscription login (a local misconfiguration — the agent inherits the ambient
+> auth env so it can be overridden deliberately); Haiku under-triggered the skill
+> on `--level` requests (switched to Sonnet, the realistic target); and the
+> bad-`--level` task penalised correct
 > "ask before invalid" behaviour (replaced with a valid `--level personal` get).
 > The committed log is the durable quality signal; it is a point-in-time record
 > (the model/CLI pins drift on their own schedule).

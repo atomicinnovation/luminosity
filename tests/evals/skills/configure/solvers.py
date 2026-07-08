@@ -37,10 +37,6 @@ _BYPASS_TOOLS = (
     "WebSearch",
 )
 
-# A stray ANTHROPIC_API_KEY (e.g. in mise.local.toml) takes precedence over the
-# CLI's subscription login and routes to the metered API; strip both.
-_SUBSCRIPTION_OVERRIDES = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
-
 
 def parse_transcript(stdout: str) -> list[ChatMessageAssistant]:
     messages: list[ChatMessageAssistant] = []
@@ -77,11 +73,7 @@ def parse_transcript(stdout: str) -> list[ChatMessageAssistant]:
 
 
 def _agent_env(plugin: Path) -> dict[str, str]:
-    env = {
-        key: value
-        for key, value in os.environ.items()
-        if key not in _SUBSCRIPTION_OVERRIDES
-    }
+    env = dict(os.environ)
     env["PATH"] = f"{plugin / 'bin'}{os.pathsep}{env['PATH']}"
     return env
 
