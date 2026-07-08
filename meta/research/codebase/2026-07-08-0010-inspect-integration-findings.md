@@ -227,6 +227,30 @@ formatter-safe.
 `pass^k = 0.889` (8/9; only conflict-on-set flaked once) and baseline
 `pass^k = 0.000`, committed under `results/`.
 
+## Alternatives considered: bridge + meridian proxy
+
+Before the host-native rewrite we established a *second* subscription path that
+would have **kept the `inspect_swe` bridge** — and therefore its free transcript
+population (no `parse_transcript`) and Docker isolation — with **zero code
+change**: run a local **meridian** proxy (`rynfar/meridian`), an
+Anthropic-compatible `/v1/messages` endpoint backed by Claude Max subscription
+OAuth, and set `ANTHROPIC_BASE_URL=http://127.0.0.1:3456` (+ a placeholder
+`ANTHROPIC_API_KEY`). The chain would be: sandboxed CLI → inspect bridge →
+Inspect's anthropic provider → meridian → Claude Code SDK → subscription. The
+load-bearing enabler was verified in the provider source (the standard branch
+does `base_url = model_base_url(self.base_url, "ANTHROPIC_BASE_URL")`, so it
+honours that env var) and meridian speaks Anthropic-compatible `/v1/messages` —
+but the path was **never live-tested**.
+
+We chose host-native `claude -p` over it because meridian is an **unofficial
+third-party proxy that handles the subscription credentials**, adds a
+double-proxy hop, and needs a background process running; the direct CLI is the
+official, no-extra-dependency route. The trade is the hand-rolled CLI driving +
+`parse_transcript` (which the bridge would otherwise provide). **This is the
+fallback** if that hand-rolled code becomes a burden and the meridian dependency
+is acceptable — it restores the bridge (and its transcript handling + isolation)
+on the subscription without a rewrite.
+
 ## Library-feature audit (does anything hand-built duplicate Inspect?)
 
 A final pass over the Inspect / inspect_swe docs, references, and changelogs
