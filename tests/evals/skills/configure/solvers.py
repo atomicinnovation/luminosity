@@ -1,10 +1,3 @@
-"""Drive the real `claude -p` host-natively on the Claude subscription.
-
-The agent runs in a fresh per-sample temp dir seeded with the fixture; its
-stream-json transcript is parsed into `state.messages` and the temp dir is
-stashed for the scorer's re-reads.
-"""
-
 import asyncio
 import json
 import os

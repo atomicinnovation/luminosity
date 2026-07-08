@@ -1,10 +1,4 @@
-"""Grade the configure skill by the CLI's real output, not the model's prose.
-
-Routing is read from the transcript (an argv-token match over the agent's Bash
-calls); the outcome is graded by re-running the command as a host subprocess in
-the sample's seeded temp dir, whose structured returncode the transcript's Bash
-result content cannot reliably surface.
-"""
+"""Grade the configure skill by the CLI's real output, not the model's prose."""
 
 import asyncio
 import shlex

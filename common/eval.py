@@ -1,9 +1,4 @@
-"""Skill-agnostic eval contract shared across the tasks/ and tests/ boundaries.
-
-Both the task-side orchestration (which cannot import the tests/ tree) and the
-tests-side eval definitions derive their arm names, reducer name, metric name,
-and plugin-dir env var from here, so the two never drift.
-"""
+"""Eval identifiers shared across the tasks/ and tests/ import boundary."""
 
 ACCURACY_METRIC = "accuracy"
 PLUGIN_DIR_ENV = "LUMINOSITY_EVAL_PLUGIN_DIR"
