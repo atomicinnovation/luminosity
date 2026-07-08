@@ -227,6 +227,32 @@ formatter-safe.
 `pass^k = 0.889` (8/9; only conflict-on-set flaked once) and baseline
 `pass^k = 0.000`, committed under `results/`.
 
+## Library-feature audit (does anything hand-built duplicate Inspect?)
+
+A final pass over the Inspect / inspect_swe docs, references, and changelogs
+(inspect-ai 0.3.244, inspect_swe 0.2.65 — both the newest at the time)
+confirmed every hand-built piece earns its place:
+
+- **The pass^k gate** (read the metric off `log.results`, exit non-zero below
+  0.8) — no built-in. Inspect's `fail_on_error` gates *sample errors*, never a
+  *score/metric* value; there is no threshold flag or `eval()` parameter for it.
+- **The custom `claude -p` solver** — no built-in. `inspect_swe.claude_code()`
+  is unconditionally bridge-based (model calls proxied to Inspect's metered
+  provider); it exposes no auth/passthrough option, so subscription auth is only
+  reachable by driving the CLI directly.
+- **`scrub_paths`** — no built-in. `write_eval_log` has no anonymisation /
+  path-relativisation option, and the changelog's only `redact` entries are
+  unrelated (git-remote credentials, `model_args`).
+- **`parse_transcript`** — no built-in. Inspect ingests external agents *only*
+  through the metered bridge; there is no stream-json importer or lighter
+  subprocess/transcript path.
+- **The `pass_k` reducer is native** (added in 0.3.224) and correctly chosen
+  over the lenient `pass_at`. Nuance: `pass_k` returns the draw-without-
+  replacement probability `C(correct,k)/C(total,k)`, not a hard boolean — but
+  with `epochs == k` and `fail_on_error=True` (so `total == k`) it collapses to
+  1.0 iff all k pass, exactly the intended bar. There is no built-in A/B/arm
+  comparator; the two-`Task` (skill vs baseline) pattern is the idiomatic one.
+
 ## Environment notes
 
 - Docker daemon is up (Docker 29.5.3); Claude Code CLI 2.1.203 is installed
