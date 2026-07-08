@@ -1,12 +1,14 @@
 import os
 import platform
 import sys
+import tempfile
 from pathlib import Path
 
 from invoke import Context, Exit
 
 from common.eval import PLUGIN_DIR_ENV, baseline_arm, with_skill_arm
 from tasks.shared.eval import readback, staging
+from tasks.shared.eval.workdirs import cleanup_workdirs
 from tasks.shared.paths import REPO_ROOT, binary_path
 
 _EVALS_DIR = REPO_ROOT / "tests" / "evals" / "skills"
@@ -25,6 +27,11 @@ def _host_binary() -> Path:
     arch = "arm64" if machine in ("arm64", "aarch64") else "x64"
     os_name = "darwin" if platform.system() == "Darwin" else "linux"
     return binary_path(f"{os_name}-{arch}")
+
+
+def _tmp_dirs() -> set[str]:
+    tmp = Path(tempfile.gettempdir())
+    return {str(tmp), str(tmp.resolve())}
 
 
 def _preflight_claude(context: Context) -> None:
@@ -66,6 +73,10 @@ def run_skill_eval(context: Context, skill: str) -> float:
             f"— investigate whether the skill adds value"
         )
     readback.scrub_result_dir(
-        results_dir, repo_root=str(REPO_ROOT), home=str(Path.home())
+        results_dir,
+        repo_root=str(REPO_ROOT),
+        home=str(Path.home()),
+        tmp_dirs=_tmp_dirs(),
     )
+    cleanup_workdirs(Path(tempfile.gettempdir()))
     return with_skill_fraction

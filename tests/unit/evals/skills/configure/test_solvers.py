@@ -1,18 +1,20 @@
 import json
 from typing import TYPE_CHECKING
 
+import pytest
 from inspect_ai.model import ChatMessageAssistant
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    import pytest
-
 from tests.evals.skills.configure.solvers import (
     CLAUDE_MODEL,
+    ClaudeCliVersionError,
     _agent_env,
     _claude_argv,
+    parse_cli_version,
     parse_transcript,
+    provenance,
 )
 
 
@@ -102,13 +104,35 @@ class TestClaudeArgv:
         assert "Skill" in argv
         assert argv[argv.index("--model") + 1] == CLAUDE_MODEL
 
-    def test_both_arms_disallow_the_file_reading_bypass_tools(
+    def test_both_arms_get_the_same_tools_apart_from_skill(
         self, tmp_path: Path
     ):
+        def allowed_tools(*, with_skill: bool) -> set[str]:
+            argv = _claude_argv("q", with_skill=with_skill, plugin=tmp_path)
+            tools: set[str] = set()
+            for token in argv[argv.index("--allowedTools") + 1 :]:
+                if token.startswith("--"):
+                    break
+                tools.add(token)
+            return tools
+
+        with_skill = allowed_tools(with_skill=True)
+        baseline = allowed_tools(with_skill=False)
+        assert with_skill - baseline == {"Skill"}
+        assert baseline - with_skill == set()
+
+    def test_neither_arm_disallows_the_file_reading_tools(self, tmp_path: Path):
         for with_skill in (True, False):
             argv = _claude_argv("q", with_skill=with_skill, plugin=tmp_path)
             assert "Read" in argv
             assert "Grep" in argv
+            disallowed: list[str] = (
+                argv[argv.index("--disallowedTools") + 1 :]
+                if "--disallowedTools" in argv
+                else []
+            )
+            assert "Read" not in disallowed
+            assert "Grep" not in disallowed
 
     def test_baseline_suppresses_skill_and_loads_no_plugin(
         self, tmp_path: Path
@@ -116,6 +140,7 @@ class TestClaudeArgv:
         argv = _claude_argv("q", with_skill=False, plugin=tmp_path)
         assert "--plugin-dir" not in argv
         assert "Skill" in argv[argv.index("--disallowedTools") + 1 :]
+        assert "Skill" not in argv[: argv.index("--disallowedTools")]
 
 
 class TestAgentEnv:
@@ -131,3 +156,20 @@ class TestAgentEnv:
         monkeypatch.setenv("PATH", "/usr/bin")
         env = _agent_env(tmp_path)
         assert env["PATH"].startswith(f"{tmp_path / 'bin'}:")
+
+
+class TestParseCliVersion:
+    def test_reads_the_version_from_the_cli_banner(self):
+        assert parse_cli_version("2.1.203 (Claude Code)\n") == "2.1.203"
+
+    def test_unrecognised_output_fails_loudly(self):
+        with pytest.raises(ClaudeCliVersionError):
+            parse_cli_version("command not found")
+
+
+class TestProvenance:
+    def test_names_the_agent_model_and_cli_version(self):
+        assert provenance("2.1.203") == {
+            "claude_model": CLAUDE_MODEL,
+            "claude_cli_version": "2.1.203",
+        }

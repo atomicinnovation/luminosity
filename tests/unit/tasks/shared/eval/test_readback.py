@@ -3,9 +3,16 @@ from typing import Any
 
 import pytest
 
-from common.eval import TRIALS, baseline_arm, pass_k_reducer, with_skill_arm
+from common.eval import (
+    TRIALS,
+    WORKDIR_PREFIX,
+    baseline_arm,
+    pass_k_reducer,
+    with_skill_arm,
+)
 from tasks.shared.errors import EvalReadbackError
 from tasks.shared.eval import readback
+from tasks.shared.eval.readback import HOST_PATH_PATTERN as _ABSOLUTE_HOST_PATH
 
 
 def _metric(value: float) -> Any:
@@ -73,17 +80,70 @@ class TestPassK:
 
 
 class TestScrubPaths:
-    def test_relativises_repo_and_home_paths(self):
-        home = "/Users/dev"
-        repo = f"{home}/Code/luminosity"
-        text = (
-            f'{{"eval": "{repo}/tests/evals/x.json", '
-            f'"cache": "{home}/.cache/inspect"}}'
+    HOME = "/Users/dev"
+    REPO = f"{HOME}/Code/luminosity"
+    TMP = "/var/folders/yn/hashed0000gn/T"
+    REAL_TMP = f"/private{TMP}"
+
+    def _scrub(self, text: str) -> str:
+        return readback.scrub_paths(
+            text,
+            repo_root=self.REPO,
+            home=self.HOME,
+            tmp_dirs=[self.TMP, self.REAL_TMP],
         )
-        scrubbed = readback.scrub_paths(text, repo_root=repo, home=home)
-        assert home not in scrubbed
+
+    def test_relativises_repo_and_home_paths(self):
+        text = (
+            f'{{"eval": "{self.REPO}/tests/evals/x.json", '
+            f'"cache": "{self.HOME}/.cache/inspect"}}'
+        )
+        scrubbed = self._scrub(text)
+        assert self.HOME not in scrubbed
         assert "./tests/evals/x.json" in scrubbed
         assert "~/.cache/inspect" in scrubbed
+
+    def test_relativises_the_sample_workdir_outside_home(self):
+        text = f'{{"workdir": "{self.TMP}/configure-eval-abc"}}'
+        assert self._scrub(text) == '{"workdir": "<tmp>/configure-eval-abc"}'
+
+    def test_relativises_the_resolved_tmp_prefix(self):
+        text = f'{{"stderr": "{self.REAL_TMP}/configure-eval-abc/.luminosity"}}'
+        scrubbed = self._scrub(text)
+        assert self.REAL_TMP not in scrubbed
+        assert "<tmp>/configure-eval-abc/.luminosity" in scrubbed
+
+    def test_no_absolute_host_path_survives(self):
+        text = " ".join(
+            [
+                f"{self.REPO}/tests",
+                f"{self.HOME}/.cache",
+                f"{self.TMP}/w",
+                f"{self.REAL_TMP}/w",
+            ]
+        )
+        assert _ABSOLUTE_HOST_PATH.search(self._scrub(text)) is None
+
+
+class TestHostPathPattern:
+    def test_flags_machine_specific_roots(self):
+        for path in (
+            "/Users/dev/Code/x",
+            "/home/dev/Code/x",
+            "/var/folders/yn/hashed/T/w",
+            "/private/var/folders/yn/hashed/T/w",
+            f"/tmp/{WORKDIR_PREFIX}abc123",
+        ):
+            assert _ABSOLUTE_HOST_PATH.search(path) is not None, path
+
+    def test_ignores_agent_authored_paths_that_carry_no_machine_identity(self):
+        for path in (
+            "/tmp/out.txt",
+            "/tmp/err.txt",
+            "/usr/bin/env",
+            "/etc/hosts",
+        ):
+            assert _ABSOLUTE_HOST_PATH.search(path) is None, path
 
 
 class TestSharedContract:

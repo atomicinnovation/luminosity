@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -9,26 +10,34 @@ from inspect_ai.model import ChatMessageAssistant
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 from inspect_ai.tool import ToolCall
 
+from common.eval import WORKDIR_PREFIX
 from tests.evals.skills.configure.environment import plugin_dir
 
 _FIXTURES = Path(__file__).parent / "fixtures"
 
 CLAUDE_MODEL = "claude-sonnet-5"
 MAX_TURNS = 8
+_AGENT_TOOLS = ("Bash", "Read", "Grep", "Glob")
 
-# The configure skill's contract is to manage config only through the CLI, so
-# disallowing the file-access tools removes the shortcut of reading the config
-# files directly — the eval then measures skill-driven CLI routing.
-_BYPASS_TOOLS = (
-    "Read",
-    "Edit",
-    "Write",
-    "Grep",
-    "Glob",
-    "NotebookEdit",
-    "WebFetch",
-    "WebSearch",
-)
+
+class ClaudeCliVersionError(RuntimeError):
+    pass
+
+
+_VERSION = re.compile(r"\d+\.\d+\.\d+")
+
+
+def parse_cli_version(stdout: str) -> str:
+    match = _VERSION.search(stdout)
+    if match is None:
+        raise ClaudeCliVersionError(
+            f"cannot read a Claude Code version from {stdout!r}"
+        )
+    return match.group(0)
+
+
+def provenance(cli_version: str) -> dict[str, str]:
+    return {"claude_model": CLAUDE_MODEL, "claude_cli_version": cli_version}
 
 
 def parse_transcript(stdout: str) -> list[ChatMessageAssistant]:
@@ -81,8 +90,6 @@ def _seed(workdir: Path, fixture: str) -> None:
 
 
 def _claude_argv(prompt: str, *, with_skill: bool, plugin: Path) -> list[str]:
-    allowed = ["Bash", "Skill"] if with_skill else ["Bash"]
-    disallowed = [*_BYPASS_TOOLS] if with_skill else ["Skill", *_BYPASS_TOOLS]
     argv = [
         "claude",
         "-p",
@@ -95,12 +102,12 @@ def _claude_argv(prompt: str, *, with_skill: bool, plugin: Path) -> list[str]:
         "--max-turns",
         str(MAX_TURNS),
         "--allowedTools",
-        *allowed,
-        "--disallowedTools",
-        *disallowed,
+        *_AGENT_TOOLS,
     ]
     if with_skill:
-        argv += ["--plugin-dir", str(plugin)]
+        argv += ["Skill", "--plugin-dir", str(plugin)]
+    else:
+        argv += ["--disallowedTools", "Skill"]
     return argv
 
 
@@ -118,22 +125,37 @@ async def _run_claude(
     return stdout.decode(), stderr.decode()
 
 
+_cli_version_cache: str | None = None
+
+
+async def _cli_version(env: dict[str, str]) -> str:
+    global _cli_version_cache  # noqa: PLW0603 (one probe per eval process)
+    if _cli_version_cache is None:
+        stdout, _ = await _run_claude(
+            ["claude", "--version"], cwd=Path.cwd(), env=env
+        )
+        _cli_version_cache = parse_cli_version(stdout)
+    return _cli_version_cache
+
+
 @solver
 def run_configure_agent(*, with_skill: bool) -> Solver:
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         plugin = plugin_dir()
-        workdir = Path(tempfile.mkdtemp(prefix="configure-eval-"))
+        env = _agent_env(plugin)
+        workdir = Path(tempfile.mkdtemp(prefix=WORKDIR_PREFIX))
         _seed(workdir, state.metadata["fixture"])
         stdout, stderr = await _run_claude(
             _claude_argv(
                 state.input_text, with_skill=with_skill, plugin=plugin
             ),
             cwd=workdir,
-            env=_agent_env(plugin),
+            env=env,
         )
         state.messages.extend(parse_transcript(stdout))
         state.metadata["workdir"] = str(workdir)
         state.metadata["agent_stderr"] = stderr[-2000:]
+        state.metadata.update(provenance(await _cli_version(env)))
         return state
 
     return solve

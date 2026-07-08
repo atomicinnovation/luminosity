@@ -305,8 +305,9 @@ class TestClaudeCodePin:
     """The Claude Code CLI is pinned via mise's npm backend for the evals."""
 
     _CLAUDE_TOOL = "npm:@anthropic-ai/claude-code"
-    # At or above the plugin's v2.1.144 skill-preload floor; recorded in the
-    # committed eval log.
+    # At or above the plugin's v2.1.144 skill-preload floor. The version the
+    # agent actually ran is stamped per sample by the solver; the committed
+    # logs are checked against it by tests/unit/evals/…/test_results.py.
     _EXPECTED = "2.1.203"
 
     def test_claude_and_node_are_pinned(self, mise: Mise):

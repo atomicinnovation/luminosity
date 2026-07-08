@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+import pytest
 from inspect_ai.model import ChatMessageAssistant, ChatMessageUser
 from inspect_ai.tool import ToolCall
 
@@ -10,6 +11,7 @@ from tests.evals.skills.configure.scorer import (
     config_command_ran,
     grade_error,
     grade_precedence,
+    grade_sample,
     grade_value,
     skill_was_invoked,
 )
@@ -203,6 +205,61 @@ class TestConfigCommandRan:
             is False
         )
 
+    def test_an_unpinned_set_level_is_free(self):
+        for command in (
+            f"{LUM} config set core.example personal-v",
+            f"{LUM} config set core.example personal-v --level personal",
+        ):
+            assert (
+                config_command_ran(
+                    [_bash(command)],
+                    action="set",
+                    key="core.example",
+                    level=None,
+                    value="personal-v",
+                )
+                is True
+            )
+
+    def test_a_pinned_set_level_must_match(self):
+        messages = [_bash(f"{LUM} config set core blocked --level team")]
+        assert (
+            config_command_ran(
+                messages,
+                action="set",
+                key="core",
+                level="team",
+                value="blocked",
+            )
+            is True
+        )
+
+    def test_a_misrouted_set_level_does_not_match(self):
+        messages = [_bash(f"{LUM} config set core blocked --level personal")]
+        assert (
+            config_command_ran(
+                messages,
+                action="set",
+                key="core",
+                level="team",
+                value="blocked",
+            )
+            is False
+        )
+
+    def test_a_pinned_set_level_must_be_present(self):
+        messages = [_bash(f"{LUM} config set core blocked")]
+        assert (
+            config_command_ran(
+                messages,
+                action="set",
+                key="core",
+                level="team",
+                value="blocked",
+            )
+            is False
+        )
+
     def test_a_command_with_no_config_token_is_skipped(self):
         assert (
             config_command_ran(
@@ -253,3 +310,43 @@ class TestSkillWasInvoked:
 
         messages = [_Msg("assistant", [_Call("Skill", None)])]
         assert skill_was_invoked(messages, "configure") is False
+
+
+class TestGradeSample:
+    """Attribution is a scored conjunct, not a logged diagnostic."""
+
+    @pytest.mark.parametrize("skill_expected", [True, False])
+    def test_a_wrong_outcome_fails_however_the_skill_was_routed(
+        self, skill_expected: bool
+    ):
+        for skill_invoked in (True, False):
+            assert (
+                grade_sample(
+                    outcome=False,
+                    skill_invoked=skill_invoked,
+                    skill_expected=skill_expected,
+                )
+                is False
+            )
+
+    def test_with_skill_arm_requires_the_skill_to_have_been_invoked(self):
+        assert (
+            grade_sample(outcome=True, skill_invoked=True, skill_expected=True)
+            is True
+        )
+        assert (
+            grade_sample(outcome=True, skill_invoked=False, skill_expected=True)
+            is False
+        )
+
+    def test_baseline_arm_fails_if_the_skill_leaked_in(self):
+        assert (
+            grade_sample(
+                outcome=True, skill_invoked=False, skill_expected=False
+            )
+            is True
+        )
+        assert (
+            grade_sample(outcome=True, skill_invoked=True, skill_expected=False)
+            is False
+        )

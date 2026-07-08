@@ -4,6 +4,8 @@ ACCURACY_METRIC = "accuracy"
 PLUGIN_DIR_ENV = "LUMINOSITY_EVAL_PLUGIN_DIR"
 TRIALS = 3
 
+WORKDIR_PREFIX = "luminosity-eval-"
+
 
 def with_skill_arm(skill: str) -> str:
     return f"{skill}_with_skill"

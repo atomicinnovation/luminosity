@@ -1,5 +1,3 @@
-"""Grade the configure skill by the CLI's real output, not the model's prose."""
-
 import asyncio
 import shlex
 from dataclasses import dataclass
@@ -39,6 +37,12 @@ def grade_precedence(
     expected_team: str,
 ) -> bool:
     return personal_read == expected_new and team_read == expected_team
+
+
+def grade_sample(
+    *, outcome: bool, skill_invoked: bool, skill_expected: bool
+) -> bool:
+    return outcome and skill_invoked == skill_expected
 
 
 def grade_error(
@@ -96,6 +100,16 @@ def _split_config_args(
     return positionals, level
 
 
+def _level_scoped_exactly(pinned: str | None, invoked: str | None) -> bool:
+    return invoked == pinned
+
+
+def _level_unpinned_or_matching(
+    pinned: str | None, invoked: str | None
+) -> bool:
+    return pinned is None or pinned == invoked
+
+
 def config_command_ran(
     messages: list[Any],
     *,
@@ -104,32 +118,37 @@ def config_command_ran(
     level: str | None,
     value: str | None = None,
 ) -> bool:
-    # A `get` must match its `--level` (the outcome re-read cannot see the
-    # agent's level choice); a `set`'s level correctness surfaces in the
-    # precedence outcome, so only its verb/key/value are matched here.
     for command in _bash_commands(messages):
         parsed = _split_config_args(shlex.split(command))
         if parsed is None:
             continue
         positionals, invoked_level = parsed
         if action == "get":
-            if positionals == [action, key] and invoked_level == level:
+            if positionals == [action, key] and _level_scoped_exactly(
+                level, invoked_level
+            ):
                 return True
-        elif positionals == [action, key, value]:
+        elif positionals == [
+            action,
+            key,
+            value,
+        ] and _level_unpinned_or_matching(level, invoked_level):
             return True
     return False
 
 
+def _bare_skill_name(qualified: str) -> str:
+    return qualified.rsplit(":", 1)[-1]
+
+
 def skill_was_invoked(messages: list[Any], name: str) -> bool:
-    # Claude Code names the skill namespace-qualified, e.g.
-    # {"skill": "luminosity:configure"} — match the bare name after the colon.
     for message in messages:
         if getattr(message, "role", None) != "assistant":
             continue
         for call in message.tool_calls or []:
             if call.function == "Skill":
                 invoked = str((call.arguments or {}).get("skill", ""))
-                if invoked.rsplit(":", 1)[-1] == name:
+                if _bare_skill_name(invoked) == name:
                     return True
     return False
 
@@ -196,11 +215,16 @@ def configure_scorer(*, skill: str, with_skill: bool):
     @scorer(metrics=[accuracy(), stderr()])
     def configure():
         async def score(state: TaskState, target: Target) -> Score:
-            passed = await _grade(state, target)
+            skill_invoked = skill_was_invoked(state.messages, skill)
+            passed = grade_sample(
+                outcome=await _grade(state, target),
+                skill_invoked=skill_invoked,
+                skill_expected=with_skill,
+            )
             return Score(
                 value=CORRECT if passed else INCORRECT,
                 metadata={
-                    "skill_invoked": skill_was_invoked(state.messages, skill),
+                    "skill_invoked": skill_invoked,
                     "skill_expected": with_skill,
                 },
             )
