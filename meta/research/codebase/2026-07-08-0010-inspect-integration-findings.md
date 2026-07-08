@@ -196,6 +196,13 @@ framework (epochs, `pass_k` reducer, scorer, `EvalLog`):
   scorer's `skill_was_invoked` was corrected to this shape; `parse_transcript`
   is unit-tested against it.
 
+**Dataset format:** the tasks live in `dataset.json` (a pretty-printed JSON
+array), not the `dataset.jsonl` the ADR/plan sketch. `json_dataset` selects the
+reader by extension — `.jsonl` is one-object-per-line (a formatter that
+pretty-prints it corrupts it), whereas a `.json` array is `json.load`-ed and
+stays valid under formatting, so the dataset is human-readable and
+formatter-safe.
+
 **Open eval-design findings (need calibration before the gated run):**
 
 1. **Skill invocation is stochastic and prompt-sensitive.** Clear get requests

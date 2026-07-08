@@ -8,7 +8,7 @@ import yaml
 _EVAL_DIR = (
     Path(__file__).resolve().parents[4] / "evals" / "skills" / "configure"
 )
-_DATASET = _EVAL_DIR / "dataset.jsonl"
+_DATASET = _EVAL_DIR / "dataset.json"
 _FIXTURES = _EVAL_DIR / "fixtures"
 
 # A Python transcription of the cli/config/src/error.rs Display templates. The
@@ -24,11 +24,7 @@ _DOMAIN_TEMPLATES = (
 
 
 def _records() -> list[dict[str, Any]]:
-    return [
-        json.loads(line)
-        for line in _DATASET.read_text().splitlines()
-        if line.strip()
-    ]
+    return json.loads(_DATASET.read_text())
 
 
 def _seeded_value(fixture: str, key: str) -> Any:

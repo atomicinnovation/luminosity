@@ -14,7 +14,6 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any
 
 from inspect_ai.model import ChatMessageAssistant
 from inspect_ai.solver import Generate, Solver, TaskState, solver
@@ -88,6 +87,23 @@ def parse_transcript(stdout: str) -> list[ChatMessageAssistant]:
     return messages
 
 
+# Auth vars that override the CLI's own subscription login. A stray
+# ANTHROPIC_API_KEY (e.g. left in mise.local.toml) silently routes the agent to
+# the metered API — "credit balance too low" — instead of the subscription, so
+# strip both so `claude -p` always uses the claude.ai login.
+_SUBSCRIPTION_OVERRIDES = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
+
+
+def _agent_env(plugin: Path) -> dict[str, str]:
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in _SUBSCRIPTION_OVERRIDES
+    }
+    env["PATH"] = f"{plugin / 'bin'}{os.pathsep}{env['PATH']}"
+    return env
+
+
 def _seed(workdir: Path, fixture: str) -> None:
     source = _FIXTURES / fixture / ".luminosity"
     (workdir / ".git").mkdir(parents=True)
@@ -143,16 +159,12 @@ def run_configure_agent(*, with_skill: bool) -> Solver:
         plugin = plugin_dir()
         workdir = Path(tempfile.mkdtemp(prefix="configure-eval-"))
         _seed(workdir, state.metadata["fixture"])
-        env: dict[str, Any] = {
-            **os.environ,
-            "PATH": f"{plugin / 'bin'}{os.pathsep}{os.environ['PATH']}",
-        }
         stdout, stderr = await _run_claude(
             _claude_argv(
                 state.input_text, with_skill=with_skill, plugin=plugin
             ),
             cwd=workdir,
-            env=env,
+            env=_agent_env(plugin),
         )
         state.messages.extend(parse_transcript(stdout))
         state.metadata["workdir"] = str(workdir)

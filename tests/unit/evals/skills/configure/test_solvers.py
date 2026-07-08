@@ -6,8 +6,11 @@ from inspect_ai.model import ChatMessageAssistant
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import pytest
+
 from tests.evals.skills.configure.solvers import (
     CLAUDE_MODEL,
+    _agent_env,
     _claude_argv,
     parse_transcript,
 )
@@ -113,3 +116,22 @@ class TestClaudeArgv:
         argv = _claude_argv("q", with_skill=False, plugin=tmp_path)
         assert "--plugin-dir" not in argv
         assert "Skill" in argv[argv.index("--disallowedTools") + 1 :]
+
+
+class TestAgentEnv:
+    def test_strips_the_metered_api_auth_so_the_subscription_is_used(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        # A stray key would otherwise override the CLI's subscription login.
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-stray")
+        monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "tok")
+        env = _agent_env(tmp_path)
+        assert "ANTHROPIC_API_KEY" not in env
+        assert "ANTHROPIC_AUTH_TOKEN" not in env
+
+    def test_puts_the_staged_plugin_bin_first_on_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setenv("PATH", "/usr/bin")
+        env = _agent_env(tmp_path)
+        assert env["PATH"].startswith(f"{tmp_path / 'bin'}:")
