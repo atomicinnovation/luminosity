@@ -203,22 +203,27 @@ pretty-prints it corrupts it), whereas a `.json` array is `json.load`-ed and
 stays valid under formatting, so the dataset is human-readable and
 formatter-safe.
 
-**Open eval-design findings (need calibration before the gated run):**
+**Eval-design findings (all resolved during calibration):**
 
-1. **Skill invocation is stochastic and prompt-sensitive.** Clear get requests
-   trigger `Skill(luminosity:configure)` and pass (2/3 smoke samples CORRECT
-   with the skill invoked); phrasings like "…at the team level" made the model
-   explore the filesystem instead of invoking the skill.
-2. **The model bypasses the CLI.** With `--allowedTools Bash Skill` the agent
-   still used `Read` to open `.luminosity/config.md` directly — getting the
-   value the *wrong* way (no `luminosity config` call → graded INCORRECT).
-   `--allowedTools` did not restrict `Read`. To test skill-based CLI *routing*,
-   the harness must disallow the file-reading tools (Read/Grep/Glob and a bare
-   `cat`) that shortcut around the CLI.
+1. **Stray `ANTHROPIC_API_KEY` overrode the subscription.** The agent inherited
+   the key from `mise.local.toml`; the CLI prefers it over the claude.ai login
+   → every turn hit the unfunded metered API ("credit balance too low"). Fixed:
+   the solver strips `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` from the agent
+   env (`_agent_env`), so `claude -p` always uses the subscription.
+2. **The model bypassed the CLI via `Read`.** Fixed by `--disallowedTools
+   Read/Edit/Write/Grep/Glob/…`, so the only path to the answer is the CLI.
+3. **Skill invocation was model-sensitive.** Haiku under-triggered on `--level`
+   requests; Sonnet triggers reliably. Switched `CLAUDE_MODEL` to
+   `claude-sonnet-5` (the realistic target).
+4. **The bad-`--level` task was ill-posed.** It expected the agent to blindly
+   pass `--level bad` to surface clap's exit-2, but a skill-following model
+   correctly declines an invalid level and asks to clarify. Replaced with a
+   valid `--level personal` get (clap's exit-2 is already covered by
+   `config.rs`).
 
-These are eval-authoring decisions (prompt wording, tool restriction, possibly
-improving the skill's own triggering) that consume subscription usage to iterate
-— left for a collaborative calibration pass, then the full gated run.
+**Result:** the first full gated run (Sonnet, CLI 2.1.203) scored with-skill
+`pass^k = 0.889` (8/9; only conflict-on-set flaked once) and baseline
+`pass^k = 0.000`, committed under `results/`.
 
 ## Environment notes
 

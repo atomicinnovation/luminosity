@@ -1086,20 +1086,20 @@ Extend `test_mise_wiring.py` to assert `test:unit:evals` **is** in `test:unit`'s
 
 ## Phase 3: Live run and committed eval log
 
-> **Status (2026-07-08): re-architected host-native onto the Claude
-> subscription; mechanism validated live, eval-design calibration remains.**
-> `inspect_swe`'s bridge routes model calls through Inspect's metered API
-> provider, so it cannot use a subscription. The eval was rebuilt to drive
-> `claude -p` host-natively (no Docker, no inspect-swe; `claude`+`node` pinned
-> via mise), keeping the Inspect framework. A live smoke run **succeeded on the
-> subscription** (no billing) — plugin loads, the skill invokes
-> (`Skill(luminosity:configure)`), the agent runs the real staged
-> `bin/luminosity`, and the scorer grades correctly (2/3 smoke samples CORRECT
-> with the skill invoked). Two eval-design findings remain before the gated run:
-> skill invocation is prompt-sensitive/stochastic, and the agent can bypass the
-> CLI via `Read` unless the file-reading tools are disallowed. The Phase-3
-> deliverables (committed log, golden fixture, skill-attribution promotion)
-> await that calibration pass + a full run. See the findings note.
+> **Status (2026-07-08): COMPLETE — re-architected host-native onto the Claude
+> subscription; the gate passes.** `inspect_swe`'s bridge routes model calls
+> through Inspect's metered API provider, so it cannot use a subscription. The
+> eval was rebuilt to drive `claude -p` host-natively (no Docker, no
+> inspect-swe; `claude`+`node` pinned via mise), keeping the Inspect framework.
+> The first full gated run on the subscription (model `claude-sonnet-5`, CLI
+> 2.1.203) scored **with-skill pass^k = 0.889 (≥ 0.8)** and **baseline pass^k =
+> 0.000**, committed under `results/`. Calibration resolved three findings: a
+> stray `ANTHROPIC_API_KEY` was overriding the subscription (now stripped by the
+> solver); Haiku under-triggered the skill on `--level` requests (switched to
+> Sonnet, the realistic target); and the bad-`--level` task penalised correct
+> "ask before invalid" behaviour (replaced with a valid `--level personal` get).
+> The committed log is the durable quality signal; it is a point-in-time record
+> (the model/CLI pins drift on their own schedule).
 
 ### Overview
 
