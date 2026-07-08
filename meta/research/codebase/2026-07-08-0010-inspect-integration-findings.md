@@ -135,6 +135,38 @@ it records that `pass_k` was *confirmed present and correct* as of
 `pass_k` returns `nan` when `total < k`, but the run fails first), so the custom
 reducer's `len == k` guard is not needed.
 
+## Phase 3 live-run validation (partial — blocked on API credit)
+
+A minimal live smoke test (1 sample, 1 epoch) validated the integration chain
+end-to-end short of a graded transcript:
+
+- ✅ `build:release` cross-compiles the `linux-x64` musl launcher (statically
+  linked ELF) on the macOS host via cargo-zigbuild.
+- ✅ The Docker sandbox builds from the repo-root context, COPYs that launcher to
+  `${CLAUDE_PLUGIN_ROOT}/bin/luminosity`, and installs the pinned Claude Code
+  CLI `2.1.203`.
+- ✅ The launcher **runs in-container under amd64 emulation** — `luminosity config
+  get core.example` returns the seeded value (exit 0) via both the
+  `${CLAUDE_PLUGIN_ROOT}/bin/luminosity` path and `PATH`.
+- ✅ `inspect_swe.claude_code()` builds the sandbox via the compose file, launches
+  the CLI, and **proxies its model calls to Anthropic** (model
+  `claude-haiku-4-5-20251001`, Claude Code's real tool schema resolved — Bash
+  with a `command` argument, Write, TaskUpdate, …). This discharges the story's
+  chief residual risk: the inspect_swe-driving-Claude-Code integration works.
+- ❌ **BLOCKED:** the Anthropic API returns `400 invalid_request_error: "Your
+  credit balance is too low to access the Anthropic API"`. The
+  `mise.local.toml` key is unfunded, so no model turn completes and no gradeable
+  transcript is produced.
+
+**Consequently the Phase-3 deliverables cannot be produced yet:** the committed
+`results/<timestamp>.json` log, the golden transcript fixture, the CLI-version
+assertion, and the promotion of skill-attribution to a scored requirement all
+depend on a completed run. They remain open pending funded API credit (or a
+funded key), after which `mise run eval:skills:configure` completes them.
+Phase-0 items 3 and 5 are correspondingly still only partially answered (the
+CLI is driven via the sandbox bridge; the full Bash/Skill transcript shape was
+not captured before the billing error).
+
 ## Environment notes
 
 - Docker daemon is up (Docker 29.5.3); Claude Code CLI 2.1.203 is installed

@@ -1086,6 +1086,18 @@ Extend `test_mise_wiring.py` to assert `test:unit:evals` **is** in `test:unit`'s
 
 ## Phase 3: Live run and committed eval log
 
+> **Status (2026-07-08): BLOCKED on Anthropic API credit.** A 1-sample/1-epoch
+> smoke test validated the full integration chain — `build:release` →
+> host-independent Docker sandbox → in-container launcher (amd64 emulation) →
+> `inspect_swe`-driven Claude Code 2.1.203 → Anthropic model proxy — discharging
+> the story's chief residual risk. The run then fails at the model call with
+> `400: "Your credit balance is too low to access the Anthropic API"` (the
+> `mise.local.toml` key is unfunded). The Phase-3 deliverables below (committed
+> log, golden transcript fixture, CLI-version assertion, skill-attribution
+> promotion) require a completed run and are **deferred pending funded credit**;
+> once funded, `mise run eval:skills:configure` produces them. See the findings
+> note for the validated-vs-blocked breakdown.
+
 ### Overview
 
 Run the eval for real once — the story's residual-risk throwaway run validating
