@@ -23,9 +23,9 @@ from tests.evals.skills.configure.environment import plugin_dir
 
 _FIXTURES = Path(__file__).parent / "fixtures"
 
-# A dated snapshot so the committed log is reproducible against a fixed model;
-# recorded with the CLI version. The subscription serves it as-is.
-CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+# The model the eval measures the skill against. Sonnet is the realistic target
+# (Haiku under-triggered the skill on --level requests); recorded in the log.
+CLAUDE_MODEL = "claude-sonnet-5"
 
 # Loop guard: sized to the longest task (one CLI call plus a report; a couple
 # for a precedence set) with headroom, so a looping agent is bounded.

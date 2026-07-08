@@ -18,6 +18,10 @@ _STAGING_DIR = REPO_ROOT / "cli" / "target" / "eval-plugin"
 # bin/luminosity is the real launcher, and its dir is claude's --plugin-dir).
 PLUGIN_DIR_ENV = "LUMINOSITY_EVAL_PLUGIN_DIR"
 
+# Bound concurrent `claude -p` sessions so the subscription's rate limits are
+# not tripped (fail_on_error would otherwise fail the whole run on a 429).
+_MAX_CONCURRENT_SAMPLES = 4
+
 
 def _ensure_repo_on_path() -> None:
     # Inspect's file-path loader loads configure_eval.py with no package context
@@ -72,6 +76,7 @@ def _run_configure_eval(context: Context) -> float:
         ],
         log_format="json",
         log_dir=str(_RESULTS_DIR),
+        max_samples=_MAX_CONCURRENT_SAMPLES,
     )
     with_skill = readback.require_success(
         readback.arm_log(logs, readback.ARM_WITH_SKILL)

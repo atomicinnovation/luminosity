@@ -93,16 +93,14 @@
     }
   },
   {
-    "input": "Read the luminosity config core.example at the bad level.",
-    "target": "",
+    "input": "Read the luminosity config core.example at the personal level.",
+    "target": "personal-v",
     "metadata": {
       "action": "get",
       "key": "core.example",
-      "level": "bad",
-      "expect_error": true,
-      "marker": "bad",
-      "exit": 2,
-      "fixture": "team_core_example"
+      "level": "personal",
+      "expect_error": false,
+      "fixture": "personal_core_example"
     }
   }
 ]

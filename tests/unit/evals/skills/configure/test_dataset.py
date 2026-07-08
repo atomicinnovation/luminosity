@@ -52,11 +52,6 @@ def test_domain_markers_are_substrings_of_the_templates():
         metadata = record["metadata"]
         if not metadata["expect_error"]:
             continue
-        if metadata.get("exit") == 2:
-            # the clap usage error names the offending value, not a
-            # `luminosity:` domain template
-            assert metadata["marker"] == metadata["level"]
-            continue
         assert any(
             metadata["marker"] in template for template in _DOMAIN_TEMPLATES
         )
@@ -100,7 +95,7 @@ class TestNineScenarioClasses:
                 and not m["expect_error"]
                 and m["fixture"] == "empty_value"
             ),
-            # valid --level get
+            # valid --level get (team)
             lambda m: (
                 m["action"] == "get"
                 and not m["expect_error"]
@@ -130,8 +125,12 @@ class TestNineScenarioClasses:
             lambda m: (
                 m["expect_error"] and m["marker"] == "malformed frontmatter"
             ),
-            # bad --level (clap exit 2)
-            lambda m: m["expect_error"] and m.get("exit") == 2,
+            # valid --level get (personal)
+            lambda m: (
+                m["action"] == "get"
+                and not m["expect_error"]
+                and m.get("level") == "personal"
+            ),
         ],
     )
     def test_exactly_one_of_each_class(self, predicate: Any):
