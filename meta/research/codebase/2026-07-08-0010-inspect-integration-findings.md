@@ -243,9 +243,14 @@ confirmed every hand-built piece earns its place:
 - **`scrub_paths`** — no built-in. `write_eval_log` has no anonymisation /
   path-relativisation option, and the changelog's only `redact` entries are
   unrelated (git-remote credentials, `model_args`).
-- **`parse_transcript`** — no built-in. Inspect ingests external agents *only*
-  through the metered bridge; there is no stream-json importer or lighter
-  subprocess/transcript path.
+- **`parse_transcript`** — the one piece with a library equivalent we chose not
+  to use. The `sandbox_agent_bridge` *does* populate `state.messages` with native
+  Inspect messages automatically (model calls crossing the proxy are recorded),
+  so under the bridge no parsing is needed. We hand-roll it only because we
+  dropped the bridge for subscription auth — it is a cost of that trade, not a
+  library gap. (The scorer's outcome re-read is separate: it exists because the
+  tool-result content cannot reliably surface an exit code, and would remain
+  even under the bridge.)
 - **The `pass_k` reducer is native** (added in 0.3.224) and correctly chosen
   over the lenient `pass_at`. Nuance: `pass_k` returns the draw-without-
   replacement probability `C(correct,k)/C(total,k)`, not a hard boolean — but
