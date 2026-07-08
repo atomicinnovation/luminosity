@@ -89,6 +89,7 @@ ignore = [
 preset = "strict"
 python-version = "3.14"
 project-includes = [
+    "common/**/*.py",
     "tasks/**/*.py",
     "tests/**/*.py"
 ]

@@ -1,6 +1,15 @@
-from invoke import Collection
+import sys
+from pathlib import Path
 
-from . import (
+# invoke's loader puts tasks/ on sys.path but not the repo root, so make the
+# sibling top-level `common` package importable at collection-load time.
+_REPO_ROOT = str(Path(__file__).resolve().parent.parent)
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from invoke import Collection  # noqa: E402
+
+from . import (  # noqa: E402
     assertions,
     build,
     changelog,
@@ -18,8 +27,8 @@ from . import (
     types,
     version,
 )
-from . import eval as eval_
-from . import format as format_
+from . import eval as eval_  # noqa: E402
+from . import format as format_  # noqa: E402
 
 ns = Collection()
 

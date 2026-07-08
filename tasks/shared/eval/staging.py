@@ -6,15 +6,8 @@ if TYPE_CHECKING:
 
 
 def stage_plugin(*, repo_root: Path, host_binary: Path, dest: Path) -> Path:
-    """Assemble a plugin tree whose ``bin/luminosity`` is the real launcher.
-
-    The shipped ``bin/luminosity`` is a release-fetching shim that cannot run
-    for an in-dev prerelease. The eval grades config behaviour,
-    not distribution, so the with-skill agent must resolve
-    ``${CLAUDE_PLUGIN_ROOT}/bin/luminosity`` to the real host-native launcher —
-    staged here alongside the plugin manifest and the skill, so ``claude -p
-    --plugin-dir <dest>`` loads the configure skill and its command runs.
-    """
+    # The shipped bin/luminosity is a release-fetching shim that cannot run for
+    # an in-dev prerelease, so stage the real host-native launcher at that path.
     if dest.exists():
         shutil.rmtree(dest)
     (dest / ".claude-plugin").mkdir(parents=True)

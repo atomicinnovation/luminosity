@@ -3,9 +3,9 @@ from typing import Any
 
 import pytest
 
-from tasks.eval import readback
+from common.eval import TRIALS, baseline_arm, pass_k_reducer, with_skill_arm
 from tasks.shared.errors import EvalReadbackError
-from tests.evals.shared import names
+from tasks.shared.eval import readback
 
 
 def _metric(value: float) -> Any:
@@ -86,12 +86,10 @@ class TestScrubPaths:
         assert "~/.cache/inspect" in scrubbed
 
 
-class TestNameCoherence:
-    def test_readback_literals_equal_the_shared_names(self):
-        assert readback.ARM_WITH_SKILL == names.ARM_WITH_SKILL
-        assert readback.ARM_BASELINE == names.ARM_BASELINE
-        assert readback.PASS_K_REDUCER == names.PASS_K_REDUCER
-        assert readback.ACCURACY_METRIC == names.ACCURACY_METRIC
+class TestSharedContract:
+    def test_reducer_name_matches_the_trial_count(self):
+        assert pass_k_reducer(TRIALS) == "pass_k_3"
 
-    def test_reducer_name_is_coherent_with_the_epoch_count(self):
-        assert f"pass_k_{names.EPOCHS}" == names.PASS_K_REDUCER
+    def test_arm_naming_convention(self):
+        assert with_skill_arm("configure") == "configure_with_skill"
+        assert baseline_arm("configure") == "configure_baseline"

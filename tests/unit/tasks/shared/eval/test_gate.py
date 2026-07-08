@@ -1,6 +1,6 @@
 import pytest
 
-from tasks.eval import gate
+from tasks.shared.eval import gate
 
 
 class TestBelowFloor:

@@ -82,50 +82,41 @@ class TestNineScenarioClasses:
     @pytest.mark.parametrize(
         "predicate",
         [
-            # get-hit
             lambda m: (
                 m["action"] == "get"
                 and not m["expect_error"]
                 and m["fixture"] == "team_core_example"
                 and m.get("level") is None
             ),
-            # empty-value get
             lambda m: (
                 m["action"] == "get"
                 and not m["expect_error"]
                 and m["fixture"] == "empty_value"
             ),
-            # valid --level get (team)
             lambda m: (
                 m["action"] == "get"
                 and not m["expect_error"]
                 and m.get("level") == "team"
             ),
-            # set / precedence
             lambda m: (
                 m["action"] == "set"
                 and not m["expect_error"]
                 and "expected_team" in m
             ),
-            # conflict on set
             lambda m: (
                 m["action"] == "set"
                 and m["expect_error"]
                 and m["marker"] == "cannot set"
             ),
-            # missing key
             lambda m: (
                 m["action"] == "get"
                 and m["expect_error"]
                 and m["marker"] == "is not set"
             ),
-            # invalid key
             lambda m: m["expect_error"] and m["marker"] == "invalid config key",
-            # malformed frontmatter
             lambda m: (
                 m["expect_error"] and m["marker"] == "malformed frontmatter"
             ),
-            # valid --level get (personal)
             lambda m: (
                 m["action"] == "get"
                 and not m["expect_error"]

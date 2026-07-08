@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from tasks.eval.staging import stage_plugin
+from tasks.shared.eval.staging import stage_plugin
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,7 +31,7 @@ class TestStagePlugin:
         assert (dest / "skills" / "config" / "configure" / "SKILL.md").is_file()
         launcher = dest / "bin" / "luminosity"
         assert launcher.read_text() == "#!/bin/sh\necho real\n"
-        assert launcher.stat().st_mode & 0o111  # executable
+        assert launcher.stat().st_mode & 0o111
 
     def test_is_idempotent_replacing_a_prior_staging(self, tmp_path: Path):
         repo = _fake_repo(tmp_path / "repo")

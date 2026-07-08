@@ -1,28 +1,9 @@
-"""Deterministic outcome scorer for the configure skill eval.
+"""Grade the configure skill by the CLI's real output, not the model's prose.
 
-The scorer never grades the model's prose (the skill tells Claude to relay the
-CLI's stdout, but it may frame it — "The value is team-v"). Instead it grades
-two observable facts:
-
-- **Routing** — did the agent run the *correct* `luminosity config` command for
-  the task (right verb, key, and `--level`)? This is read from the transcript
-  as an argv-token match over the agent's Bash tool calls, never a loose
-  substring, so an exploratory or wrongly-scoped command is not mistaken for the
-  graded one.
-- **Outcome** — grade the CLI's real stdout / exit code / stderr by re-running
-  the canonical command (or, for a `set`, the level-scoped reads that reveal the
-  end state) as a host subprocess in the sample's seeded temp dir, whose
-  structured `returncode` distinguishes clap's exit 2 from a domain exit 1 (the
-  bad-`--level` task requires this — the transcript's Bash *result* content
-  cannot reliably surface a numeric exit code).
-
-The pure decision/extraction helpers (`grade_value`, `grade_error`,
-`grade_precedence`, `config_command_ran`, `skill_was_invoked`) are split from
-the sandbox I/O so every branch is unit-testable against message stubs with no
-live run. Two transcript-shape assumptions are Phase-3-verified against the
-golden fixture: the Bash tool-call argument key (`command`) and the `Skill`
-tool-use event structure. Skill attribution is a **logged diagnostic** here, not
-a hard pass/fail conjunct; Phase 3 promotes it once the event shape is captured.
+Routing is read from the transcript (an argv-token match over the agent's Bash
+calls); the outcome is graded by re-running the command as a host subprocess in
+the sample's seeded temp dir, whose structured returncode the transcript's Bash
+result content cannot reliably surface.
 """
 
 import asyncio
@@ -40,7 +21,6 @@ from inspect_ai.scorer import (
     stderr,
 )
 
-from tests.evals.shared.names import SKILL_NAME
 from tests.evals.skills.configure.environment import luminosity_binary
 
 if TYPE_CHECKING:
@@ -106,11 +86,6 @@ def _bash_commands(messages: list[Any]) -> list[str]:
 def _split_config_args(
     tokens: list[str],
 ) -> tuple[list[str], str | None] | None:
-    """Positionals and `--level` value for the `config` sub-command in tokens.
-
-    Returns None when the token list is not a `... config ...` invocation, so a
-    bare shell command is never mistaken for one.
-    """
     if "config" not in tokens:
         return None
     tail = tokens[tokens.index("config") + 1 :]
@@ -135,14 +110,9 @@ def config_command_ran(
     level: str | None,
     value: str | None = None,
 ) -> bool:
-    """Whether the agent ran the exact `config` command the task requires.
-
-    A `get` must match the verb, key, and `--level` (its absence when the task
-    is unscoped) so a wrongly-scoped read is caught here — the outcome re-read
-    cannot see the agent's level choice. A `set` matches verb + key + value;
-    its level correctness surfaces in the precedence outcome (a mis-routed
-    `--level team` overwrites the shared value), so it is not enforced here.
-    """
+    # A `get` must match its `--level` (the outcome re-read cannot see the
+    # agent's level choice); a `set`'s level correctness surfaces in the
+    # precedence outcome, so only its verb/key/value are matched here.
     for command in _bash_commands(messages):
         parsed = _split_config_args(shlex.split(command))
         if parsed is None:
@@ -157,7 +127,7 @@ def config_command_ran(
 
 
 def skill_was_invoked(messages: list[Any], name: str) -> bool:
-    # Claude Code's Skill tool call names the skill namespace-qualified, e.g.
+    # Claude Code names the skill namespace-qualified, e.g.
     # {"skill": "luminosity:configure"} — match the bare name after the colon.
     for message in messages:
         if getattr(message, "role", None) != "assistant":
@@ -228,16 +198,15 @@ async def _grade(state: TaskState, target: Target) -> bool:
     )
 
 
-def configure_scorer(*, with_skill: bool):
+def configure_scorer(*, skill: str, with_skill: bool):
     @scorer(metrics=[accuracy(), stderr()])
     def configure():
         async def score(state: TaskState, target: Target) -> Score:
             passed = await _grade(state, target)
-            invoked = skill_was_invoked(state.messages, SKILL_NAME)
             return Score(
                 value=CORRECT if passed else INCORRECT,
                 metadata={
-                    "skill_invoked": invoked,
+                    "skill_invoked": skill_was_invoked(state.messages, skill),
                     "skill_expected": with_skill,
                 },
             )

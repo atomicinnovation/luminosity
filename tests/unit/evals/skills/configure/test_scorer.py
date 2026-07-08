@@ -27,7 +27,6 @@ def _bash(command: str) -> ChatMessageAssistant:
 
 
 def _skill(name: str) -> ChatMessageAssistant:
-    # Claude Code names the skill namespace-qualified in the Skill tool call.
     return ChatMessageAssistant(
         content="",
         tool_calls=[
@@ -48,11 +47,9 @@ class TestGradeValue:
         assert grade_value("team-v\n", "team-w\n") is False
 
     def test_get_call_site_reconciles_the_trailing_newline(self):
-        # stdout "team-v\n" grades against target "team-v" + "\n"
         assert grade_value("team-v\n", "team-v" + "\n") is True
 
     def test_empty_value_line_is_distinct_from_a_miss(self):
-        # an empty value prints "\n"; target "" + "\n" matches it, "" would not
         assert grade_value("\n", "" + "\n") is True
         assert grade_value("\n", "") is False
 
@@ -89,7 +86,6 @@ class TestGradePrecedence:
         )
 
     def test_a_team_overwrite_fails(self):
-        # a mis-routed `set --level team` overwrites the shared value
         assert (
             grade_precedence(
                 "personal-v\n", "personal-v\n", "personal-v\n", "team-v\n"

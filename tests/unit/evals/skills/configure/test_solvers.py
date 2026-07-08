@@ -122,7 +122,6 @@ class TestAgentEnv:
     def test_strips_the_metered_api_auth_so_the_subscription_is_used(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        # A stray key would otherwise override the CLI's subscription login.
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-stray")
         monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "tok")
         env = _agent_env(tmp_path)
