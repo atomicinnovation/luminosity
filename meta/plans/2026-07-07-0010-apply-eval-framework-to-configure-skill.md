@@ -5,14 +5,14 @@ title: "Apply the Eval Framework to the configure Skill Implementation Plan"
 date: "2026-07-06T23:40:55+00:00"
 author: Toby Clemson
 producer: create-plan
-status: ready
+status: done
 work_item_id: "work-item:0010"
 parent: "work-item:0010"
 derived_from: ["codebase-research:2026-07-07-0010-apply-eval-framework-to-configure-skill"]
 tags: [plan, evaluation, inspect, configure, skills]
 revision: "ea45efa776c78758fafd11967e718f2a13b0e3d9"
 repository: "luminosity"
-last_updated: "2026-07-07T11:18:32+00:00"
+last_updated: "2026-07-08T16:19:31+00:00"
 last_updated_by: Toby Clemson
 schema_version: 1
 ---
@@ -219,15 +219,20 @@ sanitised) — the captured `Bash`/`Skill` shapes the later unit tests reference
       and recorded). — `inspect-ai==0.3.244`, `inspect-swe==0.2.65`; **plus a required
       `httpx<1`** constraint (see findings note item 1). No contingency needed.
 - [x] The `claude_code()` kwargs the plan wires all exist in the resolved `inspect_swe`.
-- [ ] The CLI-provisioning model is determined, and the Phase-2 §5 sandbox shape is
+- [x] The CLI-provisioning model is determined, and the Phase-2 §5 sandbox shape is
       confirmed to match it (sandbox-present launcher vs. `version=`-provisioned).
-      **Deferred to the credentialed live run (needs Docker + model API).**
+      — **Moot after the host-native pivot**: nothing provisions a CLI for the eval.
+      `mise [tools]` pins `claude` and the agent runs the staged
+      `${CLAUDE_PLUGIN_ROOT}/bin/luminosity`; the version it ran is stamped per sample.
 - [x] The `file.py@task` specifier loads under the `__init__.py`-free tree with the chosen
       import form. — **fully-absolute `from tests.evals.…` imports only** (relative
       imports fail under Inspect's loader); repo root on `sys.path`.
-- [ ] The captured transcript sample shows the real `Bash`/`Skill` fields, and whether
+- [x] The captured transcript sample shows the real `Bash`/`Skill` fields, and whether
       stdout is raw (if normalised, Phase 2 grades get-tasks via the `sandbox().exec`
-      re-read fallback). **Deferred to the credentialed live run.**
+      re-read fallback). — The pivot makes the transcript an **owned** `stream-json`
+      interface, pinned by `test_solvers.py`; the scorer re-executes rather than reading
+      tool-result text, so the raw-vs-normalised question does not arise. No separate
+      `transcript_shape_sample.json` fixture was needed.
 
 ## Phase 1: Eval tier scaffold and pass^k gate
 
@@ -1093,7 +1098,14 @@ Extend `test_mise_wiring.py` to assert `test:unit:evals` **is** in `test:unit`'s
 > inspect-swe; `claude`+`node` pinned via mise), keeping the Inspect framework.
 > The first full gated run on the subscription (model `claude-sonnet-5`, CLI
 > 2.1.203) scored **with-skill pass^k = 0.889 (≥ 0.8)** and **baseline pass^k =
-> 0.000**, committed under `results/`. Calibration resolved three findings: an
+> 0.000**. Plan validation then found three artefact gaps (log provenance, an
+> incomplete path scrub, and skill attribution left unscored), and review of the
+> transcripts showed the `_BYPASS_TOOLS` disallow was porous (Bash `cat`/`grep`
+> reproduce the denied tools) — routing is enforced by the scorer, so both arms now
+> get an identical toolset differing only in `Skill`. The committed logs come from
+> the third gated run after those fixes: **with-skill pass^k = 1.000**, baseline
+> **0.000**. The agent inherits the operator's `CLAUDE.md`/hooks (a known,
+> documented contamination that biases the baseline downward). Calibration resolved three findings: an
 > unfunded `ANTHROPIC_API_KEY` left in `mise.local.toml` overrode the
 > subscription login (a local misconfiguration — the agent inherits the ambient
 > auth env so it can be overridden deliberately); Haiku under-triggered the skill
@@ -1163,22 +1175,33 @@ a conscious, documented refresh event, not a reproducible re-run.
 
 #### Automated Verification
 
-- [ ] The gated live run exits 0: `mise run eval:skills:configure`
-- [ ] The committed log is valid JSON and readable back:
+- [x] The gated live run exits 0: `mise run eval:skills:configure`
+- [x] The committed log is valid JSON and readable back:
       `uv run python -c "from inspect_ai.log import read_eval_log; read_eval_log('<path>')"`
+- [x] The committed logs carry no absolute host path, and every sample records
+      `claude_model` / `claude_cli_version`: `uv run pytest tests/unit/evals`
 
 #### Manual Verification
 
-- [ ] The committed log records both arms over the same dataset with a
-      with-skill `pass_k ≥ 0.8`.
-- [ ] Inspect View (or `read_eval_log`) shows per-sample transcripts with the
+- [x] The committed log records both arms over the same dataset with a
+      with-skill `pass_k ≥ 0.8`. — **1.000 vs baseline 0.000** (an earlier run
+      scored 0.889; the conflict-on-set flake did not recur).
+- [x] Inspect View (or `read_eval_log`) shows per-sample transcripts with the
       `Skill` tool-use event on the with-skill arm, and the agent's `Bash` commands
       running via `${CLAUDE_PLUGIN_ROOT}/bin/luminosity` inside the seeded fixture.
-- [ ] The golden-transcript fixture is committed and its scorer test passes; the
-      log-recorded CLI version equals the pin.
-- [ ] The `inspect_swe` integration behaved (skill loaded in the with-skill arm,
-      suppressed in the baseline) — the residual risk is discharged.
-- [ ] `mise run check` and the bare `mise run` default remain green and never
+      — 27/27 with-skill samples invoked the skill; 0/27 baseline samples did.
+- [x] ~~The golden-transcript fixture is committed and its scorer test passes~~; the
+      log-recorded CLI version equals the pin. — The fixture was **dropped as
+      unnecessary** under the host-native pivot (the transcript is an owned
+      `stream-json` interface pinned by `test_solvers.py`, not a harness artefact to
+      retro-pin). The CLI version is stamped per sample and asserted at
+      `2.1.203`, matching the `mise [tools]` pin.
+- [x] ~~The `inspect_swe` integration behaved~~ (skill loaded in the with-skill arm,
+      suppressed in the baseline) — the residual risk is discharged. — `inspect_swe`
+      was dropped; the skill-loaded/suppressed contrast is instead a **scored**
+      requirement (`grade_sample`), so a regression fails the gate rather than being
+      merely observable.
+- [x] `mise run check` and the bare `mise run` default remain green and never
       trigger the eval.
 
 ---

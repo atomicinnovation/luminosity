@@ -60,15 +60,18 @@ a matched member of the group (bump in lockstep with any inspect-ai major).
   `version=` if the CLI version must be reproducible, and Phase 3 asserts the
   log-recorded version.
 
-## 3. CLI provisioning model — DEFERRED to a credentialed run
+## 3. CLI provisioning model — RESOLVED (by the host-native pivot)
 
-Requires a live `inspect_swe.claude_code()` eval against a Docker sandbox with
-an authenticated model API — not runnable in the current environment (no
-`ANTHROPIC_API_KEY`; Docker daemon is up). Deferred to the Phase-3 live run (or
-a user-run probe). The Phase-2 sandbox is built to the plan's assumption (image
-carries the real cross-built launcher at `${CLAUDE_PLUGIN_ROOT}/bin/luminosity`,
-skill loaded via `skills=`), and Phase 3 confirms both arms executed the
-in-image launcher.
+Originally deferred to a credentialed run, then **made moot**: the host-native
+pivot dropped `inspect_swe` and Docker entirely, so nothing provisions a CLI on
+the eval's behalf. The Claude Code CLI is pinned in `mise.toml [tools]`
+(`npm:@anthropic-ai/claude-code@2.1.203`, its native binary fetched by
+`deps:install:claude-native`), and the agent resolves the real launcher through
+`${CLAUDE_PLUGIN_ROOT}/bin/luminosity` in the staged plugin tree. Confirmed live:
+the `init` event lists `plugins: [{name: luminosity, source: luminosity@inline}]`
+and the agent's `Bash` commands run the staged binary. The version the agent ran
+is stamped into every sample (`claude_cli_version`), so the committed log records
+it rather than a plan-time assumption.
 
 ## 4. File-path task loader + import form — RESOLVED
 
@@ -88,14 +91,23 @@ in-image launcher.
   `inspect_eval`. pytest already puts repo root on `sys.path`
   (`pythonpath = ["."]`), so the unit tests import the same way.
 
-## 5. Transcript shape — DEFERRED to a credentialed run
+## 5. Transcript shape — RESOLVED (by the host-native pivot)
 
-The real `Bash` tool-result fields and `Skill` tool-use event structure, and
-whether stdout is raw or normalised, require a live run to capture. Deferred to
-Phase 3, which commits `fixtures/golden_transcript.json` and drives at least one
-scorer test from it (the hard gate the plan specifies). Phase-2 scorer helpers
-are written against hand-authored stubs of the assumed shape and are structured
-so the golden fixture can retro-pin them.
+Originally deferred to a credentialed run. The pivot **replaced the unknown with
+an owned interface**: because the solver drives `claude -p --output-format
+stream-json` directly, the transcript is `stream-json` (not an `inspect_swe`
+bridge artefact), and `parse_transcript` is the repo's own reader of it. The
+shape — `assistant` events carrying `tool_use` blocks, Bash `{"command", …}` and
+Skill `{"skill": "luminosity:configure", …}` (namespace-qualified) — is pinned by
+`tests/unit/evals/skills/configure/test_solvers.py`.
+
+**The planned `fixtures/golden_transcript.json` was therefore dropped, not
+forgotten.** Its purpose was to retro-pin a shape the harness handed us and we
+could only guess at; under the pivot the shape is an input we parse and can
+assert on directly. The raw-vs-normalised-stdout worry it also hedged is moot for
+a further reason: the scorer never grades tool-result text at all — it re-executes
+the command (see the outcome re-read below), because a tool result cannot reliably
+carry an exit code.
 
 ## 6. Reducer / metric read-back shape — RESOLVED (and it reverses the plan's
 core reconciliation)
@@ -135,7 +147,12 @@ it records that `pass_k` was *confirmed present and correct* as of
 `pass_k` returns `nan` when `total < k`, but the run fails first), so the custom
 reducer's `len == k` guard is not needed.
 
-## Phase 3 live-run validation (partial — blocked on API credit)
+## Phase 3, first attempt — blocked on API credit (superseded)
+
+> **Historical.** This section records the metered-API attempt that motivated the
+> host-native pivot below. Its blocker is resolved and its "deliverables cannot be
+> produced yet" conclusion no longer holds — see *Host-native pivot* and *Phase 3
+> outcome*.
 
 A minimal live smoke test (1 sample, 1 epoch) validated the integration chain
 end-to-end short of a graded transcript:
@@ -158,14 +175,10 @@ end-to-end short of a graded transcript:
   `mise.local.toml` key is unfunded, so no model turn completes and no gradeable
   transcript is produced.
 
-**Consequently the Phase-3 deliverables cannot be produced yet:** the committed
-`results/<timestamp>.json` log, the golden transcript fixture, the CLI-version
-assertion, and the promotion of skill-attribution to a scored requirement all
-depend on a completed run. They remain open pending funded API credit (or a
-funded key), after which `mise run eval:skills:configure` completes them.
-Phase-0 items 3 and 5 are correspondingly still only partially answered (the
-CLI is driven via the sandbox bridge; the full Bash/Skill transcript shape was
-not captured before the billing error).
+At the time this blocked every Phase-3 deliverable, since each depends on a
+completed run. The pivot below removed the blocker by dropping the metered API
+altogether; all of them are now delivered (see *Phase 3 outcome*), except the
+golden transcript fixture, which the pivot made unnecessary (item 5).
 
 ## Host-native pivot (2026-07-08)
 
@@ -212,8 +225,17 @@ formatter-safe.
    verbatim, so `claude -p` uses whatever the environment provides — the
    subscription login by default, or a deliberately-set API key for operators
    without a subscription.
-2. **The model bypassed the CLI via `Read`.** Fixed by `--disallowedTools
-   Read/Edit/Write/Grep/Glob/…`, so the only path to the answer is the CLI.
+2. **The model bypassed the CLI via `Read`.** Originally "fixed" by
+   `--disallowedTools Read/Edit/Write/Grep/Glob/…`, claimed to make the CLI the only
+   path to the answer. **That claim was false and the disallow has since been
+   dropped.** With `Bash` allowed, `cat`/`grep`/`find` reproduce those tools exactly:
+   in the second gated run's baseline arm, 12 of 27 samples read
+   `.luminosity/config.md` straight off disk via `Bash` and one of them reported the
+   right value — scoring INCORRECT anyway. What actually enforces CLI routing is the
+   scorer's `config_command_ran`, which requires the agent to have invoked the
+   canonical `luminosity config …` argv. The tool list was redundant with that check
+   and merely made the arms look more constrained than they were. Both arms now get
+   the same tools (`Bash`, `Read`, `Grep`, `Glob`) and differ only in `Skill`.
 3. **Skill invocation was model-sensitive.** Haiku under-triggered on `--level`
    requests; Sonnet triggers reliably. Switched `CLAUDE_MODEL` to
    `claude-sonnet-5` (the realistic target).
@@ -223,9 +245,67 @@ formatter-safe.
    valid `--level personal` get (clap's exit-2 is already covered by
    `config.rs`).
 
-**Result:** the first full gated run (Sonnet, CLI 2.1.203) scored with-skill
-`pass^k = 0.889` (8/9; only conflict-on-set flaked once) and baseline
-`pass^k = 0.000`, committed under `results/`.
+## Known contamination: the agent inherits the operator's Claude Code config
+
+**Accepted, not fixed.** `claude -p` loads the user-level `CLAUDE_CONFIG_DIR/CLAUDE.md`
+and the hooks in that directory's `settings.json`. The eval's agent therefore runs with
+whatever personal instructions and hooks the operator happens to have, and the committed
+log is **not portable across machines**.
+
+Observed on the authoring machine: the user memory imports an `RTK.md` (a CLI-proxy
+tool), and four baseline samples went hunting for it —
+`which rtk 2>/dev/null && rtk --help` — instead of looking for `luminosity`. The
+with-skill arm shows zero such detours, because the skill gives it a direction. So the
+contamination **lands asymmetrically, biasing the baseline downward** and flattering the
+A/B contrast.
+
+Bounded, though: the operator's `PreToolUse` hook rewrites `Bash` commands, but
+`rtk rewrite` passes `luminosity config …`, `cat`, `grep`, and `find` through unchanged
+(verified). The *graded* argv is never rewritten, so grading itself is sound — the
+contamination is a distraction on the agent's reasoning, not a corruption of the
+measurement.
+
+**Why it is not fixed:** on CLI 2.1.203, subscription auth and context isolation are
+mutually exclusive. `--bare` is exactly the isolation switch (skips hooks, auto-memory,
+CLAUDE.md discovery) but documents that "OAuth and keychain are never read" — it demands
+`ANTHROPIC_API_KEY`. Pointing `CLAUDE_CONFIG_DIR` or `HOME` at a throwaway directory
+(with or without seeding `.claude.json`) yields `Not logged in`: the keychain read is
+gated on the default config dir. Escaping the contamination therefore means returning to
+the metered API the host-native pivot exists to avoid.
+
+**The lever, when it matters:** run the committed eval with `--bare` and a funded
+`ANTHROPIC_API_KEY`. Until then, read the baseline number as a *lower* bound on a
+skill-less agent, and expect the with-skill/baseline gap to narrow on a clean machine.
+
+## Phase 3 outcome
+
+The first full gated run (Sonnet, CLI 2.1.203) scored with-skill `pass^k = 0.889`
+(8/9; only conflict-on-set flaked once) and baseline `pass^k = 0.000`.
+
+Plan validation then found three gaps in that run's artefacts, each since closed
+(and the logs regenerated by a second gated run, **with-skill `pass^k = 1.000`,
+baseline `0.000`** — the conflict-on-set flake did not recur, which is what a
+single stochastic draw is worth):
+
+- **Provenance.** `eval.model` reads `mockllm/model`, because the solver bypasses
+  Inspect's provider — so the log said nothing about what actually ran. The solver
+  now stamps `claude_model` + `claude_cli_version` into every sample, guarded by
+  `tests/unit/evals/skills/configure/test_results.py`.
+- **Path scrubbing.** `scrub_paths` relativised only `$REPO_ROOT` and `$HOME`, so
+  the per-sample workdir (`/var/folders/…`, outside `$HOME`) leaked 66 absolute
+  host paths into the committed logs. It now scrubs the temp root and its resolved
+  twin; the guard is a `HOST_PATH_PATTERN` regex applied to the committed logs
+  themselves, not a `$HOME` substring check.
+- **Skill attribution.** It was recorded in `Score.metadata` but never scored, so
+  the with-skill arm could have passed on a lucky bare-model command. `grade_sample`
+  now makes `skill_invoked == skill_expected` a conjunct of the verdict.
+
+Two smaller findings were closed alongside: a mis-routed conflict `set --level`
+was undetectable (the argv match now enforces a task-pinned `set` level, while
+leaving an unpinned one free, since the default and an explicit equivalent are
+both correct), and the per-sample workdirs leaked ~54 temp directories per run
+(now swept by `cleanup_workdirs` after a completed run — a crashed run keeps them
+for reading).
 
 ## Alternatives considered: bridge + meridian proxy
 
