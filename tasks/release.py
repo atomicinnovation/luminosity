@@ -4,6 +4,8 @@ from invoke import Context, task
 
 from . import build, changelog, git, github, marketplace, sign, version
 
+_ARTIFACT_MARKERS = (".key", "cli/launcher/bin/luminosity-", "manifest.minisig")
+
 
 def _refuse_under_ci(task_name: str) -> None:
     """Raise if called from a CI environment."""
@@ -15,9 +17,25 @@ def _refuse_under_ci(task_name: str) -> None:
         )
 
 
+def _assert_no_leaked_artifacts(context: Context) -> None:
+    result = context.run("git status --porcelain", hide=True, warn=True)
+    offenders = [
+        line
+        for line in result.stdout.splitlines()
+        if any(marker in line for marker in _ARTIFACT_MARKERS)
+    ]
+    if offenders:
+        joined = "\n".join(offenders)
+        raise RuntimeError(
+            "refusing to commit: a signing secret or staged binary would be "
+            f"swept into the version-bump commit:\n{joined}"
+        )
+
+
 def _publish(context: Context) -> None:
     version.check(context)
     resolved_version = str(version.read(context, print_to_stdout=False))
+    _assert_no_leaked_artifacts(context)
     git.commit_version(context)
     git.tag_version(context)
     git.push(context)

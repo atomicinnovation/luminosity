@@ -379,12 +379,12 @@ def test_publish_allows_clean_version_anchors(ctx, mocker):
 
 #### Automated Verification
 
-- [ ] Leak-guard tests pass: `uv run pytest tests/unit/tasks/test_release.py -v`
-- [ ] Full local CI mirror passes: `mise run`
+- [x] Leak-guard tests pass: `uv run pytest tests/unit/tasks/test_release.py -v`
+- [x] Full local CI mirror passes: `mise run`
 
 #### Manual Verification
 
-- [ ] A tracked `checksums.json` / `manifest.json` bump does not trip the guard;
+- [x] A tracked `checksums.json` / `manifest.json` bump does not trip the guard;
       a stray `luminosity-*` binary or `.key` file does.
 
 ---
