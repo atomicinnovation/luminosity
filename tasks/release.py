@@ -2,7 +2,16 @@ import os
 
 from invoke import Context, task
 
-from . import build, changelog, git, github, marketplace, sign, version
+from . import (
+    assertions,
+    build,
+    changelog,
+    git,
+    github,
+    marketplace,
+    sign,
+    version,
+)
 
 
 def _refuse_under_ci(task_name: str) -> None:
@@ -17,8 +26,8 @@ def _refuse_under_ci(task_name: str) -> None:
 
 def _publish(context: Context) -> None:
     version.check(context)
-    sign.sign(context)
     resolved_version = str(version.read(context, print_to_stdout=False))
+    assertions.no_leaked_artifacts(context)
     git.commit_version(context)
     git.tag_version(context)
     git.push(context)
@@ -27,18 +36,30 @@ def _publish(context: Context) -> None:
 
 
 @task
+def prerelease_sign(context: Context) -> None:
+    """CI prerelease part 2: sign the staged binaries and manifest."""
+    sign.sign(context)
+
+
+@task
+def release_sign(context: Context) -> None:
+    """CI stable release part 2: sign the staged binaries and manifest."""
+    sign.sign(context)
+
+
+@task
 def prerelease_prepare(context: Context) -> None:
     """CI prerelease part 1: bump version, cross-build binaries, checksum."""
     git.configure(context)
     git.pull(context)
     version.bump(context, bump_type=[version.BumpType.PRE])
-    marketplace.update_prerelease_version(context, plugin="accelerator")
+    marketplace.update_prerelease_version(context, plugin="luminosity")
     build.release(context)
 
 
 @task
 def prerelease_finalise(context: Context) -> None:
-    """CI prerelease part 2: commit, tag, push, release, publish."""
+    """CI prerelease part 3: commit, tag, push, release, publish."""
     _publish(context)
 
 
@@ -55,7 +76,7 @@ def release_prepare(context: Context) -> None:
 
 @task
 def release_finalise(context: Context) -> None:
-    """CI stable release part 2: commit, tag, push, release, publish."""
+    """CI stable release part 3: commit, tag, push, release, publish."""
     _publish(context)
 
 
@@ -64,6 +85,7 @@ def prerelease(context: Context) -> None:
     """Local-dev only: full prerelease flow without SLSA attestation."""
     _refuse_under_ci("prerelease")
     prerelease_prepare(context)
+    prerelease_sign(context)
     prerelease_finalise(context)
 
 
@@ -72,6 +94,8 @@ def release(context: Context) -> None:
     """Local-dev only: full stable release flow without SLSA attestation."""
     _refuse_under_ci("release")
     release_prepare(context)
+    release_sign(context)
     release_finalise(context)
     prerelease_prepare(context)
+    prerelease_sign(context)
     prerelease_finalise(context)

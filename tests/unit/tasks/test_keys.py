@@ -55,10 +55,10 @@ class TestGenerate:
         generate(ctx, force=True)
         assert ctx.run.called
 
-    def test_password_protected_by_default(self, ctx: MagicMock, key_dir: Path):
+    def test_generates_a_password_less_key(self, ctx: MagicMock, key_dir: Path):
         generate(ctx)
-        assert " -W" not in _command(ctx)
-
-    def test_no_password_passes_the_flag(self, ctx: MagicMock, key_dir: Path):
-        generate(ctx, no_password=True)
         assert " -W" in _command(ctx)
+
+    def test_generation_is_non_interactive(self, ctx: MagicMock, key_dir: Path):
+        generate(ctx)
+        assert "pty" not in ctx.run.call_args.kwargs

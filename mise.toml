@@ -301,7 +301,7 @@ description = "Verify the GitHub CLI is authenticated"
 run = "invoke github.check-auth"
 
 [tasks."keys:generate"]
-description = "Generate the release minisign keypair (public key committed, secret key gitignored; store the secret in the GitHub MINISIGN_SECRET_KEY secret)"
+description = "Generate the password-less release minisign keypair (public key committed, secret key gitignored; store the secret in the GitHub LUMINOSITY_RELEASE_SECRET_KEY secret)"
 depends = ["deps:install:python"]
 run = "invoke keys.generate"
 
@@ -309,22 +309,34 @@ run = "invoke keys.generate"
 description = "Abort if the working tree has any uncommitted changes"
 run = "invoke git.check-clean"
 
+[tasks."assertions:no-leaked-artifacts"]
+description = "Abort if a signing secret or staged binary would leak into a commit"
+run = "invoke assertions.no-leaked-artifacts"
+
 [tasks."prerelease:prepare"]
-description = "CI prerelease halve 1: bump version, build binaries, compute checksums"
+description = "CI prerelease part 1: bump version, build binaries, compute checksums"
 depends = ["deps:install:zigbuild", "github:check-auth", "git:check-clean"]
 run = "invoke prerelease.prepare"
 
+[tasks."prerelease:sign"]
+description = "CI prerelease part 2: sign the staged binaries and manifest"
+run = "invoke prerelease.sign"
+
 [tasks."prerelease:finalise"]
-description = "CI prerelease halve 2: commit, tag, push, create release, upload, publish"
+description = "CI prerelease part 3: commit, tag, push, create release, upload, publish"
 run = "invoke prerelease.finalise"
 
 [tasks."release:prepare"]
-description = "CI stable release halve 1: finalise version, update marketplace and changelog, build binaries"
+description = "CI stable release part 1: finalise version, update marketplace and changelog, build binaries"
 depends = ["deps:install:zigbuild", "github:check-auth", "git:check-clean"]
 run = "invoke release.prepare"
 
+[tasks."release:sign"]
+description = "CI stable release part 2: sign the staged binaries and manifest"
+run = "invoke release.sign"
+
 [tasks."release:finalise"]
-description = "CI stable release halve 2: commit, tag, push, create release, upload, publish"
+description = "CI stable release part 3: commit, tag, push, create release, upload, publish"
 run = "invoke release.finalise"
 
 [tasks."prerelease"]

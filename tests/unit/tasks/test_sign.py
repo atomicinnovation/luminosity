@@ -120,7 +120,7 @@ class TestSignTask:
     def test_requires_the_secret_key_env(
         self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
     ):
-        monkeypatch.delenv("MINISIGN_SECRET_KEY", raising=False)
+        monkeypatch.delenv("LUMINOSITY_RELEASE_SECRET_KEY", raising=False)
         with pytest.raises(Exit):
             sign(ctx)
 
@@ -132,8 +132,7 @@ class TestSignTask:
         monkeypatch: pytest.MonkeyPatch,
     ):
         self._setup(mocker, tmp_path)
-        monkeypatch.setenv("MINISIGN_SECRET_KEY", "fake-key-material")
-        monkeypatch.delenv("MINISIGN_KEY_PASSWORD", raising=False)
+        monkeypatch.setenv("LUMINOSITY_RELEASE_SECRET_KEY", "fake-key-material")
         mock_sign = mocker.patch.object(minisign, "sign")
         sign(ctx)
         # One signature per binary + one for the manifest.

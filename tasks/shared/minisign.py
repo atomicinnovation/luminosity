@@ -14,13 +14,10 @@ def sign(
     secret_key_path: Path,
     target: Path,
     signature_path: Path,
-    *,
-    password: str | None = None,
 ) -> None:
-    """Detach-sign `target` with the secret key, writing `signature_path`.
+    """Detach-sign `target` with the password-less secret key.
 
-    A password is fed on stdin; `None` suits an unencrypted key. Any failure
-    raises `MinisignError`.
+    Writes `signature_path`; any failure raises `MinisignError`.
     """
     command = [
         MINISIGN,
@@ -32,11 +29,9 @@ def sign(
         "-m",
         str(target),
     ]
-    stdin = "" if password is None else f"{password}\n"
     try:
         result = subprocess.run(
             command,
-            input=stdin,
             capture_output=True,
             text=True,
             timeout=_TIMEOUT_SECONDS,

@@ -1,6 +1,7 @@
 from invoke import Collection
 
 from . import (
+    assertions,
     build,
     changelog,
     deny,
@@ -24,15 +25,18 @@ ns = Collection()
 ns_prerelease = Collection("prerelease")
 ns_prerelease.add_task(release.prerelease, default=True)
 ns_prerelease.add_task(release.prerelease_prepare, name="prepare")
+ns_prerelease.add_task(release.prerelease_sign, name="sign")
 ns_prerelease.add_task(release.prerelease_finalise, name="finalise")
 ns.add_collection(ns_prerelease)
 
 ns_release = Collection("release")
 ns_release.add_task(release.release, default=True)
 ns_release.add_task(release.release_prepare, name="prepare")
+ns_release.add_task(release.release_sign, name="sign")
 ns_release.add_task(release.release_finalise, name="finalise")
 ns.add_collection(ns_release)
 
+ns.add_collection(Collection.from_module(assertions))
 ns.add_collection(Collection.from_module(build))
 ns.add_collection(Collection.from_module(changelog))
 ns.add_collection(Collection.from_module(deny))
