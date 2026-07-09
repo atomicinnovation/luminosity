@@ -7,6 +7,7 @@ from invoke import Context
 import tasks.release as release_module
 from tasks.release import (
     _publish,
+    prerelease_prepare,
     prerelease_sign,
 )
 
@@ -48,6 +49,21 @@ class TestSignTasks:
         signed = mocker.patch.object(release_module.sign, "sign")
         prerelease_sign(ctx)
         signed.assert_called_once_with(ctx)
+
+
+class TestPrereleasePrepare:
+    def test_updates_the_luminosity_prerelease_marketplace(
+        self, ctx: MagicMock, mocker: MockerFixture
+    ) -> None:
+        update = mocker.patch.object(
+            release_module.marketplace, "update_prerelease_version"
+        )
+        mocker.patch.object(release_module.git, "configure")
+        mocker.patch.object(release_module.git, "pull")
+        mocker.patch.object(release_module.version, "bump")
+        mocker.patch.object(release_module.build, "release")
+        prerelease_prepare(ctx)
+        update.assert_called_once_with(ctx, plugin="luminosity")
 
 
 class TestLeakGuard:

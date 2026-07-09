@@ -61,7 +61,7 @@ def prerelease_prepare(context: Context) -> None:
     git.configure(context)
     git.pull(context)
     version.bump(context, bump_type=[version.BumpType.PRE])
-    marketplace.update_prerelease_version(context, plugin="accelerator")
+    marketplace.update_prerelease_version(context, plugin="luminosity")
     build.release(context)
 
 

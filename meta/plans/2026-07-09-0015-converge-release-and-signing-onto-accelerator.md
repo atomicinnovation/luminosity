@@ -641,16 +641,16 @@ def test_prerelease_prepare_updates_the_luminosity_marketplace(ctx, mocker):
 
 #### Automated Verification
 
-- [ ] Release tests pass: `uv run pytest tests/unit/tasks/test_release.py -v`
-- [ ] No wrong-plugin call remains:
+- [x] Release tests pass: `uv run pytest tests/unit/tasks/test_release.py -v`
+- [x] No wrong-plugin call remains:
       `! grep -rn 'plugin="accelerator"' tasks/`
-- [ ] Markdown-lint / full local CI mirror passes: `mise run`
+- [x] Markdown-lint / full local CI mirror passes: `mise run`
 
 #### Manual Verification
 
-- [ ] `RELEASING.md` accurately describes the post-convergence pipeline and the
+- [x] `RELEASING.md` accurately describes the post-convergence pipeline and the
       key + App lifecycles.
-- [ ] The CONTRIBUTING.md note no longer claims a separate signing *job* and no
+- [x] The CONTRIBUTING.md note no longer claims a separate signing *job* and no
       longer references a passphrase or `MINISIGN_*` secrets.
 - [ ] The PR description lists each intentional divergence.
 
