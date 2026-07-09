@@ -117,7 +117,6 @@ class TestReleasePrepare:
 class TestPrereleaseFinalise:
     def test_commits_before_upload(self, ctx: MagicMock, mocker: MockerFixture):
         mocker.patch.object(tv, "check")
-        mocker.patch.object(tsign, "sign")
         mocker.patch.object(
             tv, "read", return_value=MagicMock(__str__=lambda _: "1.21.0-pre.1")
         )
@@ -136,7 +135,6 @@ class TestPrereleaseFinalise:
         self, ctx: MagicMock, mocker: MockerFixture
     ):
         mocker.patch.object(tv, "check")
-        mocker.patch.object(tsign, "sign")
         mocker.patch.object(
             tv, "read", return_value=MagicMock(__str__=lambda _: "1.21.0-pre.1")
         )
@@ -151,7 +149,7 @@ class TestPrereleaseFinalise:
         assert mock_create.called
         assert mock_upload.called
 
-    def test_signs_before_upload(self, ctx: MagicMock, mocker: MockerFixture):
+    def test_does_not_sign(self, ctx: MagicMock, mocker: MockerFixture):
         mocker.patch.object(tv, "check")
         mock_sign = mocker.patch.object(tsign, "sign")
         mocker.patch.object(
@@ -165,15 +163,14 @@ class TestPrereleaseFinalise:
 
         prerelease_finalise(ctx)
 
-        mock_sign.assert_called_once_with(ctx)
+        mock_sign.assert_not_called()
 
-    def test_coherence_gate_aborts_before_signing_or_publishing(
+    def test_coherence_gate_aborts_before_publishing(
         self, ctx: MagicMock, mocker: MockerFixture
     ):
         mocker.patch.object(
             tv, "check", side_effect=Exit("version:check failed", code=1)
         )
-        mock_sign = mocker.patch.object(tsign, "sign")
         mock_commit = mocker.patch.object(tgit, "commit_version")
         mock_create = mocker.patch.object(gh, "create_release")
         mock_upload = mocker.patch.object(gh, "upload_and_verify")
@@ -183,7 +180,6 @@ class TestPrereleaseFinalise:
         with pytest.raises(Exit):
             prerelease_finalise(ctx)
 
-        assert not mock_sign.called
         assert not mock_commit.called
         assert not mock_create.called
         assert not mock_upload.called
@@ -215,12 +211,14 @@ class TestLocalDevGuards:
         monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
         monkeypatch.delenv("CI", raising=False)
         mock_prepare = mocker.patch.object(tr, "prerelease_prepare")
+        mock_sign = mocker.patch.object(tr, "prerelease_sign")
         mock_finalise = mocker.patch.object(tr, "prerelease_finalise")
         prerelease(ctx)
         mock_prepare.assert_called_once_with(ctx)
+        mock_sign.assert_called_once_with(ctx)
         mock_finalise.assert_called_once_with(ctx)
 
-    def test_release_calls_all_four_halves(
+    def test_release_calls_every_stage(
         self,
         ctx: MagicMock,
         mocker: MockerFixture,
@@ -229,11 +227,15 @@ class TestLocalDevGuards:
         monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
         monkeypatch.delenv("CI", raising=False)
         mock_rp = mocker.patch.object(tr, "release_prepare")
+        mock_rs = mocker.patch.object(tr, "release_sign")
         mock_rf = mocker.patch.object(tr, "release_finalise")
         mock_pp = mocker.patch.object(tr, "prerelease_prepare")
+        mock_ps = mocker.patch.object(tr, "prerelease_sign")
         mock_pf = mocker.patch.object(tr, "prerelease_finalise")
         release(ctx)
         mock_rp.assert_called_once_with(ctx)
+        mock_rs.assert_called_once_with(ctx)
         mock_rf.assert_called_once_with(ctx)
         mock_pp.assert_called_once_with(ctx)
+        mock_ps.assert_called_once_with(ctx)
         mock_pf.assert_called_once_with(ctx)

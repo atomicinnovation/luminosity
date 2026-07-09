@@ -289,17 +289,17 @@ shape that relocates the secret onto a prepare step and expect rejection.
 
 #### Automated Verification
 
-- [ ] New release tests pass: `uv run pytest tests/unit/tasks/test_release.py -v`
-- [ ] Workflow topology tests pass:
+- [x] New release tests pass: `uv run pytest tests/unit/tasks/test_release.py -v`
+- [x] Workflow topology tests pass:
       `uv run pytest tests/unit/tasks/test_workflows.py -v`
-- [ ] Read-only CI set passes: `mise run check`
-- [ ] Full local CI mirror passes: `mise run`
+- [x] Read-only CI set passes: `mise run check`
+- [x] Full local CI mirror passes: `mise run`
 
 #### Manual Verification
 
-- [ ] Tracing the signing-secret env in `main.yml` shows it only on `*:sign`
+- [x] Tracing the signing-secret env in `main.yml` shows it only on `*:sign`
       steps and on no step that runs `cargo zigbuild` / `:prepare`.
-- [ ] `_publish` reads top-to-bottom as commit → tag → push → release with no
+- [x] `_publish` reads top-to-bottom as commit → tag → push → release with no
       signing.
 
 ---

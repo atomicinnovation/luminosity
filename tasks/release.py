@@ -17,13 +17,24 @@ def _refuse_under_ci(task_name: str) -> None:
 
 def _publish(context: Context) -> None:
     version.check(context)
-    sign.sign(context)
     resolved_version = str(version.read(context, print_to_stdout=False))
     git.commit_version(context)
     git.tag_version(context)
     git.push(context)
     github.create_release(context, target_version=resolved_version)
     github.upload_and_verify(context, resolved_version)
+
+
+@task
+def prerelease_sign(context: Context) -> None:
+    """CI prerelease step 2: sign the staged binaries and manifest."""
+    sign.sign(context)
+
+
+@task
+def release_sign(context: Context) -> None:
+    """CI stable release step 2: sign the staged binaries and manifest."""
+    sign.sign(context)
 
 
 @task
@@ -64,6 +75,7 @@ def prerelease(context: Context) -> None:
     """Local-dev only: full prerelease flow without SLSA attestation."""
     _refuse_under_ci("prerelease")
     prerelease_prepare(context)
+    prerelease_sign(context)
     prerelease_finalise(context)
 
 
@@ -72,6 +84,8 @@ def release(context: Context) -> None:
     """Local-dev only: full stable release flow without SLSA attestation."""
     _refuse_under_ci("release")
     release_prepare(context)
+    release_sign(context)
     release_finalise(context)
     prerelease_prepare(context)
+    prerelease_sign(context)
     prerelease_finalise(context)

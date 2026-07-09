@@ -280,6 +280,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: mise run prerelease:prepare
 
+      - name: Sign prerelease
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
+        run: mise run prerelease:sign
+
       - name: Attest binary provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
@@ -288,8 +294,6 @@ jobs:
       - name: Finalise prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
-          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
         run: mise run prerelease:finalise
 
   approve-release:
@@ -337,6 +341,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: mise run release:prepare
 
+      - name: Sign stable release
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
+        run: mise run release:sign
+
       - name: Attest stable binary provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
@@ -345,14 +355,18 @@ jobs:
       - name: Finalise stable release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
-          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
         run: mise run release:finalise
 
       - name: Prepare post-stable prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: mise run prerelease:prepare
+
+      - name: Sign post-stable prerelease
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
+        run: mise run prerelease:sign
 
       - name: Attest post-stable binary provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
@@ -362,6 +376,4 @@ jobs:
       - name: Finalise post-stable prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
-          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
         run: mise run prerelease:finalise

@@ -233,3 +233,103 @@ def test_existing_test_jobs_still_gate_release(wf: dict[str, Any]) -> None:
     needs = _needs(jobs[PRERELEASE_GATE_JOB])
     assert TEST_UNIT_JOB in needs
     assert TEST_INTEGRATION_JOB in needs
+
+
+# --- Release-sequence step topology -----------------------------------------
+#
+# Each release job runs one or more prepare → sign → attest → finalise
+# sequences. The signing secret enters only the sign step; attest runs after
+# signing. The prerelease job runs one sequence; the release job runs two
+# (stable, then the post-stable prerelease re-cut).
+
+RELEASE_STEP_SEQUENCE = ["prepare", "sign", "attest", "finalise"]
+_RELEASE_SEQUENCE_REPETITIONS = {PRERELEASE_JOB: 1, RELEASE_JOB: 2}
+
+
+def _steps(job: dict[str, Any]) -> list[dict[str, Any]]:
+    return [step for step in job.get("steps", []) if isinstance(step, dict)]
+
+
+def _step_kind(step: dict[str, Any]) -> str | None:
+    run = step.get("run", "")
+    if "attest-build-provenance" in step.get("uses", ""):
+        return "attest"
+    if ":prepare" in run:
+        return "prepare"
+    if ":sign" in run:
+        return "sign"
+    if ":finalise" in run:
+        return "finalise"
+    return None
+
+
+def _release_step_kinds(job: dict[str, Any]) -> list[str]:
+    kinds = (_step_kind(step) for step in _steps(job))
+    return [kind for kind in kinds if kind is not None]
+
+
+def _carries_signing_secret(step: dict[str, Any]) -> bool:
+    env = step.get("env", {})
+    return any(key != "GH_TOKEN" for key in env)
+
+
+def _assert_sequence_ordering(job: dict[str, Any], repetitions: int) -> None:
+    assert _release_step_kinds(job) == RELEASE_STEP_SEQUENCE * repetitions
+
+
+def _assert_signing_secret_only_on_sign_steps(job: dict[str, Any]) -> None:
+    for step in _steps(job):
+        if _carries_signing_secret(step):
+            assert ":sign" in step.get("run", ""), (
+                f"{step.get('name')} carries the signing secret but does not "
+                "run a :sign target"
+            )
+
+
+def _assert_release_step_topology(wf: dict[str, Any]) -> None:
+    jobs = wf["jobs"]
+    for job_name, repetitions in _RELEASE_SEQUENCE_REPETITIONS.items():
+        job = jobs[job_name]
+        _assert_sequence_ordering(job, repetitions)
+        _assert_signing_secret_only_on_sign_steps(job)
+
+
+def test_release_step_topology_holds(wf: dict[str, Any]) -> None:
+    _assert_release_step_topology(wf)
+
+
+def _leak_secret_onto_a_prepare_step(jobs: dict[str, Any]) -> None:
+    for step in jobs[PRERELEASE_JOB]["steps"]:
+        if ":prepare" in step.get("run", ""):
+            step.setdefault("env", {})["MINISIGN_SECRET_KEY"] = "x"
+            return
+
+
+def _move_attest_before_sign(jobs: dict[str, Any]) -> None:
+    steps = jobs[PRERELEASE_JOB]["steps"]
+    sign_index = next(
+        i for i, s in enumerate(steps) if ":sign" in s.get("run", "")
+    )
+    attest_index = next(
+        i
+        for i, s in enumerate(steps)
+        if "attest-build-provenance" in s.get("uses", "")
+    )
+    steps.insert(sign_index, steps.pop(attest_index))
+
+
+_KNOWN_BAD_STEP_SHAPES = [
+    _leak_secret_onto_a_prepare_step,
+    _move_attest_before_sign,
+]
+
+
+@pytest.mark.parametrize("introduce_violation", _KNOWN_BAD_STEP_SHAPES)
+def test_step_topology_assertions_reject_each_known_bad_shape(
+    wf: dict[str, Any],
+    introduce_violation: Callable[[dict[str, Any]], None],
+) -> None:
+    bad = copy.deepcopy(wf)
+    introduce_violation(bad["jobs"])
+    with pytest.raises(AssertionError):
+        _assert_release_step_topology(bad)
