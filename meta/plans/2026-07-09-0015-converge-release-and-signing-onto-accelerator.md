@@ -550,9 +550,9 @@ and `secrets.LUMINOSITY_RELEASER_SECRET`, and that their Checkout step's
 
 #### Automated Verification
 
-- [ ] Workflow tests pass:
+- [x] Workflow tests pass:
       `uv run pytest tests/unit/tasks/test_workflows.py -v`
-- [ ] Full local CI mirror passes: `mise run`
+- [x] Full local CI mirror passes: `mise run`
 
 #### Manual Verification
 

@@ -356,3 +356,50 @@ def test_no_minisign_password_or_secret_env_remains() -> None:
     text = WORKFLOW.read_text()
     assert "MINISIGN_SECRET_KEY" not in text
     assert "MINISIGN_KEY_PASSWORD" not in text
+
+
+# --- GitHub App releaser identity -------------------------------------------
+#
+# The version-bump push is authorized past main's ruleset by a GitHub App on
+# the bypass list. Both release jobs mint the App token and check out with it,
+# so the persisted push credential is the App's, not the default Actions bot's.
+
+APP_TOKEN_ACTION = "create-github-app-token"
+APP_TOKEN_OUTPUT = "${{ steps.app-token.outputs.token }}"
+
+
+def _app_token_step(job: dict[str, Any]) -> dict[str, Any] | None:
+    for step in _steps(job):
+        if APP_TOKEN_ACTION in step.get("uses", ""):
+            return step
+    return None
+
+
+def _checkout_step(job: dict[str, Any]) -> dict[str, Any] | None:
+    for step in _steps(job):
+        if "actions/checkout" in step.get("uses", ""):
+            return step
+    return None
+
+
+@pytest.mark.parametrize("job_name", [PRERELEASE_JOB, RELEASE_JOB])
+def test_release_job_mints_and_checks_out_with_the_app_token(
+    wf: dict[str, Any], job_name: str
+) -> None:
+    job = wf["jobs"][job_name]
+
+    app_token = _app_token_step(job)
+    assert app_token is not None
+    assert app_token.get("id") == "app-token"
+    provided = app_token.get("with", {})
+    assert (
+        provided.get("client-id") == "${{ vars.LUMINOSITY_RELEASER_CLIENT_ID }}"
+    )
+    assert (
+        provided.get("private-key")
+        == "${{ secrets.LUMINOSITY_RELEASER_SECRET }}"
+    )
+
+    checkout = _checkout_step(job)
+    assert checkout is not None
+    assert checkout.get("with", {}).get("token") == APP_TOKEN_OUTPUT
