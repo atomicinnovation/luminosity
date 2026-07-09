@@ -2,9 +2,16 @@ import os
 
 from invoke import Context, task
 
-from . import build, changelog, git, github, marketplace, sign, version
-
-_ARTIFACT_MARKERS = (".key", "cli/launcher/bin/luminosity-", "manifest.minisig")
+from . import (
+    assertions,
+    build,
+    changelog,
+    git,
+    github,
+    marketplace,
+    sign,
+    version,
+)
 
 
 def _refuse_under_ci(task_name: str) -> None:
@@ -17,25 +24,10 @@ def _refuse_under_ci(task_name: str) -> None:
         )
 
 
-def _assert_no_leaked_artifacts(context: Context) -> None:
-    result = context.run("git status --porcelain", hide=True, warn=True)
-    offenders = [
-        line
-        for line in result.stdout.splitlines()
-        if any(marker in line for marker in _ARTIFACT_MARKERS)
-    ]
-    if offenders:
-        joined = "\n".join(offenders)
-        raise RuntimeError(
-            "refusing to commit: a signing secret or staged binary would be "
-            f"swept into the version-bump commit:\n{joined}"
-        )
-
-
 def _publish(context: Context) -> None:
     version.check(context)
     resolved_version = str(version.read(context, print_to_stdout=False))
-    _assert_no_leaked_artifacts(context)
+    assertions.no_leaked_artifacts(context)
     git.commit_version(context)
     git.tag_version(context)
     git.push(context)
@@ -45,13 +37,13 @@ def _publish(context: Context) -> None:
 
 @task
 def prerelease_sign(context: Context) -> None:
-    """CI prerelease step 2: sign the staged binaries and manifest."""
+    """CI prerelease part 2: sign the staged binaries and manifest."""
     sign.sign(context)
 
 
 @task
 def release_sign(context: Context) -> None:
-    """CI stable release step 2: sign the staged binaries and manifest."""
+    """CI stable release part 2: sign the staged binaries and manifest."""
     sign.sign(context)
 
 
@@ -67,7 +59,7 @@ def prerelease_prepare(context: Context) -> None:
 
 @task
 def prerelease_finalise(context: Context) -> None:
-    """CI prerelease part 2: commit, tag, push, release, publish."""
+    """CI prerelease part 3: commit, tag, push, release, publish."""
     _publish(context)
 
 
@@ -84,7 +76,7 @@ def release_prepare(context: Context) -> None:
 
 @task
 def release_finalise(context: Context) -> None:
-    """CI stable release part 2: commit, tag, push, release, publish."""
+    """CI stable release part 3: commit, tag, push, release, publish."""
     _publish(context)
 
 

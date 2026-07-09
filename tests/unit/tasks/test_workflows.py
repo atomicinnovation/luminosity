@@ -53,12 +53,6 @@ def _no_approval_gated_job_holds_the_release_lock(
 
 
 def _release_runs_only_after_approval(jobs: dict[str, Any]) -> None:
-    """Assert the approval topology by job name.
-
-    prerelease and release carry identical write permissions, so nothing but
-    the names tells them apart; the name-agnostic lock invariant above
-    backstops a careless rename.
-    """
     assert jobs[APPROVAL_GATE_JOB].get("environment") == RELEASE_ENVIRONMENT
     assert APPROVAL_GATE_JOB in _needs(jobs[RELEASE_JOB])
     assert PRERELEASE_JOB in _needs(jobs[APPROVAL_GATE_JOB])
@@ -154,15 +148,6 @@ def test_topology_assertions_reject_each_known_bad_shape(
         _assert_release_topology(bad)
 
 
-# --- Rust CI job presence ---------------------------------------------------
-#
-# This guard verifies CI *job topology* — that the jobs exist, run the right
-# `mise run` targets, and gate the release via `needs:`. It does NOT (and
-# cannot) verify branch-protection mergeability, which lives in repo settings
-# (see CONTRIBUTING.md). A job present in YAML but absent from the
-# branch-protection required checks would let a red build merge with this test
-# still green — so this is a necessary backstop, not sufficient enforcement.
-
 PRERELEASE_GATE_JOB = "prerelease"
 TEST_UNIT_JOB = "test-unit"
 TEST_INTEGRATION_JOB = "test-integration"
@@ -217,9 +202,6 @@ def test_check_architecture_job_runs_pup_and_the_regression(
     jobs = wf["jobs"]
     architecture = jobs["check-architecture"]
     assert _job_runs_target(architecture, "mise run pup:check")
-    # The cargo-pup behavioural regression cannot be silently dropped from the
-    # one job that provisions its nightly. It runs via the test:integration:pup
-    # mise task (which filters to -m requires_pup), not pytest directly.
     assert _job_runs_target(architecture, "mise run test:integration:pup")
     assert "check-architecture" in _needs(jobs[PRERELEASE_GATE_JOB])
 
@@ -234,13 +216,6 @@ def test_existing_test_jobs_still_gate_release(wf: dict[str, Any]) -> None:
     assert TEST_UNIT_JOB in needs
     assert TEST_INTEGRATION_JOB in needs
 
-
-# --- Release-sequence step topology -----------------------------------------
-#
-# Each release job runs one or more prepare → sign → attest → finalise
-# sequences. The signing secret enters only the sign step; attest runs after
-# signing. The prerelease job runs one sequence; the release job runs two
-# (stable, then the post-stable prerelease re-cut).
 
 RELEASE_STEP_SEQUENCE = ["prepare", "sign", "attest", "finalise"]
 _RELEASE_SEQUENCE_REPETITIONS = {PRERELEASE_JOB: 1, RELEASE_JOB: 2}
@@ -357,12 +332,6 @@ def test_no_minisign_password_or_secret_env_remains() -> None:
     assert "MINISIGN_SECRET_KEY" not in text
     assert "MINISIGN_KEY_PASSWORD" not in text
 
-
-# --- GitHub App releaser identity -------------------------------------------
-#
-# The version-bump push is authorized past main's ruleset by a GitHub App on
-# the bypass list. Both release jobs mint the App token and check out with it,
-# so the persisted push credential is the App's, not the default Actions bot's.
 
 APP_TOKEN_ACTION = "create-github-app-token"
 APP_TOKEN_OUTPUT = "${{ steps.app-token.outputs.token }}"

@@ -67,51 +67,19 @@ class TestPrereleasePrepare:
 
 
 class TestLeakGuard:
-    def test_publish_aborts_when_a_secret_would_leak(
+    def test_publish_runs_the_leak_guard_before_committing(
         self, ctx: MagicMock, mocker: MockerFixture
     ) -> None:
-        ctx.run.return_value = MagicMock(
-            stdout="?? keys/luminosity-release.key\n"
-        )
         mocker.patch.object(release_module.version, "check")
         mocker.patch.object(
             release_module.version, "read", return_value="1.0.0"
+        )
+        mocker.patch.object(
+            release_module.assertions,
+            "no_leaked_artifacts",
+            side_effect=RuntimeError,
         )
         commit = mocker.patch.object(release_module.git, "commit_version")
         with pytest.raises(RuntimeError):
             _publish(ctx)
         commit.assert_not_called()
-
-    def test_publish_aborts_when_a_staged_binary_would_leak(
-        self, ctx: MagicMock, mocker: MockerFixture
-    ) -> None:
-        ctx.run.return_value = MagicMock(
-            stdout="?? cli/launcher/bin/luminosity-darwin-arm64\n"
-        )
-        mocker.patch.object(release_module.version, "check")
-        mocker.patch.object(
-            release_module.version, "read", return_value="1.0.0"
-        )
-        commit = mocker.patch.object(release_module.git, "commit_version")
-        with pytest.raises(RuntimeError):
-            _publish(ctx)
-        commit.assert_not_called()
-
-    def test_publish_allows_clean_version_anchors(
-        self, ctx: MagicMock, mocker: MockerFixture
-    ) -> None:
-        ctx.run.return_value = MagicMock(
-            stdout=" M cli/launcher/bin/checksums.json\n"
-            " M cli/launcher/bin/manifest.json\n"
-        )
-        mocker.patch.object(release_module.version, "check")
-        mocker.patch.object(
-            release_module.version, "read", return_value="1.0.0"
-        )
-        commit = mocker.patch.object(release_module.git, "commit_version")
-        mocker.patch.object(release_module.git, "tag_version")
-        mocker.patch.object(release_module.git, "push")
-        mocker.patch.object(release_module.github, "create_release")
-        mocker.patch.object(release_module.github, "upload_and_verify")
-        _publish(ctx)
-        commit.assert_called_once_with(ctx)
