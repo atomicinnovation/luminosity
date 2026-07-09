@@ -126,7 +126,7 @@ prerelease.
 ## The leak guard
 
 `finalise` uses a blanket `git add .` to stage the version bump, so before it
-commits, `_assert_no_leaked_artifacts` scans the porcelain status and aborts if
+commits, `assertions.no_leaked_artifacts` scans the porcelain status and aborts if
 anything matching a `.key` secret, a staged `cli/launcher/bin/luminosity-`
 binary, or `manifest.minisig` is present. The tracked version anchors
 (`checksums.json`, `manifest.json`) are deliberately excluded and do not trip

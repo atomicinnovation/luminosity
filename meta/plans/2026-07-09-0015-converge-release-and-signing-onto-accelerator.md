@@ -5,7 +5,7 @@ title: "Converge the Release & Signing Process onto Accelerator's Proven Pipelin
 date: "2026-07-08T23:19:01+00:00"
 author: Toby Clemson
 producer: create-plan
-status: draft
+status: done
 work_item_id: "work-item:0015"
 parent: "work-item:0015"
 derived_from: ["codebase-research:2026-07-08-0015-converge-release-signing-onto-accelerator"]
