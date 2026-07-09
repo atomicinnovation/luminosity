@@ -20,7 +20,11 @@ build = [
     "ziglang==0.16.0",
     "cargo-zigbuild==0.23.0",
     "tomlkit>=0.13.2",
-    "pathspec>=0.12.1"
+    "pathspec>=0.12.1",
+    "inspect-ai==0.3.244",
+    # inspect-ai leaves httpx unbounded and prerelease = "allow" would otherwise
+    # pick the broken 1.0.dev* pre-release.
+    "httpx<1"
 ]
 dev = [
     "pytest>=8",
@@ -80,10 +84,12 @@ ignore = [
 preset = "strict"
 python-version = "3.14"
 project-includes = [
+    "common/**/*.py",
     "tasks/**/*.py",
     "tests/**/*.py"
 ]
 replace-imports-with-any = [
+    "inspect_ai.*",
     "invoke.*",
     "keepachangelog.*",
     "pathspec.*",

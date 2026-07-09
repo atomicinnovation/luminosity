@@ -254,6 +254,91 @@ class TestPupWiring:
         assert "test:integration:pup" not in _depends(mise, "test:integration")
 
 
+class TestEvalTierWiring:
+    """The eval tier is declared but excluded from every CI aggregate."""
+
+    @pytest.mark.parametrize(
+        "name", ["eval", "eval:skills", "eval:skills:configure"]
+    )
+    def test_eval_task_is_declared(self, mise: Mise, name: str):
+        assert name in _tasks(mise)
+
+    @pytest.mark.parametrize(
+        "name", ["eval", "eval:skills", "eval:skills:configure"]
+    )
+    def test_eval_task_is_absent_from_check(self, mise: Mise, name: str):
+        assert name not in _depends(mise, "check")
+
+    @pytest.mark.parametrize(
+        "name", ["eval", "eval:skills", "eval:skills:configure"]
+    )
+    def test_eval_task_is_absent_from_default(self, mise: Mise, name: str):
+        assert name not in _depends(mise, "default")
+
+    def test_eval_roll_ups_are_pure_depends(self, mise: Mise):
+        # The intermediate tiers mirror the test:unit roll-up shape: no `run`,
+        # only `depends`, so a second skill slots under eval:skills cleanly.
+        assert "run" not in _tasks(mise)["eval"]
+        assert "run" not in _tasks(mise)["eval:skills"]
+        assert _depends(mise, "eval") == ["eval:skills"]
+        assert _depends(mise, "eval:skills") == ["eval:skills:configure"]
+
+    def test_configure_leaf_wraps_the_invoke_task(self, mise: Mise):
+        leaf = _tasks(mise)["eval:skills:configure"]
+        assert leaf["run"] == "invoke eval.skills.configure"
+        assert "deps:install:python" in leaf.get("depends", [])
+
+    def test_configure_leaf_provisions_the_host_launcher(self, mise: Mise):
+        # Host-native `claude -p` runs the host launcher (build:launcher stages
+        # it) at the plugin's bin/luminosity — not the cross-built release.
+        depends = _depends(mise, "eval:skills:configure")
+        assert "build:launcher" in depends
+        assert "build:release" not in depends
+
+    def test_configure_leaf_provisions_the_native_claude(self, mise: Mise):
+        assert "deps:install:claude-native" in _depends(
+            mise, "eval:skills:configure"
+        )
+
+
+class TestClaudeCodePin:
+    """The Claude Code CLI is pinned via mise's npm backend for the evals."""
+
+    _CLAUDE_TOOL = "npm:@anthropic-ai/claude-code"
+    # At or above the plugin's v2.1.144 skill-preload floor. The version the
+    # agent actually ran is stamped per sample by the solver; the committed
+    # logs are checked against it by tests/unit/evals/…/test_results.py.
+    _EXPECTED = "2.1.203"
+
+    def test_claude_and_node_are_pinned(self, mise: Mise):
+        tools = mise["tools"]
+        assert tools[self._CLAUDE_TOOL] == self._EXPECTED
+        assert "node" in tools
+
+    def test_native_provisioning_task_wraps_an_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["deps:install:claude-native"]["run"]
+            == "invoke deps.install-claude-native"
+        )
+
+
+class TestEvalUnitSuiteWiring:
+    """The eval-logic unit suite runs in the default sweep; the live tier does
+    not.
+    """
+
+    def test_test_unit_evals_wraps_an_invoke_task(self, mise: Mise):
+        assert _tasks(mise)["test:unit:evals"]["run"] == "invoke test.evals.run"
+
+    def test_test_unit_evals_is_folded_into_test_unit(self, mise: Mise):
+        # Mirror of the live-tier exclusion: the eval unit suite MUST run in CI
+        # so the scorer/dataset/coherence tests cannot silently fall out.
+        assert "test:unit:evals" in _depends(mise, "test:unit")
+
+    def test_test_unit_evals_provisions_python(self, mise: Mise):
+        assert "deps:install:python" in _depends(mise, "test:unit:evals")
+
+
 class TestFinalEnumeratedArrays:
     """Pin the complete top-level task arrays."""
 
@@ -282,6 +367,7 @@ class TestFinalEnumeratedArrays:
         assert _depends(mise, "test:unit") == [
             "test:unit:tasks",
             "test:unit:cli",
+            "test:unit:evals",
         ]
 
 

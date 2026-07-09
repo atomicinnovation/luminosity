@@ -4,6 +4,9 @@ _.python.venv = { path = ".venv", create = true }
 [tools]
 uv = "0.11.6"
 python = "3.14.4"
+# node + the Claude Code CLI (a Node app) drive the skill-eval tier's claude -p.
+node = "22.12.0"
+"npm:@anthropic-ai/claude-code" = "2.1.203"
 gh = "2.89.0"
 rust = { version = "1.90.0", components = "rustfmt,clippy,llvm-tools-preview" }
 "aqua:nextest-rs/nextest/cargo-nextest" = "0.9.138"
@@ -43,6 +46,10 @@ run = "invoke deps.install-zigbuild"
 description = "Provision the cargo-pup nightly toolchain + pinned cargo-pup (rustup-managed, not a mise [tool])"
 run = "invoke deps.install-pup"
 
+[tasks."deps:install:claude-native"]
+description = "Fetch the platform-native Claude Code binary the pinned npm shim bootstraps (mise's npm backend skips the postinstall); needed by the skill-eval tier"
+run = "invoke deps.install-claude-native"
+
 [tasks."test:unit:tasks"]
 description = "Run pytest unit tests for invoke tasks"
 depends = ["deps:install:python"]
@@ -73,6 +80,11 @@ description = "Run the whole Rust workspace's unit tests in one --workspace pass
 depends = ["deps:install:rust-components"]
 run = "invoke test.cli.run"
 
+[tasks."test:unit:evals"]
+description = "Run the eval-logic unit tests (scorer, dataset, coherence); the live eval tier stays out of CI"
+depends = ["deps:install:python"]
+run = "invoke test.evals.run"
+
 [tasks."test:unit:launcher"]
 description = "Run launcher-crate unit tests only (ad-hoc; the aggregate covers it via test:unit:cli)"
 depends = ["deps:install:rust-components"]
@@ -85,7 +97,7 @@ run = "invoke test.kernel.run"
 
 [tasks."test:unit"]
 description = "Run all unit tests in parallel"
-depends = ["test:unit:tasks", "test:unit:cli"]
+depends = ["test:unit:tasks", "test:unit:cli", "test:unit:evals"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"
@@ -94,6 +106,19 @@ depends = ["test:integration:tasks", "test:integration:deny", "test:integration:
 [tasks.test]
 description = "Run all tests in parallel"
 depends = ["test:unit", "test:integration"]
+
+[tasks."eval:skills:configure"]
+description = "Run the configure skill Inspect eval on demand (host-native claude -p; excluded from CI for token/subscription cost)"
+depends = ["deps:install:python", "deps:install:claude-native", "build:launcher"]
+run = "invoke eval.skills.configure"
+
+[tasks."eval:skills"]
+description = "Run all skill evals on demand (excluded from CI for token cost)"
+depends = ["eval:skills:configure"]
+
+[tasks.eval]
+description = "Run every eval tier on demand (excluded from CI for token cost)"
+depends = ["eval:skills"]
 
 [tasks."format:scripts:check"]
 description = "Check shell formatting with shfmt (read-only; fails on drift)"

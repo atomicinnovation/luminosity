@@ -15,10 +15,17 @@
 # so a `.luminosity/` discovered below the repo root is still matched.
 **/.luminosity/config.local.md
 **/.luminosity/tmp/
+# …except the eval fixtures, which deliberately commit a personal config to
+# exercise the precedence + malformed-frontmatter paths.
+!tests/evals/skills/configure/fixtures/**/config.local.md
 .claude/settings.local.json
+# Local mise overrides may carry secrets (e.g. ANTHROPIC_API_KEY for the eval
+# tier's live run) — never commit them.
+mise.local.toml
 .idea/
 .playwright-mcp/
 .pytest_cache/
+.venv/
 __pycache__/
 workspaces/
 node_modules/

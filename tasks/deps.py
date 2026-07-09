@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 from invoke import Context, Exit, task
 
@@ -8,6 +9,8 @@ from tasks.shared.targets import TARGETS
 _CROSS_TARGETS = tuple(triple for triple, _ in TARGETS)
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+_CLAUDE_NPM_TOOL = "npm:@anthropic-ai/claude-code"
 
 
 @task
@@ -37,6 +40,55 @@ def install_zigbuild(context: Context) -> None:
         if context.run(command, warn=True, pty=False).exited != 0:
             raise Exit(f"deps:install:zigbuild: {message}", code=1)
     install_rust_targets(context)
+
+
+@task
+def install_claude_native(context: Context) -> None:
+    """Fetch the platform-native Claude Code binary the npm shim bootstraps.
+
+    mise's npm backend installs the pinned @anthropic-ai/claude-code with
+    --ignore-scripts, so the postinstall that downloads the platform-native
+    binary never runs and the `claude` shim errors. This runs that postinstall
+    against the mise-managed install — the same rustup-provisions-cargo-pup
+    pattern for a tool mise cannot pin end-to-end. Idempotent: skipped when
+    `claude` already works.
+    """
+    if _claude_runs(context):
+        return
+    where = context.run(
+        f"mise where {_CLAUDE_NPM_TOOL}", warn=True, pty=False, hide=True
+    )
+    if where.exited != 0:
+        raise Exit(
+            "deps:install:claude-native: the pinned claude npm tool is not "
+            "installed — run `mise install` first",
+            code=1,
+        )
+    install_script = (
+        Path(where.stdout.strip())
+        / "lib/node_modules/@anthropic-ai/claude-code/install.cjs"
+    )
+    if not install_script.is_file():
+        raise Exit(
+            f"deps:install:claude-native: postinstall script not found at "
+            f"{install_script}",
+            code=1,
+        )
+    with context.cd(str(install_script.parent)):
+        context.run("node install.cjs", warn=True, pty=False)
+    if not _claude_runs(context):
+        raise Exit(
+            "deps:install:claude-native: failed to provision the native "
+            "claude binary",
+            code=1,
+        )
+
+
+def _claude_runs(context: Context) -> bool:
+    return (
+        context.run("claude --version", warn=True, pty=False, hide=True).exited
+        == 0
+    )
 
 
 @task
