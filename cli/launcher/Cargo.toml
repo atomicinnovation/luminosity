@@ -2,7 +2,7 @@
 # Seeded from plugin.json; subsequent bumps are owned by tasks/version.py,
 # which keeps plugin.json / this Cargo.toml / checksums.json coherent.
 name = "luminosity"
-version = "0.1.0-pre.1"
+version = "0.1.0"
 edition = "2021"
 # The MSRV; with resolver = "3" this drives MSRV-aware version selection. A CI
 # leg builds/tests on this exact toolchain so an MSRV-breaking transitive bump
