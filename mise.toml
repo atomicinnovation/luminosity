@@ -301,7 +301,7 @@ description = "Verify the GitHub CLI is authenticated"
 run = "invoke github.check-auth"
 
 [tasks."keys:generate"]
-description = "Generate the release minisign keypair (public key committed, secret key gitignored; store the secret in the GitHub MINISIGN_SECRET_KEY secret)"
+description = "Generate the password-less release minisign keypair (public key committed, secret key gitignored; store the secret in the GitHub LUMINOSITY_RELEASE_SECRET_KEY secret)"
 depends = ["deps:install:python"]
 run = "invoke keys.generate"
 

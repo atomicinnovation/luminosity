@@ -532,7 +532,6 @@ class TestDownloadAndVerifySignatureRealTool:
         self,
         mocker: MockerFixture,
         signed_by_secret: Path,
-        password: str | None = None,
     ) -> tuple[Path, str]:
         # download_release_asset is stubbed to place the already-prepared bytes
         # into whatever temp path the helper picked.
@@ -540,7 +539,7 @@ class TestDownloadAndVerifySignatureRealTool:
         payload = source_dir / "payload.bin"
         payload.write_bytes(b"launcher-bytes")
         sig = source_dir / "payload.bin.minisig"
-        minisign.sign(signed_by_secret, payload, sig, password=password)
+        minisign.sign(signed_by_secret, payload, sig)
 
         def fake_download(
             ctx: MagicMock, tag: str, asset_name: str, output_path: Path

@@ -10,9 +10,8 @@ from tasks.shared.paths import RELEASE_PUBLIC_KEY
 def generate(
     context: Context,
     force: bool = False,
-    no_password: bool = False,
 ) -> None:
-    """Generate the release minisign keypair.
+    """Generate the password-less release minisign keypair.
 
     Writes the committed public key and its gitignored sibling secret key.
     Refuses to overwrite an existing public key without `--force`, since
@@ -30,25 +29,22 @@ def generate(
     command = [
         minisign.MINISIGN,
         "-G",
+        "-W",
         "-f",  # minisign overwrite flag; existence is guarded by --force above
         "-p",
         str(RELEASE_PUBLIC_KEY),
         "-s",
         str(secret_key),
     ]
-    if no_password:
-        command.append("-W")
-    # pty=True so the interactive passphrase prompt works.
-    context.run(shlex.join(command), pty=True)
+    context.run(shlex.join(command))
 
     print(
         "\nGenerated the release keypair:\n"
         f"  public  (commit this):   {RELEASE_PUBLIC_KEY}\n"
         f"  secret  (DO NOT commit): {secret_key}\n\n"
         "Next steps:\n"
-        f"  1. Store the contents of {secret_key} in the GitHub "
-        "`MINISIGN_SECRET_KEY` secret\n"
-        "     (and its passphrase in `MINISIGN_KEY_PASSWORD`).\n"
+        "  1. gh secret set LUMINOSITY_RELEASE_SECRET_KEY < "
+        f"{secret_key}\n"
         f"  2. Delete the local secret key: rm {secret_key}\n"
         "  3. Rebuild so the launcher re-embeds the new public key: "
         "mise run build:launcher\n"

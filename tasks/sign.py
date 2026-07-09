@@ -22,8 +22,7 @@ from tasks.shared.targets import TARGETS
 MANIFEST_SCHEMA_VERSION = 1
 _LAUNCHER_DESCRIPTION = "The luminosity launcher"
 
-_SECRET_KEY_ENV = "MINISIGN_SECRET_KEY"  # noqa: S105 — env var name, not a secret
-_KEY_PASSWORD_ENV = "MINISIGN_KEY_PASSWORD"  # noqa: S105 — env var name
+_SECRET_KEY_ENV = "LUMINOSITY_RELEASE_SECRET_KEY"  # noqa: S105 — env var name
 
 
 def build_manifest(
@@ -69,16 +68,13 @@ def _signatures() -> dict[str, str]:
     }
 
 
-def sign_binaries(
-    context: Context, secret_key: Path, password: str | None
-) -> None:
+def sign_binaries(context: Context, secret_key: Path) -> None:
     """Detach-sign each staged binary as `luminosity-{platform}.minisig`."""
     for _, platform in TARGETS:
         minisign.sign(
             secret_key,
             binary_path(platform),
             signature_path(platform),
-            password=password,
         )
 
 
@@ -97,19 +93,17 @@ def write_manifest() -> None:
 def sign(context: Context) -> None:
     """Sign every binary, build the manifest, and sign the manifest.
 
-    Reads the release secret key from `MINISIGN_SECRET_KEY` (and optional
-    `MINISIGN_KEY_PASSWORD`), writing it to a private temp file to sign with.
+    Reads the password-less release secret key from
+    `LUMINOSITY_RELEASE_SECRET_KEY`, writing it to a private temp file to
+    sign with.
     """
     key_material = os.environ.get(_SECRET_KEY_ENV)
     if not key_material:
         raise Exit(f"{_SECRET_KEY_ENV} is not set; cannot sign the release", 1)
-    password = os.environ.get(_KEY_PASSWORD_ENV) or None
     with tempfile.TemporaryDirectory() as tmp:
         secret_key = Path(tmp) / "release.key"
         secret_key.write_text(key_material)
         secret_key.chmod(0o600)
-        sign_binaries(context, secret_key, password)
+        sign_binaries(context, secret_key)
         write_manifest()
-        minisign.sign(
-            secret_key, MANIFEST, MANIFEST_SIGNATURE, password=password
-        )
+        minisign.sign(secret_key, MANIFEST, MANIFEST_SIGNATURE)

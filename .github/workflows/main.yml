@@ -282,8 +282,7 @@ jobs:
 
       - name: Sign prerelease
         env:
-          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
-          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
+          LUMINOSITY_RELEASE_SECRET_KEY: ${{ secrets.LUMINOSITY_RELEASE_SECRET_KEY }}
         run: mise run prerelease:sign
 
       - name: Attest binary provenance
@@ -343,8 +342,7 @@ jobs:
 
       - name: Sign stable release
         env:
-          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
-          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
+          LUMINOSITY_RELEASE_SECRET_KEY: ${{ secrets.LUMINOSITY_RELEASE_SECRET_KEY }}
         run: mise run release:sign
 
       - name: Attest stable binary provenance
@@ -364,8 +362,7 @@ jobs:
 
       - name: Sign post-stable prerelease
         env:
-          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
-          MINISIGN_KEY_PASSWORD: ${{ secrets.MINISIGN_KEY_PASSWORD }}
+          LUMINOSITY_RELEASE_SECRET_KEY: ${{ secrets.LUMINOSITY_RELEASE_SECRET_KEY }}
         run: mise run prerelease:sign
 
       - name: Attest post-stable binary provenance

@@ -333,3 +333,26 @@ def test_step_topology_assertions_reject_each_known_bad_shape(
     introduce_violation(bad["jobs"])
     with pytest.raises(AssertionError):
         _assert_release_step_topology(bad)
+
+
+SIGNING_SECRET_ENV = "LUMINOSITY_RELEASE_SECRET_KEY"
+
+
+def test_sign_steps_reference_the_release_secret_key(
+    wf: dict[str, Any],
+) -> None:
+    for job_name in _RELEASE_SEQUENCE_REPETITIONS:
+        sign_steps = [
+            step
+            for step in _steps(wf["jobs"][job_name])
+            if ":sign" in step.get("run", "")
+        ]
+        assert sign_steps
+        for step in sign_steps:
+            assert SIGNING_SECRET_ENV in step.get("env", {})
+
+
+def test_no_minisign_password_or_secret_env_remains() -> None:
+    text = WORKFLOW.read_text()
+    assert "MINISIGN_SECRET_KEY" not in text
+    assert "MINISIGN_KEY_PASSWORD" not in text

@@ -490,17 +490,17 @@ workflow.
 
 #### Automated Verification
 
-- [ ] Sign + keys tests pass:
+- [x] Sign + keys tests pass:
       `uv run pytest tests/unit/tasks/test_sign.py tests/unit/tasks/test_keys.py -v`
-- [ ] Workflow tests pass:
+- [x] Workflow tests pass:
       `uv run pytest tests/unit/tasks/test_workflows.py -v`
-- [ ] No password remnants:
+- [x] No password remnants:
       `! grep -rn "MINISIGN_KEY_PASSWORD\|MINISIGN_SECRET_KEY" tasks/ .github/`
-- [ ] Full local CI mirror passes: `mise run`
+- [x] Full local CI mirror passes: `mise run`
 
 #### Manual Verification
 
-- [ ] `mise run keys:generate --force` (throwaway dir) produces a key that signs
+- [x] `mise run keys:generate --force` (throwaway dir) produces a key that signs
       and verifies without a passphrase prompt.
 
 ---
