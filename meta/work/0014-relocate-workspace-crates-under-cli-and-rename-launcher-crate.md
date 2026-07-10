@@ -5,7 +5,7 @@ title: "Relocate Workspace Crates Under cli/ and Rename the Launcher Crate"
 date: "2026-07-02T01:14:59+00:00"
 author: Toby Clemson
 producer: create-work-item
-status: ready
+status: done
 kind: task
 priority: medium
 parent: "work-item:0001"

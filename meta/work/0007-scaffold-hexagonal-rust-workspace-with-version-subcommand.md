@@ -5,7 +5,7 @@ title: "Scaffold the Hexagonal Rust Workspace with a version Subcommand"
 date: "2026-06-22T20:03:08+00:00"
 author: Toby Clemson
 producer: extract-work-items
-status: ready
+status: done
 kind: story
 priority: high
 parent: "work-item:0001"
