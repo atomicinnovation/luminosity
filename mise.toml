@@ -120,6 +120,11 @@ depends = ["eval:skills:configure"]
 description = "Run every eval tier on demand (excluded from CI for token cost)"
 depends = ["eval:skills"]
 
+[tasks."eval:view"]
+description = "Serve the Inspect log viewer over the committed skill-eval logs (no live run; forwards flags, e.g. `-- --skill configure --port 8080`)"
+depends = ["deps:install:python"]
+run = "invoke eval.view"
+
 [tasks."format:scripts:check"]
 description = "Check shell formatting with shfmt (read-only; fails on drift)"
 run = "invoke format.scripts.check"
