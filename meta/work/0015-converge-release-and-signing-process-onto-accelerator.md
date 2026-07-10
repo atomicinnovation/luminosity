@@ -5,7 +5,7 @@ title: "Converge the Release & Signing Process onto Accelerator's Proven Pipelin
 date: "2026-07-08T22:53:04+00:00"
 author: Toby Clemson
 producer: create-work-item
-status: draft
+status: done
 kind: task
 priority: high
 relates_to: ["work-item:0008"]

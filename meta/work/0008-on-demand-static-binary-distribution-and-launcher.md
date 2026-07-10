@@ -5,7 +5,7 @@ title: "On-Demand Static-Binary Distribution & Launcher"
 date: "2026-06-22T20:03:08+00:00"
 author: Toby Clemson
 producer: extract-work-items
-status: in-progress
+status: done
 kind: story
 priority: high
 parent: "work-item:0001"
