@@ -8,10 +8,10 @@ from invoke import Context, Exit
 
 from common.eval import PLUGIN_DIR_ENV, baseline_arm, with_skill_arm
 from tasks.shared.eval import readback, staging
+from tasks.shared.eval.locations import EVALS_SKILLS_DIR, results_dir
 from tasks.shared.eval.workdirs import cleanup_workdirs
 from tasks.shared.paths import REPO_ROOT, binary_path
 
-_EVALS_DIR = REPO_ROOT / "tests" / "evals" / "skills"
 _STAGING_DIR = REPO_ROOT / "cli" / "target" / "eval-plugin"
 _MAX_CONCURRENT_SAMPLES = 4
 
@@ -54,14 +54,14 @@ def run_skill_eval(context: Context, skill: str) -> float:
             repo_root=REPO_ROOT, host_binary=_host_binary(), dest=_STAGING_DIR
         )
     )
-    eval_file = _EVALS_DIR / skill / f"{skill}_eval.py"
-    results_dir = _EVALS_DIR / skill / "results"
-    results_dir.mkdir(parents=True, exist_ok=True)
+    eval_file = EVALS_SKILLS_DIR / skill / f"{skill}_eval.py"
+    results = results_dir(skill)
+    results.mkdir(parents=True, exist_ok=True)
     with_arm, base_arm = with_skill_arm(skill), baseline_arm(skill)
     logs = inspect_eval(
         [f"{eval_file}@{with_arm}", f"{eval_file}@{base_arm}"],
         log_format="json",
-        log_dir=str(results_dir),
+        log_dir=str(results),
         max_samples=_MAX_CONCURRENT_SAMPLES,
     )
     with_skill = readback.require_success(readback.arm_log(logs, with_arm))
@@ -73,7 +73,7 @@ def run_skill_eval(context: Context, skill: str) -> float:
             f"— investigate whether the skill adds value"
         )
     readback.scrub_result_dir(
-        results_dir,
+        results,
         repo_root=str(REPO_ROOT),
         home=str(Path.home()),
         tmp_dirs=_tmp_dirs(),
