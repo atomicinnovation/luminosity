@@ -339,6 +339,24 @@ class TestEvalUnitSuiteWiring:
         assert "deps:install:python" in _depends(mise, "test:unit:evals")
 
 
+class TestSkillWiringSuiteWiring:
+    """The skill-wiring unit suite runs in the default sweep like the others."""
+
+    def test_test_unit_skills_wraps_an_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["test:unit:skills"]["run"] == "invoke test.skills.run"
+        )
+
+    def test_test_unit_skills_is_folded_into_test_unit(self, mise: Mise):
+        # The AC-enforcing registry test only guards the wiring if it actually
+        # runs in CI; the directory-scoped roll-ups never collect
+        # tests/unit/skills without this leaf.
+        assert "test:unit:skills" in _depends(mise, "test:unit")
+
+    def test_test_unit_skills_provisions_python(self, mise: Mise):
+        assert "deps:install:python" in _depends(mise, "test:unit:skills")
+
+
 class TestFinalEnumeratedArrays:
     """Pin the complete top-level task arrays."""
 
@@ -368,6 +386,7 @@ class TestFinalEnumeratedArrays:
             "test:unit:tasks",
             "test:unit:cli",
             "test:unit:evals",
+            "test:unit:skills",
         ]
 
 

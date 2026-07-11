@@ -664,12 +664,12 @@ coherence assertions mirroring the `test:unit:evals` ones.
 
 #### Automated Verification
 
-- [ ] Registry + `allowed-tools` + AC-10 wiring tests pass via the roll-up:
+- [x] Registry + `allowed-tools` + AC-10 wiring tests pass via the roll-up:
       `mise run test:unit:skills`
-- [ ] The mise-wiring coherence test passes (asserts the `test:unit:skills` leaf
+- [x] The mise-wiring coherence test passes (asserts the `test:unit:skills` leaf
       exists and `test:unit` depends on it)
-- [ ] Python lint + types pass: `mise run build-system:check`
-- [ ] Full read-only CI mirror passes: `mise run check`
+- [x] Python lint + types pass: `mise run build-system:check`
+- [x] Full read-only CI mirror passes: `mise run check`
 
 #### Manual Verification
 
