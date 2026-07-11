@@ -21,17 +21,6 @@ enum Parsed {
     Map(Vec<(String, Parsed)>),
 }
 
-/// Parses a whole config file into the typed tree, or empty frontmatter into an
-/// empty mapping.
-///
-/// # Errors
-///
-/// A detail string when the frontmatter is unterminated or is not valid YAML.
-pub fn parse(content: &str) -> Result<Node, String> {
-    let split = frontmatter::split(content)?;
-    parse_frontmatter(&split.frontmatter)
-}
-
 /// Renders `document` as frontmatter, preserving the existing file's body.
 ///
 /// # Errors
@@ -55,7 +44,13 @@ fn preserved_body(content: &str) -> Result<String, String> {
     Ok(split.body)
 }
 
-fn parse_frontmatter(frontmatter: &str) -> Result<Node, String> {
+/// Parses an already-split frontmatter block into the typed tree, or empty
+/// frontmatter into an empty mapping.
+///
+/// # Errors
+///
+/// A detail string when the frontmatter is not valid YAML.
+pub fn parse_frontmatter(frontmatter: &str) -> Result<Node, String> {
     if frontmatter.trim().is_empty() {
         return Ok(Node::Mapping(Mapping::new()));
     }
@@ -214,7 +209,12 @@ impl Serialize for Parsed {
 mod tests {
     use config::{Node, Scalar};
 
-    use super::{parse, render};
+    use super::{parse_frontmatter, render};
+    use crate::frontmatter;
+
+    fn parse(content: &str) -> Result<Node, String> {
+        parse_frontmatter(&frontmatter::split(content)?.frontmatter)
+    }
 
     fn scalar_at<'a>(node: &'a Node, path: &[&str]) -> Option<&'a Scalar> {
         let mut current = node;

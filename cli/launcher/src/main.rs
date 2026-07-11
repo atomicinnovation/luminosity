@@ -8,7 +8,10 @@ use std::process::ExitCode;
 use clap::error::ErrorKind;
 use clap::{CommandFactory as _, Parser as _};
 
-use config::{ConfigAccess, ConfigError, ConfigService, Key, Level, Resolved};
+use config::{
+    ConfigAccess, ConfigError, ConfigService, Key, Level,
+    ProjectContextAssembler, ReadConfigBody, Resolved,
+};
 use config_adapters::FileConfigStore;
 use luminosity::launch::core::{
     ExternalCommand, ResolutionError, ResolveBinary,
@@ -81,13 +84,27 @@ impl ConfigAccess for LazyConfigAccess {
     }
 }
 
-fn discover_config_service(
-) -> Result<ConfigService<FileConfigStore, FileConfigStore>, ConfigError> {
+/// Discovers the project root and builds the config service lazily on the first
+/// `read_body`, mirroring [`LazyConfigAccess`].
+struct LazyConfigBody;
+
+impl ReadConfigBody for LazyConfigBody {
+    fn read_body(&self, level: Level) -> Result<Option<String>, ConfigError> {
+        discover_store()?.read_body(level)
+    }
+}
+
+fn discover_store() -> Result<FileConfigStore, ConfigError> {
     let start = std::env::current_dir().map_err(|error| ConfigError::Io {
         path: ".".to_owned(),
         detail: error.to_string(),
     })?;
-    let store = FileConfigStore::discover(&start);
+    Ok(FileConfigStore::discover(&start))
+}
+
+fn discover_config_service(
+) -> Result<ConfigService<FileConfigStore, FileConfigStore>, ConfigError> {
+    let store = discover_store()?;
     Ok(ConfigService::new(store.clone(), store))
 }
 
@@ -115,7 +132,7 @@ fn is_root_help(error: &clap::Error) -> bool {
             .nth(1)
             .as_deref()
             .and_then(std::ffi::OsStr::to_str),
-        Some("version" | "config" | "help")
+        Some("version" | "config" | "context" | "help")
     )
 }
 
@@ -132,11 +149,26 @@ fn render_augmented_help() -> ExitCode {
 fn run(cli: &Cli) -> Result<(), kernel::Error> {
     let reporter = VersionReporter::new(VergenBuildMetadata);
     let config = LazyConfigAccess;
+    let context = ProjectContextAssembler::new(LazyConfigBody);
     let executor = UnixExec;
     if std::env::var_os(FIXTURE_ENV).is_some_and(|value| !value.is_empty()) {
-        dispatch(cli, &reporter, &config, &FixtureResolver, &executor)
+        dispatch(
+            cli,
+            &reporter,
+            &config,
+            &context,
+            &FixtureResolver,
+            &executor,
+        )
     } else {
-        dispatch(cli, &reporter, &config, &LazyProductionResolver, &executor)
+        dispatch(
+            cli,
+            &reporter,
+            &config,
+            &context,
+            &LazyProductionResolver,
+            &executor,
+        )
     }
 }
 

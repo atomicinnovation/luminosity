@@ -2,5 +2,6 @@
 //! hexagon under its own module.
 
 pub mod config_command;
+pub mod context_command;
 pub mod launch;
 pub mod version;

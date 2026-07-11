@@ -21,6 +21,13 @@ pub enum Command {
         #[command(subcommand)]
         action: ConfigAction,
     },
+    /// Print the project-context block assembled from the config-file bodies
+    /// (prints nothing when both bodies are empty or absent).
+    Context {
+        /// Also print a per-level discovery diagnostic to stderr.
+        #[arg(long)]
+        explain: bool,
+    },
     /// Any unknown subcommand + its args, forwarded verbatim. `Vec<OsString>`
     /// (not `Vec<String>`) preserves non-UTF-8 arguments through to the child.
     #[command(external_subcommand)]
@@ -94,7 +101,9 @@ mod tests {
                 raw,
                 vec![OsString::from("frobnicate"), OsString::from("--flag")]
             ),
-            Command::Version | Command::Config { .. } => {
+            Command::Version
+            | Command::Config { .. }
+            | Command::Context { .. } => {
                 return Err("routed away from External".into())
             }
         }

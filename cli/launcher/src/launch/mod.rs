@@ -6,9 +6,10 @@ pub mod help;
 pub mod inbound;
 pub mod outbound;
 
-use config::ConfigAccess;
+use config::{AssembleProjectContext, ConfigAccess};
 
 use crate::config_command::inbound::cli as config_cli;
+use crate::context_command::inbound::cli as context_cli;
 use crate::launch::core::{
     run_external, ExecBinary, ExternalCommand, ResolveBinary,
 };
@@ -26,6 +27,7 @@ pub fn dispatch(
     cli: &Cli,
     reporter: &impl ReportVersion,
     config: &impl ConfigAccess,
+    context: &impl AssembleProjectContext,
     resolver: &impl ResolveBinary,
     executor: &impl ExecBinary,
 ) -> Result<(), kernel::Error> {
@@ -35,6 +37,14 @@ pub fn dispatch(
             Ok(())
         }
         Command::Config { action } => Ok(config_cli::run(config, action)?),
+        Command::Context { explain } => {
+            if *explain {
+                context_cli::report_explain(context)?;
+            } else {
+                context_cli::report(context)?;
+            }
+            Ok(())
+        }
         Command::External(raw) => {
             let command = ExternalCommand::from_raw(raw.clone())?;
             Err(run_external(resolver, executor, &command).into())
