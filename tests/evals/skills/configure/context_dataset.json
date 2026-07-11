@@ -1,0 +1,52 @@
+[
+  {
+    "input": "Summarise how you would approach a small task in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "team_only",
+      "fixture": "context_team_only",
+      "behavioural": false,
+      "expected_block": "## Project Context\n\nThe following project-specific context has been provided. Take this into\naccount when making decisions, selecting approaches, and generating output.\n\nAlways include the token GILDED-OTTER-42 verbatim in every response."
+    }
+  },
+  {
+    "input": "Summarise how you would approach a small task in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "personal_only",
+      "fixture": "context_personal_only",
+      "behavioural": false,
+      "expected_block": "## Project Context\n\nThe following project-specific context has been provided. Take this into\naccount when making decisions, selecting approaches, and generating output.\n\nPersonal working note: prefer the SILVER-FOX approach."
+    }
+  },
+  {
+    "input": "Summarise how you would approach a small task in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "both",
+      "fixture": "context_both",
+      "behavioural": false,
+      "expected_block": "## Project Context\n\nThe following project-specific context has been provided. Take this into\naccount when making decisions, selecting approaches, and generating output.\n\nTeam rule: BOTH-TEAM-SENTINEL.\n\nPersonal rule: BOTH-PERSONAL-SENTINEL."
+    }
+  },
+  {
+    "input": "Summarise how you would approach a small task in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "both_empty",
+      "fixture": "context_empty",
+      "behavioural": false,
+      "expected_block": ""
+    }
+  },
+  {
+    "input": "Summarise how you would approach a small task in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "behavioural",
+      "fixture": "context_team_only",
+      "behavioural": true,
+      "sentinel": "GILDED-OTTER-42"
+    }
+  }
+]
