@@ -12,7 +12,7 @@ parent: "work-item:0011"
 blocks: ["work-item:0017", "work-item:0018"]
 relates_to: ["work-item:0010"]
 tags: [configuration, context-injection]
-last_updated: "2026-07-11T13:03:03+00:00"
+last_updated: "2026-07-11T17:58:14+00:00"
 last_updated_by: Toby Clemson
 schema_version: 1
 ---
@@ -123,9 +123,25 @@ every skill's prompt; the reader itself is implemented in the Rust CLI.
 
 ## Technical Notes
 
-- Accelerator reference: `scripts/config-read-context.sh`,
-  `config_extract_body`/`config_trim_body` in `config-common.sh`; Rust body-split
-  equivalent `cli/config-adapters/src/frontmatter.rs` + `document.rs`.
+- **Accelerator reference (external `atomicinnovation/accelerator` repo — these
+  paths are NOT in this tree).** The behaviour this story reimplements in Rust
+  lives in the accelerator's bash library:
+  - `scripts/config-read-context.sh` — the reader itself (assembles the
+    `## Project Context` block).
+    URL: <https://github.com/atomicinnovation/accelerator/blob/main/scripts/config-read-context.sh>
+    Local (installed plugin cache):
+    `~/.claude/plugins/cache/atomic-innovation-prerelease/accelerator/<version>/scripts/config-read-context.sh`
+  - `config_extract_body` / `config_trim_body` in `scripts/config-common.sh` —
+    the body-extract and body-trim helpers it builds on.
+    URL: <https://github.com/atomicinnovation/accelerator/blob/main/scripts/config-common.sh>
+    Local:
+    `~/.claude/plugins/cache/atomic-innovation-prerelease/accelerator/<version>/scripts/config-common.sh`
+  - (`<version>` is the installed accelerator plugin version, e.g.
+    `1.24.0-pre.11`.)
+- **Local (luminosity) Rust body-split equivalent to build on** —
+  `cli/config-adapters/src/frontmatter.rs` (the `split` primitive) +
+  `document.rs`. These paths exist only in this repo; the accelerator's own Rust
+  migration has not yet extracted a `config-adapters` crate.
 - **Exact wrapper block (load-bearing, from `config-read-context.sh`)** — the
   emitted block is the header, a blank line, the fixed two-line prose, a blank
   line, then the trimmed combined body:
@@ -138,7 +154,14 @@ every skill's prompt; the reader itself is implemented in the Rust CLI.
 
   <combined team-then-personal body>
   ```
-- ADR-0017 (configuration extension points), ADR-0003 (`.luminosity/` layout).
+- **ADR-0017 — accelerator ADR** (external repo), "Configuration Extension
+  Points for Templates, Agents, and Custom Lenses".
+  URL: <https://github.com/atomicinnovation/accelerator/blob/main/meta/decisions/ADR-0017-configuration-extension-points.md>
+  Local:
+  `~/.claude/plugins/cache/atomic-innovation-prerelease/accelerator/<version>/meta/decisions/ADR-0017-configuration-extension-points.md`
+- **ADR-0003 — this repo's ADR**, "Multi-Level Userspace Configuration Model"
+  (the `.luminosity/` config-file layout / team-vs-personal levels this story
+  reads from): `meta/decisions/ADR-0003-multi-level-userspace-configuration-model.md`.
 
 ## Drafting Notes
 
@@ -164,6 +187,15 @@ every skill's prompt; the reader itself is implemented in the Rust CLI.
   eval extension; recorded 0010 as an eval-framework dependency and reframed
   0017/0018 from symmetric `relates_to` to `Blocks` (0016 owns the shared
   mechanism/anchor).
+
+- Corrected 2026-07-11 (post codebase research,
+  `meta/research/codebase/2026-07-11-0016-plugin-global-context-injection.md`):
+  disambiguated accelerator vs. local references in Technical Notes. The
+  `config-read-context.sh` / `config-common.sh` scripts and ADR-0017 are
+  **accelerator** artifacts (external `atomicinnovation/accelerator` repo), now
+  cited by URL then installed-plugin-cache path; the `cli/config-adapters/**`
+  Rust paths are **luminosity-local**; ADR-0003 is this repo's config-model ADR
+  (its prior "`.luminosity/` layout" gloss corrected to the actual title).
 
 ## References
 
