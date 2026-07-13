@@ -16,14 +16,13 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _PLUGIN_JSON = _REPO_ROOT / ".claude-plugin" / "plugin.json"
 _CONFIGURE = _REPO_ROOT / "skills" / "config" / "configure" / "SKILL.md"
 
-# `2>&1 || true` is load-bearing, not defensive noise. The reader is fail-loud,
-# and the ! preprocessor aborts the whole skill on a non-zero exit — so a single
-# malformed config file would otherwise make every skill refuse to load,
-# including the one a user would reach for to diagnose it. Tolerating the exit
-# keeps skills usable, and folding stderr into stdout splices the reader's error
-# (which names the offending file) into the prompt in place of the block, so a
-# broken config stays loud rather than silently dropping project context.
-INJECTION_LINE = "!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity context 2>&1 || true`"
+# --fail-safe is load-bearing. The reader is fail-loud, and the ! preprocessor
+# discards the whole prompt on a non-zero exit — so a single malformed config
+# file would otherwise make every skill refuse to load, including the one a user
+# would reach for to diagnose it. The flag renders the read failure as a visible
+# stdout notice naming the file, so a broken config stays loud in every skill
+# without disabling any of them.
+INJECTION_LINE = "!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity context --fail-safe`"
 CONTEXT_GRANT = "Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity context*)"
 
 

@@ -170,6 +170,55 @@ fn explain_distinguishes_absent_from_present_but_empty() -> TestResult {
 }
 
 #[test]
+fn fail_safe_renders_a_malformed_body_as_a_stdout_notice() -> TestResult {
+    let dir = workspace()?;
+    seed(&dir, "config.md", "---\nkey: value\n")?;
+
+    let output = run(&dir, &["context", "--fail-safe"])?;
+    assert!(output.status.success());
+    let out = stdout(&output);
+    assert!(out.starts_with("## Project Context Unavailable\n"));
+    assert!(out.contains("config.md"));
+    assert!(out.contains("malformed frontmatter"));
+    Ok(())
+}
+
+#[test]
+fn fail_safe_leaves_a_healthy_read_byte_identical() -> TestResult {
+    let dir = workspace()?;
+    seed(&dir, "config.md", "---\ncore: v\n---\nteam context\n")?;
+
+    let plain = run(&dir, &["context"])?;
+    let safe = run(&dir, &["context", "--fail-safe"])?;
+    assert_eq!(safe.stdout, plain.stdout);
+    assert_eq!(stdout(&safe), format!("{BLOCK_HEADER}team context\n"));
+    Ok(())
+}
+
+#[test]
+fn fail_safe_still_prints_nothing_when_both_bodies_are_empty() -> TestResult {
+    let dir = workspace()?;
+    seed(&dir, "config.md", "---\ncore: v\n---\n")?;
+
+    let output = run(&dir, &["context", "--fail-safe"])?;
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "");
+    Ok(())
+}
+
+#[test]
+fn without_fail_safe_a_malformed_body_still_fails_loudly() -> TestResult {
+    let dir = workspace()?;
+    seed(&dir, "config.md", "---\nkey: value\n")?;
+
+    let output = run(&dir, &["context"])?;
+    assert!(!output.status.success());
+    assert_eq!(stdout(&output), "");
+    assert!(stderr(&output).contains("config.md"));
+    Ok(())
+}
+
+#[test]
 fn resolves_the_block_from_a_subdirectory() -> TestResult {
     let dir = workspace()?;
     seed(&dir, "config.md", "---\ncore: v\n---\nteam context\n")?;

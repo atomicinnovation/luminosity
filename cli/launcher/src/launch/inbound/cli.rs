@@ -27,6 +27,11 @@ pub enum Command {
         /// Also print a per-level discovery diagnostic to stderr.
         #[arg(long)]
         explain: bool,
+        /// Never exit non-zero: render an unreadable config as a notice on
+        /// stdout instead. For callers that splice this command's stdout into
+        /// a prompt, where a non-zero exit would discard the whole prompt.
+        #[arg(long)]
+        fail_safe: bool,
     },
     /// Any unknown subcommand + its args, forwarded verbatim. `Vec<OsString>`
     /// (not `Vec<String>`) preserves non-UTF-8 arguments through to the child.

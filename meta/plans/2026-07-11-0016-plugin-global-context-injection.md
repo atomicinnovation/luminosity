@@ -683,11 +683,14 @@ coherence assertions mirroring the `test:unit:evals` ones.
       as an actionable step (a live agent spontaneously described the body-edit
       surface correctly when summarising configuration)
 - [x] With a **malformed** committed `.luminosity/config.md`, invoking `configure`
-      surfaces the fail-loud error at the `!`-preprocessor boundary. **Contingency
-      resolved**: the preprocessor renders a non-zero exit as
-      ``Shell command failed for pattern "!`…luminosity context`": [stderr]``
-      followed by the command's stderr verbatim — so the offending filename does
-      reach the user. No fallback to a degraded/empty injection is needed.
+      surfaces the error. **Contingency resolved, but not as the plan expected**:
+      a non-zero exit is *not* rendered opaquely (the preprocessor prints
+      ``Shell command failed for pattern "!`…`": [stderr]`` plus the command's
+      stderr, naming the file) — but it *discards the whole prompt*, so the skill
+      never loads. See the `--fail-safe` deviation below: the injection line now
+      degrades to a `## Project Context Unavailable` notice on stdout that names
+      the file, so the skill loads and the agent relays the error (verified live:
+      the agent reports the filename and the malformed-frontmatter detail).
 
 ---
 
@@ -785,21 +788,28 @@ untouched — the context dataset is separate, so the `configure` count stays 9.
 
 #### Deviations from the plan
 
-- **The injection call site is loud but non-blocking; the reader stays
-  fail-loud.** The plan's contingency assumed the only risk was the
-  `!`-preprocessor rendering a non-zero exit *opaquely*. It does not — it names
-  the offending file. But it also **aborts the skill**: a single malformed
-  config made every skill refuse to load, including `configure`, the one a user
-  would reach for to diagnose it (and which could not repair it anyway, since
-  `config set` fails closed on a malformed file). This deterministically failed
-  the configure eval's `malformed` sample. The injection line is therefore
-  `!`…/luminosity context 2>&1 || true``: the CLI keeps its fail-loud contract
-  (non-zero exit, filename on stderr — every Phase 1 AC and test unchanged),
-  while the call site tolerates the exit and folds stderr into stdout, so the
-  reader's error is spliced into the prompt *in place of* the block. A broken
-  config stays loud in every skill without bricking any of them — the outcome
-  the plan wanted, by the one route it had not considered. The rationale is
-  pinned on the constants in `test_context_injection.py`.
+- **New `context --fail-safe` flag; the reader's default stays fail-loud.** The
+  plan's contingency assumed the only risk was the `!`-preprocessor rendering a
+  non-zero exit *opaquely*. It does not — it names the offending file. But it
+  also **discards the whole prompt**: a single malformed config made every skill
+  refuse to load, including `configure`, the one a user would reach for to
+  diagnose it (and which could not repair it anyway, since `config set` fails
+  closed on a malformed file). This deterministically failed the configure eval's
+  `malformed` sample.
+
+  The fix is a first-class CLI switch rather than shell plumbing at the call
+  site. `luminosity context --fail-safe` never exits non-zero: a read failure is
+  rendered as a `## Project Context Unavailable` notice on **stdout**, naming the
+  offending file and telling the agent to report it and continue. Without the
+  flag the command is unchanged — non-zero exit, error on stderr — so every
+  Phase 1 acceptance criterion and test still holds, and direct diagnosis stays
+  loud. The injection line is `!`…/luminosity context --fail-safe``.
+
+  This keeps the policy typed and testable in the CLI (`OnFailure::{Fail,
+  Degrade}`, black-box tests for each) instead of hiding it in a shell
+  incantation, and a broken config stays loud in *every* skill without disabling
+  any of them — the outcome the plan wanted, by the one route it had not
+  considered.
 - **The context eval rides `eval:skills:configure`.** It grades the `configure`
   skill, so it gets no task of its own. `run_skill_eval` now discovers
   supplementary single-arm evals (`<arm>_eval.py`) beside a skill's paired-arm

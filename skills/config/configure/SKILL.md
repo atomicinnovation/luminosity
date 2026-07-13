@@ -13,7 +13,7 @@ allowed-tools:
 
 # Configure
 
-!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity context 2>&1 || true`
+!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity context --fail-safe`
 
 You manage the CLI-owned configuration **values** **only** through the
 `luminosity config` command. You never read, parse, or write those values in the
