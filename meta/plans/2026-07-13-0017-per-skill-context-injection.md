@@ -623,21 +623,21 @@ rule; they need not be duplicated per source).
 
 #### Automated Verification
 
-- [ ] Rust format and lint pass: `mise run cli:check`
-- [ ] Workspace unit tests pass: `mise run test:unit:cli`
-- [ ] The new domain tests pass in isolation:
+- [x] Rust format and lint pass: `mise run cli:check`
+- [x] Workspace unit tests pass: `mise run test:unit:cli`
+- [x] The new domain tests pass in isolation:
       `cd cli && cargo nextest run -p config -E 'test(source) + test(context)'`
-- [ ] The new adapter tests pass in isolation:
+- [x] The new adapter tests pass in isolation:
       `cd cli && cargo nextest run -p config-adapters -E 'test(skill_context)'`
-- [ ] `mise run deny:check` passes (confirming no serde/YAML crate entered the
+- [x] `mise run deny:check` passes (confirming no serde/YAML crate entered the
       `config` core's closure — the serde ban lives in `deny.toml`, not `pup.ron`)
 
 #### Manual Verification
 
-- [ ] `cli/config/` still has no filesystem or serde dependency — `SkillName` and
+- [x] `cli/config/` still has no filesystem or serde dependency — `SkillName` and
       `ContextSource` are value objects; the path rule, the symlink check, and the
       mapping validation live entirely in `config-adapters`.
-- [ ] Every new public item carries the crate's standard: a `///` summary on
+- [x] Every new public item carries the crate's standard: a `///` summary on
       every public struct/enum/trait, `#[derive(Debug, Clone, PartialEq, Eq)]`,
       `# Errors` on fallible fns, `const fn new`, `//!` module docs on `source.rs`,
       and a rewritten `//!` on `context.rs` describing any-source assembly.

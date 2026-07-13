@@ -150,8 +150,8 @@ fn explain_prints_the_block_and_per_level_diagnostics() -> TestResult {
     assert!(output.status.success());
     assert_eq!(stdout(&output), format!("{BLOCK_HEADER}team context\n"));
     let err = stderr(&output);
-    assert!(err.contains("team (config.md)"));
-    assert!(err.contains("personal (config.local.md)"));
+    assert!(err.contains("team (.luminosity/config.md)"));
+    assert!(err.contains("personal (.luminosity/config.local.md)"));
     Ok(())
 }
 
@@ -164,8 +164,10 @@ fn explain_distinguishes_absent_from_present_but_empty() -> TestResult {
     assert!(output.status.success());
     assert_eq!(stdout(&output), "");
     let err = stderr(&output);
-    assert!(err.contains("team (config.md): not found"));
-    assert!(err.contains("personal (config.local.md): discovered, empty body"));
+    assert!(err.contains("team (.luminosity/config.md): not found"));
+    assert!(err.contains(
+        "personal (.luminosity/config.local.md): discovered, empty body"
+    ));
     Ok(())
 }
 

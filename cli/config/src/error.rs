@@ -58,6 +58,12 @@ pub enum ConfigError {
     InvalidKey {
         key: String,
     },
+    InvalidSkillName {
+        name: String,
+    },
+    UnsafePath {
+        path: String,
+    },
 }
 
 impl Display for ConfigError {
@@ -89,6 +95,16 @@ impl Display for ConfigError {
                 formatter,
                 "invalid config key '{key}': expected dot-separated \
                  non-empty segments"
+            ),
+            Self::InvalidSkillName { name } => write!(
+                formatter,
+                "invalid skill name '{name}': expected non-empty \
+                 alphanumeric, '-', or '_'"
+            ),
+            Self::UnsafePath { path } => write!(
+                formatter,
+                "refused to read '{path}': it resolves outside the \
+                 .luminosity directory"
             ),
         }
     }
@@ -191,6 +207,30 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "invalid config key '': expected dot-separated non-empty segments"
+        );
+    }
+
+    #[test]
+    fn invalid_skill_name_names_the_offending_name() {
+        let error = ConfigError::InvalidSkillName {
+            name: "../../etc".to_owned(),
+        };
+        assert_eq!(
+            error.to_string(),
+            "invalid skill name '../../etc': expected non-empty \
+             alphanumeric, '-', or '_'"
+        );
+    }
+
+    #[test]
+    fn unsafe_path_names_the_offending_path() {
+        let error = ConfigError::UnsafePath {
+            path: ".luminosity/skills/configure/context.md".to_owned(),
+        };
+        assert_eq!(
+            error.to_string(),
+            "refused to read '.luminosity/skills/configure/context.md': \
+             it resolves outside the .luminosity directory"
         );
     }
 

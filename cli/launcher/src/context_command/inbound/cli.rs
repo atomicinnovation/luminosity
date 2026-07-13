@@ -7,7 +7,8 @@
 //! stdout notice instead.
 
 use config::{
-    AssembleProjectContext, ConfigError, LevelContribution, ProjectContext,
+    AssembleContext, AssembledContext, ConfigError, ContextSource,
+    LevelContribution,
 };
 
 const PROSE: &str = "\
@@ -39,7 +40,7 @@ pub struct Options {
 }
 
 #[must_use]
-pub fn render(context: &ProjectContext) -> String {
+pub fn render(context: &AssembledContext) -> String {
     format!("## Project Context\n\n{PROSE}\n\n{}", context.body)
 }
 
@@ -57,10 +58,10 @@ pub fn render_unavailable(error: &ConfigError) -> String {
 /// [`OnFailure::Fail`]; under [`OnFailure::Degrade`] the same error is rendered
 /// to stdout and this succeeds.
 pub fn run(
-    assembler: &impl AssembleProjectContext,
+    assembler: &impl AssembleContext,
     options: Options,
 ) -> Result<(), ConfigError> {
-    let assembly = match assembler.assemble() {
+    let assembly = match assembler.assemble(&ContextSource::Project) {
         Ok(assembly) => assembly,
         Err(error) if options.on_failure == OnFailure::Degrade => {
             println!("{}", render_unavailable(&error));
@@ -85,22 +86,35 @@ pub fn explain_lines(levels: &[LevelContribution]) -> Vec<String> {
 }
 
 fn explain_line(contribution: &LevelContribution) -> String {
-    let level = contribution.level;
-    let file = level.file_name();
-    if !contribution.discovered {
-        format!("{level} ({file}): not found")
-    } else if contribution.has_body {
-        format!("{level} ({file}): discovered, body present")
+    let LevelContribution {
+        level,
+        path,
+        discovered,
+        has_body,
+    } = contribution;
+    if !discovered {
+        format!("{level} ({path}): not found")
+    } else if *has_body {
+        format!("{level} ({path}): discovered, body present")
     } else {
-        format!("{level} ({file}): discovered, empty body")
+        format!("{level} ({path}): discovered, empty body")
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use config::{ConfigError, Level, LevelContribution, ProjectContext};
+    use config::{AssembledContext, ConfigError, Level, LevelContribution};
 
     use super::{explain_lines, render, render_unavailable};
+
+    fn contribution(discovered: bool, has_body: bool) -> LevelContribution {
+        LevelContribution {
+            level: Level::Team,
+            path: ".luminosity/config.md".to_owned(),
+            discovered,
+            has_body,
+        }
+    }
 
     #[test]
     fn the_unavailable_notice_names_the_offending_file() {
@@ -132,7 +146,7 @@ mod tests {
 
     #[test]
     fn renders_the_byte_exact_block() {
-        let context = ProjectContext {
+        let context = AssembledContext {
             body: "team stuff\n\npersonal stuff".to_owned(),
         };
         assert_eq!(
@@ -147,7 +161,7 @@ mod tests {
 
     #[test]
     fn the_block_ends_at_the_last_body_byte() {
-        let context = ProjectContext {
+        let context = AssembledContext {
             body: "only".to_owned(),
         };
         assert!(render(&context).ends_with("output.\n\nonly"));
@@ -155,28 +169,19 @@ mod tests {
 
     #[test]
     fn each_contribution_shape_renders_a_distinct_line() {
-        let absent = LevelContribution {
-            level: Level::Team,
-            discovered: false,
-            has_body: false,
-        };
-        let empty = LevelContribution {
-            level: Level::Team,
-            discovered: true,
-            has_body: false,
-        };
-        let present = LevelContribution {
-            level: Level::Team,
-            discovered: true,
-            has_body: true,
-        };
-        let lines = explain_lines(&[absent, empty, present]);
+        let lines = explain_lines(&[
+            contribution(false, false),
+            contribution(true, false),
+            contribution(true, true),
+        ]);
         assert_eq!(
             lines,
             vec![
-                "team (config.md): not found".to_owned(),
-                "team (config.md): discovered, empty body".to_owned(),
-                "team (config.md): discovered, body present".to_owned(),
+                "team (.luminosity/config.md): not found".to_owned(),
+                "team (.luminosity/config.md): discovered, empty body"
+                    .to_owned(),
+                "team (.luminosity/config.md): discovered, body present"
+                    .to_owned(),
             ]
         );
     }
