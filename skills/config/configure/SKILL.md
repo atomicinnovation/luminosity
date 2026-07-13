@@ -8,12 +8,12 @@ description: >-
 argument-hint: "[get <section.key> | set <section.key> <value>] [--level team|personal]"
 allowed-tools:
   - Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity config *)
-  - Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity context)
+  - Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity context*)
 ---
 
 # Configure
 
-!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity context`
+!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity context 2>&1 || true`
 
 You manage the CLI-owned configuration **values** **only** through the
 `luminosity config` command. You never read, parse, or write those values in the
