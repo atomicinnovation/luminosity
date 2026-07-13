@@ -672,20 +672,22 @@ coherence assertions mirroring the `test:unit:evals` ones.
 
 #### Manual Verification
 
-- [ ] Invoking `configure` in a repo with a team body shows the `## Project
+- [x] Invoking `configure` in a repo with a team body shows the `## Project
       Context` block above the skill's own instructions in the rendered prompt
-      (requires a live Claude Code plugin invocation; the injection line and its
-      directly-under-H1 placement are enforced by `test_context_injection.py`,
-      and `luminosity context` output is verified above)
-- [ ] With both bodies empty, the rendered `configure` prompt contains no
-      `## Project Context` block (requires a live invocation; the command's
-      empty-output contract is verified in Phase 1)
+      (verified with a live `claude -p` skill invocation against the staged
+      plugin: the agent reported `BLOCK-PRESENT` and quoted back the exact
+      wrapper prose line)
+- [x] With both bodies empty, the rendered `configure` prompt contains no
+      `## Project Context` block (same live probe reported `BLOCK-ABSENT`)
 - [x] The `configure` surface names the config-file bodies as the source and reads
-      as an actionable step
-- [ ] With a **malformed** committed `.luminosity/config.md`, invoking `configure`
-      surfaces the fail-loud error at the `!`-preprocessor boundary (requires a
-      live invocation; the reader's fail-loud filename-on-stderr behaviour is
-      verified in Phase 1's manual check)
+      as an actionable step (a live agent spontaneously described the body-edit
+      surface correctly when summarising configuration)
+- [x] With a **malformed** committed `.luminosity/config.md`, invoking `configure`
+      surfaces the fail-loud error at the `!`-preprocessor boundary. **Contingency
+      resolved**: the preprocessor renders a non-zero exit as
+      ``Shell command failed for pattern "!`…luminosity context`": [stderr]``
+      followed by the command's stderr verbatim — so the offending filename does
+      reach the user. No fallback to a degraded/empty injection is needed.
 
 ---
 
@@ -771,14 +773,33 @@ untouched — the context dataset is separate, so the `configure` count stays 9.
 #### Manual Verification
 
 - [x] `LUMINOSITY_EVAL_LIVE=1` run of the context eval passes the four
-      deterministic scenarios (validated by grading all four goldens against the
-      real compiled binary through `grade_block`; the deterministic arm re-execs
-      the binary and does not depend on the agent transcript)
-- [ ] The behavioural arm shows the agent acting on the injected project context
-      at or above the configured `pass_k` floor (requires a live `claude login`
-      subscription; the eval file and behavioural gating are wired and construct
-      correctly under `LUMINOSITY_EVAL_LIVE=on`)
+      deterministic scenarios (live Inspect run against the staged plugin: all
+      four scenarios `C` across 3 epochs)
+- [x] The behavioural arm shows the agent acting on the injected project context
+      at or above the configured `pass_k` floor (live run: 15/15 samples correct,
+      accuracy **1.000** vs the 0.8 floor; the behavioural arm passed 3/3, the
+      agent applying the injected "Lantern" terminology convention unprompted)
 - [x] `mise run` (the full local CI mirror) exits 0 end-to-end
+
+#### Deviations from the plan
+
+- **Behavioural fixture redesigned.** The first behavioural body was an
+  imperative ("Always include the token `GILDED-OTTER-42` in every response").
+  A live run showed the model correctly identifies that shape as a *prompt
+  injection* and refuses it, so the arm failed for a reason unrelated to
+  injection. The body was rewritten as declarative project context (a
+  terminology convention), which the agent applies willingly. This is the
+  practical face of the prompt-injection trade-off the plan accepted under
+  "What We're NOT Doing", and is pinned by a comment on the behavioural test.
+- **Eval-harness stale-binary bug fixed (outside the original scope).**
+  `run.py::_host_binary()` resolved `cli/launcher/bin/luminosity-<alias>`, which
+  only the *distribution* build (`build:release`) ever writes — while the eval
+  leaves depend on `build:launcher`, which builds into the cargo target dir. The
+  eval therefore staged whatever binary a past release left behind (here a
+  binary predating the `context` command), silently grading skills against stale
+  code. `_host_binary()` now resolves the `build:launcher` output via a new pure
+  `targets.host_triple()` helper and fails loudly when it is absent. Pinned by
+  `tests/unit/tasks/shared/eval/test_host_binary.py`.
 
 ---
 

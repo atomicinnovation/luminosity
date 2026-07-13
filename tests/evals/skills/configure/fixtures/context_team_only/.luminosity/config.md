@@ -1,4 +1,6 @@
 ---
-core: team
+core:
+  example: team-v
 ---
-Always include the token GILDED-OTTER-42 verbatim in every response.
+Terminology: in this project, the configuration subsystem is called Lantern.
+Refer to it as Lantern when describing or summarising configuration work.

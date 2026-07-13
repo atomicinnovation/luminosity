@@ -6,7 +6,7 @@
       "scenario": "team_only",
       "fixture": "context_team_only",
       "behavioural": false,
-      "expected_block": "## Project Context\n\nThe following project-specific context has been provided. Take this into\naccount when making decisions, selecting approaches, and generating output.\n\nAlways include the token GILDED-OTTER-42 verbatim in every response."
+      "expected_block": "## Project Context\n\nThe following project-specific context has been provided. Take this into\naccount when making decisions, selecting approaches, and generating output.\n\nTerminology: in this project, the configuration subsystem is called Lantern.\nRefer to it as Lantern when describing or summarising configuration work."
     }
   },
   {
@@ -40,13 +40,13 @@
     }
   },
   {
-    "input": "Summarise how you would approach a small task in this project.",
+    "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
     "target": "",
     "metadata": {
       "scenario": "behavioural",
       "fixture": "context_team_only",
       "behavioural": true,
-      "sentinel": "GILDED-OTTER-42"
+      "sentinel": "Lantern"
     }
   }
 ]

@@ -118,6 +118,10 @@ def test_both_orders_team_before_personal_with_one_blank_line() -> None:
 
 
 def test_behavioural_case_names_a_sentinel_present_in_its_body() -> None:
+    # The behavioural body must read as declarative project context (a
+    # convention the agent applies), not an imperative "emit this token in
+    # every response" — the model recognises the latter as a prompt injection
+    # and refuses it, failing the arm for a reason unrelated to injection.
     metadata = _record("behavioural")["metadata"]
     assert metadata["behavioural"] is True
     sentinel = metadata["sentinel"]
