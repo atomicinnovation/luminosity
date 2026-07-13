@@ -59,19 +59,32 @@ def _preflight_claude(context: Context) -> None:
         )
 
 
-def supplementary_arms(eval_file: Path) -> list[str]:
-    """Names of a skill's extra single-arm evals, beside its paired-arm one.
+def supplementary_capabilities(eval_file: Path) -> list[str]:
+    """Capabilities of a skill covered by an eval beside its paired-arm one.
 
-    A skill may cover a capability whose grading model does not fit the
-    skill-vs-baseline pairing (passive prompt injection, say, which no agent
-    command can be attributed to). Such an eval lives beside the skill's own as
-    `<arm>_eval.py` exposing one `<arm>` task, and rides the same run.
+    A skill may have a capability whose grading model does not fit the
+    skill-vs-baseline pairing — passive prompt injection, say, which no agent
+    command can be attributed to, and which has no no-skill control at all
+    (without the skill there is no prompt to inject into). Such a capability
+    gets a `<capability>_eval.py` beside the skill's own eval and rides the
+    same run.
     """
     return [
         path.stem.removesuffix("_eval")
         for path in sorted(eval_file.parent.glob("*_eval.py"))
         if path != eval_file
     ]
+
+
+def supplementary_arm(skill: str, capability: str) -> str:
+    """Return the task name a supplementary eval exposes.
+
+    Every arm in a run shares one vocabulary —
+    `<skill>[_<capability>]_<control>` — so a supplementary arm reads as what it
+    is: the same skill, a named capability, and with-skill (its only possible
+    control).
+    """
+    return with_skill_arm(f"{skill}_{capability}")
 
 
 def run_skill_eval(context: Context, skill: str) -> float:
@@ -88,14 +101,19 @@ def run_skill_eval(context: Context, skill: str) -> float:
     results = results_dir(skill)
     results.mkdir(parents=True, exist_ok=True)
     with_arm, base_arm = with_skill_arm(skill), baseline_arm(skill)
-    extra_arms = supplementary_arms(eval_file)
+    capabilities = supplementary_capabilities(eval_file)
+    extra_arms = [
+        supplementary_arm(skill, capability) for capability in capabilities
+    ]
     logs = inspect_eval(
         [
             f"{eval_file}@{with_arm}",
             f"{eval_file}@{base_arm}",
             *(
-                f"{eval_file.parent / f'{arm}_eval.py'}@{arm}"
-                for arm in extra_arms
+                f"{eval_file.parent / f'{capability}_eval.py'}@{arm}"
+                for capability, arm in zip(
+                    capabilities, extra_arms, strict=True
+                )
             ),
         ],
         log_format="json",
