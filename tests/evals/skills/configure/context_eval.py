@@ -1,15 +1,19 @@
+"""The configure skill's context-injection eval.
+
+Injection is passive — no agent command can be attributed to it — so it cannot
+share the configure eval's skill-vs-baseline grading. It rides the same
+`eval:skills:configure` run as a supplementary single-arm eval instead.
+"""
+
 from pathlib import Path
 
 from inspect_ai import Epochs, Task, task
-from inspect_ai.dataset import Sample, json_dataset
+from inspect_ai.dataset import json_dataset
 from inspect_ai.scorer import pass_k
 
 from common.eval import TRIALS
-from tasks.shared.eval.gate import live_run_enabled
 from tests.evals.skills.configure.context_scorer import context_scorer
 from tests.evals.skills.configure.solvers import run_configure_agent
-
-SKILL = "configure"
 
 # The solver drives claude -p itself, so Inspect's provider is never called.
 MODEL = "mockllm/model"
@@ -17,21 +21,10 @@ MODEL = "mockllm/model"
 _HERE = Path(__file__).parent
 
 
-def _include_sample(sample: Sample) -> bool:
-    # The behavioural arm is noisy and only meaningful live; the deterministic
-    # scenarios re-execute the binary and need no agent behaviour.
-    if (sample.metadata or {}).get("behavioural"):
-        return live_run_enabled()
-    return True
-
-
 @task
 def context() -> Task:
-    dataset = json_dataset(str(_HERE / "context_dataset.json")).filter(
-        _include_sample
-    )
     return Task(
-        dataset=dataset,
+        dataset=json_dataset(str(_HERE / "context_dataset.json")),
         solver=run_configure_agent(with_skill=True),
         scorer=context_scorer(),
         epochs=Epochs(TRIALS, pass_k(TRIALS)),

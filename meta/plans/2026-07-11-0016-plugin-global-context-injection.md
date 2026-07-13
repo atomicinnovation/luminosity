@@ -773,16 +773,39 @@ untouched — the context dataset is separate, so the `configure` count stays 9.
 #### Manual Verification
 
 - [x] `LUMINOSITY_EVAL_LIVE=1` run of the context eval passes the four
-      deterministic scenarios (live Inspect run against the staged plugin: all
-      four scenarios `C` across 3 epochs)
+      deterministic scenarios (live `mise run eval:skills:configure`: all four
+      scenarios `C` across 3 epochs)
 - [x] The behavioural arm shows the agent acting on the injected project context
-      at or above the configured `pass_k` floor (live run: 15/15 samples correct,
-      accuracy **1.000** vs the 0.8 floor; the behavioural arm passed 3/3, the
-      agent applying the injected "Lantern" terminology convention unprompted)
+      at or above the configured `pass_k` floor (live run: context arm pass^k
+      **1.000** vs the 0.8 floor, 15/15 samples; the agent applies the injected
+      "Lantern" terminology convention unprompted). The whole run is green:
+      configure with-skill **0.889**, context **1.000**, both above the floor,
+      with the committed result logs refreshed as the durable signal.
 - [x] `mise run` (the full local CI mirror) exits 0 end-to-end
 
 #### Deviations from the plan
 
+- **The injection call site is loud but non-blocking; the reader stays
+  fail-loud.** The plan's contingency assumed the only risk was the
+  `!`-preprocessor rendering a non-zero exit *opaquely*. It does not — it names
+  the offending file. But it also **aborts the skill**: a single malformed
+  config made every skill refuse to load, including `configure`, the one a user
+  would reach for to diagnose it (and which could not repair it anyway, since
+  `config set` fails closed on a malformed file). This deterministically failed
+  the configure eval's `malformed` sample. The injection line is therefore
+  `!`…/luminosity context 2>&1 || true``: the CLI keeps its fail-loud contract
+  (non-zero exit, filename on stderr — every Phase 1 AC and test unchanged),
+  while the call site tolerates the exit and folds stderr into stdout, so the
+  reader's error is spliced into the prompt *in place of* the block. A broken
+  config stays loud in every skill without bricking any of them — the outcome
+  the plan wanted, by the one route it had not considered. The rationale is
+  pinned on the constants in `test_context_injection.py`.
+- **The context eval rides `eval:skills:configure`.** It grades the `configure`
+  skill, so it gets no task of its own. `run_skill_eval` now discovers
+  supplementary single-arm evals (`<arm>_eval.py`) beside a skill's paired-arm
+  eval, runs them in the same pass, and gates on the weakest arm — so every arm
+  must clear the pass^k floor. Pinned by
+  `tests/unit/tasks/shared/eval/test_run.py`.
 - **Behavioural fixture redesigned.** The first behavioural body was an
   imperative ("Always include the token `GILDED-OTTER-42` in every response").
   A live run showed the model correctly identifies that shape as a *prompt

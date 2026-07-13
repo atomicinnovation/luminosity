@@ -113,7 +113,7 @@ description = "Run all tests in parallel"
 depends = ["test:unit", "test:integration"]
 
 [tasks."eval:skills:configure"]
-description = "Run the configure skill Inspect eval on demand (host-native claude -p; excluded from CI for token/subscription cost)"
+description = "Run the configure skill Inspect evals on demand — the get/set arms plus the context-injection arm (host-native claude -p; excluded from CI for token/subscription cost)"
 depends = ["deps:install:python", "deps:install:claude-native", "build:launcher"]
 run = "invoke eval.skills.configure"
 

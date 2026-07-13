@@ -59,6 +59,21 @@ def _preflight_claude(context: Context) -> None:
         )
 
 
+def supplementary_arms(eval_file: Path) -> list[str]:
+    """Names of a skill's extra single-arm evals, beside its paired-arm one.
+
+    A skill may cover a capability whose grading model does not fit the
+    skill-vs-baseline pairing (passive prompt injection, say, which no agent
+    command can be attributed to). Such an eval lives beside the skill's own as
+    `<arm>_eval.py` exposing one `<arm>` task, and rides the same run.
+    """
+    return [
+        path.stem.removesuffix("_eval")
+        for path in sorted(eval_file.parent.glob("*_eval.py"))
+        if path != eval_file
+    ]
+
+
 def run_skill_eval(context: Context, skill: str) -> float:
     from inspect_ai import eval as inspect_eval  # noqa: PLC0415  (heavy; lazy)
 
@@ -73,8 +88,16 @@ def run_skill_eval(context: Context, skill: str) -> float:
     results = results_dir(skill)
     results.mkdir(parents=True, exist_ok=True)
     with_arm, base_arm = with_skill_arm(skill), baseline_arm(skill)
+    extra_arms = supplementary_arms(eval_file)
     logs = inspect_eval(
-        [f"{eval_file}@{with_arm}", f"{eval_file}@{base_arm}"],
+        [
+            f"{eval_file}@{with_arm}",
+            f"{eval_file}@{base_arm}",
+            *(
+                f"{eval_file.parent / f'{arm}_eval.py'}@{arm}"
+                for arm in extra_arms
+            ),
+        ],
         log_format="json",
         log_dir=str(results),
         max_samples=_MAX_CONCURRENT_SAMPLES,
@@ -87,6 +110,12 @@ def run_skill_eval(context: Context, skill: str) -> float:
             f"eval: {skill} with-skill did not beat baseline "
             f"— investigate whether the skill adds value"
         )
+    fractions = [with_skill_fraction]
+    for arm in extra_arms:
+        arm_log = readback.require_success(readback.arm_log(logs, arm))
+        arm_fraction = readback.pass_k(arm_log)
+        print(f"eval: {skill} arm {arm!r} pass^k {arm_fraction:.3f}")
+        fractions.append(arm_fraction)
     readback.scrub_result_dir(
         results,
         repo_root=str(REPO_ROOT),
@@ -94,4 +123,6 @@ def run_skill_eval(context: Context, skill: str) -> float:
         tmp_dirs=_tmp_dirs(),
     )
     cleanup_workdirs(Path(tempfile.gettempdir()))
-    return with_skill_fraction
+    # The caller gates on one fraction, so the weakest arm decides: every arm
+    # must clear the floor for the skill's eval to pass.
+    return min(fractions)
