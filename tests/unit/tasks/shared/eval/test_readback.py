@@ -151,5 +151,11 @@ class TestSharedContract:
         assert pass_k_reducer(TRIALS) == "pass_k_3"
 
     def test_arm_naming_convention(self):
-        assert with_skill_arm("configure") == "configure_with_skill"
-        assert baseline_arm("configure") == "configure_baseline"
+        # skill, capability, control — every arm says all three.
+        assert (
+            with_skill_arm("configure", "values")
+            == "configure_values_with_skill"
+        )
+        assert (
+            baseline_arm("configure", "values") == "configure_values_baseline"
+        )

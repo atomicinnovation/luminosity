@@ -2,6 +2,7 @@ import os
 import platform
 import sys
 import tempfile
+from importlib import import_module
 from pathlib import Path
 
 from invoke import Context, Exit
@@ -59,32 +60,35 @@ def _preflight_claude(context: Context) -> None:
         )
 
 
-def supplementary_capabilities(eval_file: Path) -> list[str]:
-    """Capabilities of a skill covered by an eval beside its paired-arm one.
+def capabilities(skill: str) -> list[str]:
+    """Return the capabilities of `skill` that carry an eval.
 
-    A skill may have a capability whose grading model does not fit the
-    skill-vs-baseline pairing — passive prompt injection, say, which no agent
-    command can be attributed to, and which has no no-skill control at all
-    (without the skill there is no prompt to inject into). Such a capability
-    gets a `<capability>_eval.py` beside the skill's own eval and rides the
-    same run.
+    A skill's eval directory holds one `<capability>_eval.py` per capability it
+    is graded on. Every capability declares a with-skill arm; a baseline arm is
+    optional, because not every capability has one that would be a control (see
+    `arms`).
     """
-    return [
+    return sorted(
         path.stem.removesuffix("_eval")
-        for path in sorted(eval_file.parent.glob("*_eval.py"))
-        if path != eval_file
-    ]
+        for path in (EVALS_SKILLS_DIR / skill).glob("*_eval.py")
+    )
 
 
-def supplementary_arm(skill: str, capability: str) -> str:
-    """Return the task name a supplementary eval exposes.
+def arms(skill: str, capability: str) -> list[str]:
+    """Return the arm names a capability's eval declares, with-skill first.
 
-    Every arm in a run shares one vocabulary —
-    `<skill>[_<capability>]_<control>` — so a supplementary arm reads as what it
-    is: the same skill, a named capability, and with-skill (its only possible
-    control).
+    The with-skill arm is mandatory. The baseline arm is declared only where a
+    no-skill run is a genuine control: passive context injection, for one, has
+    none — without the skill there is no prompt to inject into, so a no-skill
+    run would be a different experiment, not a control. The eval module is the
+    single source of that decision; this reads it off the tasks it declares.
     """
-    return with_skill_arm(f"{skill}_{capability}")
+    module = import_module(f"tests.evals.skills.{skill}.{capability}_eval")
+    declared = [with_skill_arm(skill, capability)]
+    baseline = baseline_arm(skill, capability)
+    if hasattr(module, baseline):
+        declared.append(baseline)
+    return declared
 
 
 def run_skill_eval(context: Context, skill: str) -> float:
@@ -97,43 +101,41 @@ def run_skill_eval(context: Context, skill: str) -> float:
             repo_root=REPO_ROOT, host_binary=_host_binary(), dest=_STAGING_DIR
         )
     )
-    eval_file = EVALS_SKILLS_DIR / skill / f"{skill}_eval.py"
     results = results_dir(skill)
     results.mkdir(parents=True, exist_ok=True)
-    with_arm, base_arm = with_skill_arm(skill), baseline_arm(skill)
-    capabilities = supplementary_capabilities(eval_file)
-    extra_arms = [
-        supplementary_arm(skill, capability) for capability in capabilities
-    ]
+    skill_dir = EVALS_SKILLS_DIR / skill
+    declared = {
+        capability: arms(skill, capability)
+        for capability in capabilities(skill)
+    }
     logs = inspect_eval(
         [
-            f"{eval_file}@{with_arm}",
-            f"{eval_file}@{base_arm}",
-            *(
-                f"{eval_file.parent / f'{capability}_eval.py'}@{arm}"
-                for capability, arm in zip(
-                    capabilities, extra_arms, strict=True
-                )
-            ),
+            f"{skill_dir / f'{capability}_eval.py'}@{arm}"
+            for capability, capability_arms in declared.items()
+            for arm in capability_arms
         ],
         log_format="json",
         log_dir=str(results),
         max_samples=_MAX_CONCURRENT_SAMPLES,
     )
-    with_skill = readback.require_success(readback.arm_log(logs, with_arm))
-    baseline = readback.require_success(readback.arm_log(logs, base_arm))
-    with_skill_fraction = readback.pass_k(with_skill)
-    if with_skill_fraction <= readback.pass_k(baseline):
-        print(
-            f"eval: {skill} with-skill did not beat baseline "
-            f"— investigate whether the skill adds value"
+
+    def fraction(arm: str) -> float:
+        return readback.pass_k(
+            readback.require_success(readback.arm_log(logs, arm))
         )
-    fractions = [with_skill_fraction]
-    for arm in extra_arms:
-        arm_log = readback.require_success(readback.arm_log(logs, arm))
-        arm_fraction = readback.pass_k(arm_log)
-        print(f"eval: {skill} arm {arm!r} pass^k {arm_fraction:.3f}")
-        fractions.append(arm_fraction)
+
+    graded = []
+    for capability, capability_arms in declared.items():
+        with_arm = with_skill_arm(skill, capability)
+        with_fraction = fraction(with_arm)
+        print(f"eval: arm {with_arm!r} pass^k {with_fraction:.3f}")
+        graded.append(with_fraction)
+        base_arm = baseline_arm(skill, capability)
+        if base_arm in capability_arms and with_fraction <= fraction(base_arm):
+            print(
+                f"eval: {skill} {capability} with-skill did not beat baseline "
+                f"— investigate whether the skill adds value"
+            )
     readback.scrub_result_dir(
         results,
         repo_root=str(REPO_ROOT),
@@ -141,6 +143,6 @@ def run_skill_eval(context: Context, skill: str) -> float:
         tmp_dirs=_tmp_dirs(),
     )
     cleanup_workdirs(Path(tempfile.gettempdir()))
-    # The caller gates on one fraction, so the weakest arm decides: every arm
-    # must clear the floor for the skill's eval to pass.
-    return min(fractions)
+    # The caller gates on one fraction, so the weakest capability decides: every
+    # with-skill arm must clear the floor for the skill's eval to pass.
+    return min(graded)

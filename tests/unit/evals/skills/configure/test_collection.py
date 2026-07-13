@@ -4,36 +4,64 @@ from inspect_ai import Task
 from inspect_ai._eval.loader import load_tasks
 
 from common.eval import baseline_arm, with_skill_arm
-from tests.evals.skills.configure import configure_eval
+from tests.evals.skills.configure import context_eval, values_eval
 
-_EVAL_FILE = Path(configure_eval.__file__).resolve()
-_WITH_SKILL = with_skill_arm(configure_eval.SKILL)
-_BASELINE = baseline_arm(configure_eval.SKILL)
+_SKILL = values_eval.SKILL
+_DIR = Path(values_eval.__file__).resolve().parent
+
+_VALUES_WITH_SKILL = with_skill_arm(_SKILL, values_eval.CAPABILITY)
+_VALUES_BASELINE = baseline_arm(_SKILL, values_eval.CAPABILITY)
+_CONTEXT_WITH_SKILL = with_skill_arm(_SKILL, context_eval.CAPABILITY)
+
+
+def _spec(capability: str, arm: str) -> str:
+    return f"{_DIR / f'{capability}_eval.py'}@{arm}"
 
 
 class TestTaskConstruction:
-    def test_with_skill_arm_constructs(self):
-        task = configure_eval.configure_with_skill()
+    def test_values_with_skill_arm_constructs(self):
+        task = values_eval.configure_values_with_skill()
         assert isinstance(task, Task)
-        assert task.name == _WITH_SKILL
+        assert task.name == _VALUES_WITH_SKILL
 
-    def test_baseline_arm_constructs(self):
-        task = configure_eval.configure_baseline()
+    def test_values_baseline_arm_constructs(self):
+        task = values_eval.configure_values_baseline()
         assert isinstance(task, Task)
-        assert task.name == _BASELINE
+        assert task.name == _VALUES_BASELINE
+
+    def test_context_with_skill_arm_constructs(self):
+        task = context_eval.configure_context_with_skill()
+        assert isinstance(task, Task)
+        assert task.name == _CONTEXT_WITH_SKILL
+
+    def test_context_declares_no_baseline_arm(self):
+        # Passive injection has no no-skill control: without the skill there is
+        # no prompt to inject into. The absent arm is the point, not an
+        # omission.
+        assert not hasattr(
+            context_eval, baseline_arm(_SKILL, context_eval.CAPABILITY)
+        )
 
 
 class TestFilePathLoader:
-    def test_both_arms_resolve_by_specifier(self):
+    def test_every_declared_arm_resolves_by_specifier(self):
         tasks = load_tasks(
-            [f"{_EVAL_FILE}@{_WITH_SKILL}", f"{_EVAL_FILE}@{_BASELINE}"]
+            [
+                _spec(values_eval.CAPABILITY, _VALUES_WITH_SKILL),
+                _spec(values_eval.CAPABILITY, _VALUES_BASELINE),
+                _spec(context_eval.CAPABILITY, _CONTEXT_WITH_SKILL),
+            ]
         )
-        assert {task.name for task in tasks} == {_WITH_SKILL, _BASELINE}
+        assert {task.name for task in tasks} == {
+            _VALUES_WITH_SKILL,
+            _VALUES_BASELINE,
+            _CONTEXT_WITH_SKILL,
+        }
 
 
 class TestNonCollection:
     def test_pytest_collects_no_eval_definition_files(self):
-        eval_tree = _EVAL_FILE.parents[2]
+        eval_tree = _DIR.parents[1]
         assert eval_tree.name == "evals"
         assert list(eval_tree.rglob("test_*.py")) == []
         assert list(eval_tree.rglob("*_test.py")) == []
