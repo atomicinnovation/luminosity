@@ -85,6 +85,11 @@ description = "Run the eval-logic unit tests (scorer, dataset, coherence); the l
 depends = ["deps:install:python"]
 run = "invoke test.evals.run"
 
+[tasks."test:unit:skills"]
+description = "Run the skill-wiring unit tests (context injection, allowed-tools grant, configure surface)"
+depends = ["deps:install:python"]
+run = "invoke test.skills.run"
+
 [tasks."test:unit:launcher"]
 description = "Run launcher-crate unit tests only (ad-hoc; the aggregate covers it via test:unit:cli)"
 depends = ["deps:install:rust-components"]
@@ -97,7 +102,7 @@ run = "invoke test.kernel.run"
 
 [tasks."test:unit"]
 description = "Run all unit tests in parallel"
-depends = ["test:unit:tasks", "test:unit:cli", "test:unit:evals"]
+depends = ["test:unit:tasks", "test:unit:cli", "test:unit:evals", "test:unit:skills"]
 
 [tasks."test:integration"]
 description = "Run all integration tests in parallel"
@@ -108,7 +113,7 @@ description = "Run all tests in parallel"
 depends = ["test:unit", "test:integration"]
 
 [tasks."eval:skills:configure"]
-description = "Run the configure skill Inspect eval on demand (host-native claude -p; excluded from CI for token/subscription cost)"
+description = "Run the configure skill Inspect evals on demand — the get/set arms plus the context-injection arm (host-native claude -p; excluded from CI for token/subscription cost)"
 depends = ["deps:install:python", "deps:install:claude-native", "build:launcher"]
 run = "invoke eval.skills.configure"
 

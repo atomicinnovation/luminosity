@@ -6,16 +6,22 @@
 //! closure. Serialization and I/O live in the `config-adapters` crate; the core
 //! speaks only in terms of the typed [`Node`] tree it is handed.
 
+pub mod context;
 pub mod error;
 pub mod key;
 pub mod level;
 pub mod node;
 pub mod service;
 
+pub use context::{
+    AssembleProjectContext, Assembly, LevelContribution, ProjectContext,
+    ProjectContextAssembler,
+};
 pub use error::{ConfigError, Existing};
 pub use key::Key;
 pub use level::Level;
 pub use node::{Mapping, Node, Scalar};
 pub use service::{
-    ConfigAccess, ConfigService, ReadConfigLevel, Resolved, WriteConfigLevel,
+    ConfigAccess, ConfigService, ReadConfigBody, ReadConfigLevel, Resolved,
+    WriteConfigLevel,
 };

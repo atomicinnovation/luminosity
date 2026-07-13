@@ -8,14 +8,17 @@ description: >-
 argument-hint: "[get <section.key> | set <section.key> <value>] [--level team|personal]"
 allowed-tools:
   - Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity config *)
+  - Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity context*)
 ---
 
 # Configure
 
-You manage luminosity configuration **only** through the `luminosity config`
-command. You never read, parse, or write the configuration files yourself, and
-you never construct their paths — the CLI owns the files, their format, and
-level precedence.
+!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity context --fail-safe`
+
+You manage the CLI-owned configuration **values** **only** through the
+`luminosity config` command. You never read, parse, or write those values in the
+configuration files yourself, and you never construct the files' paths — the CLI
+owns the files, their frontmatter format, and level precedence.
 
 ## The model
 
@@ -28,6 +31,31 @@ levels:
 
 A read with no level resolves personal-over-team; a write with no level goes to
 the personal level, so an accidental change never lands in shared state.
+
+## Managing project context
+
+Separate from the CLI-owned values above, each config file carries a free-form
+Markdown **body** below its frontmatter. Anything written there is injected as a
+`## Project Context` block near the top of **every** skill's prompt, so it steers
+skills without the user repeating it each invocation. The two bodies combine
+team-first:
+
+- `.luminosity/config.md` — the shared, committed **team** body.
+- `.luminosity/config.local.md` — the local, git-ignored **personal** body.
+
+Editing a body is a **user** action — unlike a `get`/`set`, which you perform
+through the CLI, you do not edit these bodies yourself. When the user wants to
+add or change injected project context, point them at the relevant body
+(`.luminosity/config.md` for shared context, `.luminosity/config.local.md` for
+personal) and let them edit it directly. To confirm a body-edit took effect, run:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/bin/luminosity context
+```
+
+It prints the assembled block (or nothing when both bodies are empty). Add
+`--explain` to see, per level, whether each file was discovered and whether its
+body was non-empty — the way to diagnose an empty or unexpected block.
 
 ## Reading a value
 

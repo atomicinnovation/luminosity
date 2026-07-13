@@ -7,9 +7,12 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use config::{ConfigError, Level, Node, ReadConfigLevel, WriteConfigLevel};
+use config::{
+    ConfigError, Level, Node, ReadConfigBody, ReadConfigLevel, WriteConfigLevel,
+};
 
 use crate::document;
+use crate::frontmatter::{self, Split};
 
 static WRITE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -41,10 +44,25 @@ impl FileConfigStore {
     }
 
     fn level_path(&self, level: Level) -> PathBuf {
-        self.config_dir().join(match level {
-            Level::Team => "config.md",
-            Level::Personal => "config.local.md",
-        })
+        self.config_dir().join(level.file_name())
+    }
+
+    fn read_raw(&self, level: Level) -> Result<Option<Split>, ConfigError> {
+        let path = self.level_path(level);
+        let content = match fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(error) if error.kind() == ErrorKind::NotFound => {
+                return Ok(None)
+            }
+            Err(error) => return Err(io_error(&path, &error)),
+        };
+        let split = frontmatter::split(&content).map_err(|detail| {
+            ConfigError::MalformedFrontmatter {
+                path: display(&path),
+                detail,
+            }
+        })?;
+        Ok(Some(split))
     }
 
     fn atomic_write(
@@ -74,21 +92,22 @@ impl FileConfigStore {
 
 impl ReadConfigLevel for FileConfigStore {
     fn read(&self, level: Level) -> Result<Option<Node>, ConfigError> {
-        let path = self.level_path(level);
-        let content = match fs::read_to_string(&path) {
-            Ok(content) => content,
-            Err(error) if error.kind() == ErrorKind::NotFound => {
-                return Ok(None)
-            }
-            Err(error) => return Err(io_error(&path, &error)),
+        let Some(split) = self.read_raw(level)? else {
+            return Ok(None);
         };
-        let node = document::parse(&content).map_err(|detail| {
-            ConfigError::MalformedFrontmatter {
-                path: display(&path),
+        let node = document::parse_frontmatter(&split.frontmatter).map_err(
+            |detail| ConfigError::MalformedFrontmatter {
+                path: display(&self.level_path(level)),
                 detail,
-            }
-        })?;
+            },
+        )?;
         Ok(Some(node))
+    }
+}
+
+impl ReadConfigBody for FileConfigStore {
+    fn read_body(&self, level: Level) -> Result<Option<String>, ConfigError> {
+        Ok(self.read_raw(level)?.map(|split| split.body))
     }
 }
 
@@ -139,7 +158,7 @@ mod tests {
 
     use config::{
         ConfigAccess, ConfigError, ConfigService, Key, Level, Node,
-        ReadConfigLevel, Scalar, WriteConfigLevel,
+        ReadConfigBody, ReadConfigLevel, Scalar, WriteConfigLevel,
     };
 
     use super::FileConfigStore;
@@ -366,6 +385,74 @@ mod tests {
             .flatten()
             .collect();
         assert!(temp_entries.is_empty(), "stray temp: {temp_entries:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn read_body_returns_the_untrimmed_body() -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed(&root, "config.md", "---\ncore: v\n---\n\n  body line\n\n")?;
+        let store = FileConfigStore::rooted_at(&root);
+        assert_eq!(
+            store.read_body(Level::Team)?,
+            Some("\n  body line\n\n".to_owned())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn an_absent_file_reads_no_body() -> Result<(), TestError> {
+        let store = FileConfigStore::rooted_at(tempdir()?);
+        assert!(store.read_body(Level::Team)?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn a_body_only_file_returns_the_whole_content() -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed(&root, "config.md", "no frontmatter here\n")?;
+        let store = FileConfigStore::rooted_at(&root);
+        assert_eq!(
+            store.read_body(Level::Team)?,
+            Some("no frontmatter here\n".to_owned())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn read_body_fails_loud_on_malformed_frontmatter() -> Result<(), TestError>
+    {
+        let root = tempdir()?;
+        seed(&root, "config.md", "---\nkey: value\n")?;
+        let store = FileConfigStore::rooted_at(&root);
+        assert!(matches!(
+            store.read_body(Level::Team),
+            Err(ConfigError::MalformedFrontmatter { path, .. })
+                if path.contains("config.md")
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn read_and_read_body_share_one_raw_read() -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed(
+            &root,
+            "config.md",
+            "---\ncore:\n  example: v\n---\nbody text\n",
+        )?;
+        let store = FileConfigStore::rooted_at(&root);
+        assert_eq!(
+            scalar_at(
+                &store.read(Level::Team)?.ok_or("expected a document")?,
+                &["core", "example"]
+            ),
+            Some(&Scalar::String("v".to_owned()))
+        );
+        assert_eq!(
+            store.read_body(Level::Team)?,
+            Some("body text\n".to_owned())
+        );
         Ok(())
     }
 

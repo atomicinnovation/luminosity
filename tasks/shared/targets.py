@@ -17,6 +17,14 @@ _HOST_OS_MARKERS = {
     "Linux": "unknown-linux",
 }
 
+# platform.machine() value -> the arch prefix its release triples carry.
+_HOST_ARCH_MARKERS = {
+    "arm64": "aarch64",
+    "aarch64": "aarch64",
+    "x86_64": "x86_64",
+    "AMD64": "x86_64",
+}
+
 
 def host_targets(system: str) -> tuple[str, ...]:
     """Release triples whose OS matches `system` (a `platform.system()` value).
@@ -33,3 +41,26 @@ def host_targets(system: str) -> tuple[str, ...]:
             code=1,
         )
     return tuple(triple for triple, _ in TARGETS if marker in triple)
+
+
+def host_triple(system: str, machine: str) -> str:
+    """Return the one release triple matching this host's OS and architecture.
+
+    `host_targets` narrows to an OS and so still yields both of its arches;
+    callers that need the single binary this host actually builds want this.
+    """
+    arch = _HOST_ARCH_MARKERS.get(machine)
+    if arch is None:
+        supported = ", ".join(_HOST_ARCH_MARKERS)
+        raise Exit(
+            f"unsupported host architecture {machine!r}; "
+            f"supported: {supported}",
+            code=1,
+        )
+    for triple in host_targets(system):
+        if triple.startswith(arch):
+            return triple
+    raise Exit(
+        f"no release triple for host {system!r}/{machine!r}",
+        code=1,
+    )

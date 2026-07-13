@@ -1,3 +1,14 @@
+"""The configure skill's configuration-values eval.
+
+The `values` capability is the CLI-owned side of the skill: reading and writing
+a dotted `section.key` through `luminosity config get`/`set`. A baseline is a
+real control for it — an agent without the skill can still reach for the CLI —
+which is what the baseline arm measures.
+
+Its sibling capability, `context`, is the free-form config-file bodies injected
+into the prompt, graded separately in `context_eval.py`.
+"""
+
 from pathlib import Path
 
 from inspect_ai import Epochs, Task, task
@@ -9,6 +20,7 @@ from tests.evals.skills.configure.scorer import configure_scorer
 from tests.evals.skills.configure.solvers import run_configure_agent
 
 SKILL = "configure"
+CAPABILITY = "values"
 
 # The solver drives claude -p itself, so Inspect's provider is never called.
 MODEL = "mockllm/model"
@@ -24,15 +36,19 @@ def _task(*, with_skill: bool) -> Task:
         epochs=Epochs(TRIALS, pass_k(TRIALS)),
         model=MODEL,
         fail_on_error=True,
-        name=with_skill_arm(SKILL) if with_skill else baseline_arm(SKILL),
+        name=(
+            with_skill_arm(SKILL, CAPABILITY)
+            if with_skill
+            else baseline_arm(SKILL, CAPABILITY)
+        ),
     )
 
 
 @task
-def configure_with_skill() -> Task:
+def configure_values_with_skill() -> Task:
     return _task(with_skill=True)
 
 
 @task
-def configure_baseline() -> Task:
+def configure_values_baseline() -> Task:
     return _task(with_skill=False)
