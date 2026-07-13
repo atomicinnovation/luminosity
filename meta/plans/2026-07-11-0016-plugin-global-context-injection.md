@@ -5,7 +5,7 @@ title: "Plugin-Global Additional Context Injection Implementation Plan"
 date: "2026-07-11T19:17:39+00:00"
 author: Toby Clemson
 producer: create-plan
-status: ready
+status: done
 work_item_id: "work-item:0016"
 parent: "work-item:0016"
 derived_from: ["codebase-research:2026-07-11-0016-plugin-global-context-injection"]
