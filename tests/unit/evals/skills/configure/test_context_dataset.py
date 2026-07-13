@@ -1,34 +1,73 @@
 """Structure and golden-coherence tests for the context injection dataset.
 
-The `expected_block` goldens are a hand-synced mirror of the launcher's
-`render` (cli/launcher/src/context_command/inbound/cli.rs): the `BLOCK_PREFIX`
-below transcribes its `## Project Context` header and two-line PROSE, and the
-rebuild test derives each deterministic golden from that prefix plus the fixture
-body, so a change to the Rust prose that is not mirrored here fails loudly
-rather than silently staling the eval.
+The `expected_block` goldens mirror the launcher's `render`
+(cli/launcher/src/context_command/inbound/cli.rs): `BLOCK_PREFIX` below
+transcribes its `## Project Context` header and two-line PROSE, and the rebuild
+test derives each deterministic golden from that prefix plus the fixture body.
+
+`test_block_prefix_matches_the_rust_source` pins `BLOCK_PREFIX` against the Rust
+literals themselves, so a change to the header or prose that is not mirrored
+here fails in CI rather than silently staling the eval golden — which would
+otherwise surface only in a live eval run.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+_REPO_ROOT = Path(__file__).resolve().parents[5]
 _EVAL_DIR = (
     Path(__file__).resolve().parents[4] / "evals" / "skills" / "configure"
 )
 _DATASET = _EVAL_DIR / "context_dataset.json"
 _FIXTURES = _EVAL_DIR / "fixtures"
+_RUST_INBOUND = (
+    _REPO_ROOT
+    / "cli"
+    / "launcher"
+    / "src"
+    / "context_command"
+    / "inbound"
+    / "cli.rs"
+)
 
 # Hand-synced with render() / PROSE in
-# cli/launcher/src/context_command/inbound/cli.rs — the same literal that
-# crate's byte-exact `renders_the_byte_exact_block` test asserts.
+# cli/launcher/src/context_command/inbound/cli.rs, and pinned against those
+# literals by test_block_prefix_matches_the_rust_source below.
 BLOCK_PREFIX = (
     "## Project Context\n\n"
     "The following project-specific context has been provided. Take this into\n"
     "account when making decisions, selecting approaches, and generating "
     "output.\n\n"
 )
+
+
+def _rust_source() -> str:
+    return _RUST_INBOUND.read_text()
+
+
+def _rust_prose() -> str:
+    match = re.search(
+        r'const PROSE: &str = "(.*?)";', _rust_source(), re.DOTALL
+    )
+    if match is None:
+        message = f"no PROSE const found in {_RUST_INBOUND}"
+        raise AssertionError(message)
+    # Rust's trailing-backslash line continuation swallows the newline and the
+    # next line's leading whitespace; nothing else in PROSE is escaped.
+    return re.sub(r"\\\n\s*", "", match.group(1))
+
+
+def _rust_header() -> str:
+    match = re.search(r'format!\("(#[^"\\]*?)\\n\\n\{PROSE\}', _rust_source())
+    if match is None:
+        message = f"no render() header found in {_RUST_INBOUND}"
+        raise AssertionError(message)
+    return match.group(1)
+
 
 _SCENARIOS = {
     "team_only",
@@ -74,6 +113,13 @@ def _expected_block(fixture: str) -> str:
 
 def _record(scenario: str) -> dict[str, Any]:
     return next(r for r in _records() if r["metadata"]["scenario"] == scenario)
+
+
+def test_block_prefix_matches_the_rust_source() -> None:
+    # The scorer byte-compares the goldens against the real binary, but only in
+    # a live run. Pinning the prefix against the Rust literals is what makes a
+    # drift in the header or prose fail in CI rather than stale them unseen.
+    assert f"{_rust_header()}\n\n{_rust_prose()}\n\n" == BLOCK_PREFIX
 
 
 def test_every_line_parses_and_carries_required_fields() -> None:
