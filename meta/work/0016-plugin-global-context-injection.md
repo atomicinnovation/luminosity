@@ -5,14 +5,14 @@ title: "Plugin-Global Additional Context Injection"
 date: "2026-07-11T11:19:14+00:00"
 author: Toby Clemson
 producer: extract-work-items
-status: ready
+status: done
 kind: story
 priority: medium
 parent: "work-item:0011"
 blocks: ["work-item:0017", "work-item:0018"]
 relates_to: ["work-item:0010"]
 tags: [configuration, context-injection]
-last_updated: "2026-07-11T17:58:14+00:00"
+last_updated: "2026-07-13T18:53:06+00:00"
 last_updated_by: Toby Clemson
 schema_version: 1
 ---
@@ -20,7 +20,7 @@ schema_version: 1
 # 0016: Plugin-Global Additional Context Injection
 
 **Kind**: Story
-**Status**: Ready
+**Status**: Done
 **Priority**: Medium
 **Author**: Toby Clemson
 
@@ -63,37 +63,37 @@ every skill's prompt; the reader itself is implemented in the Rust CLI.
 
 ## Acceptance Criteria
 
-- [ ] Given a team config with a non-empty body and no personal config, when a
+- [x] Given a team config with a non-empty body and no personal config, when a
       wired skill is invoked, then the prompt contains the `## Project Context`
       block with the team body.
-- [ ] Given a personal config with a non-empty body and no team config, when a
+- [x] Given a personal config with a non-empty body and no team config, when a
       wired skill is invoked, then the prompt contains the `## Project Context`
       block with the personal body.
-- [ ] Given both team and personal config bodies are non-empty, when a wired
+- [x] Given both team and personal config bodies are non-empty, when a wired
       skill is invoked, then both bodies appear under one `## Project Context`
       block, team first, separated by a blank line.
-- [ ] Given config bodies with surrounding blank lines, when the block is
+- [x] Given config bodies with surrounding blank lines, when the block is
       emitted, then it has no leading or trailing blank lines.
-- [ ] Given both config bodies are empty or absent, when a wired skill is
+- [x] Given both config bodies are empty or absent, when a wired skill is
       invoked, then no `## Project Context` block is emitted.
-- [ ] Given a wired skill whose body contains skill-specific instructions, when
+- [x] Given a wired skill whose body contains skill-specific instructions, when
       the skill is invoked with a non-empty config body, then the
       `## Project Context` block appears *before* those skill-specific
       instructions (the near-top placement is load-bearing).
-- [ ] The emitted header line and wrapper prose match the exact
+- [x] The emitted header line and wrapper prose match the exact
       `## Project Context` block reproduced in Technical Notes, byte-for-byte
       (the header and prose are load-bearing).
-- [ ] Frontmatter/body split uses the first two `---` fences only; a file whose
+- [x] Frontmatter/body split uses the first two `---` fences only; a file whose
       first line is not `---` is treated as all-body.
-- [ ] Given the set of skills enumerated in `.claude-plugin/plugin.json`, when
+- [x] Given the set of skills enumerated in `.claude-plugin/plugin.json`, when
       each is invoked with a non-empty config body, then every one emits the
       `## Project Context` block — a test iterates the registry and asserts each
       entry, rather than checking a single skill.
-- [ ] Given the `configure` skill is invoked, then its rendered surface lists an
+- [x] Given the `configure` skill is invoked, then its rendered surface lists an
       action for managing the plugin-global project context that names the team
       and personal config-file bodies as the source, and the skill body includes
       that action.
-- [ ] The eval suite exercises each injection scenario: team-only body,
+- [x] The eval suite exercises each injection scenario: team-only body,
       personal-only body, both bodies present (team-first ordering), and
       both-empty-emits-nothing — each asserting the presence/absence and content
       of the `## Project Context` block (building on the eval framework from
