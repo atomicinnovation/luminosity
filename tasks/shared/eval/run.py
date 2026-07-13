@@ -10,7 +10,9 @@ from common.eval import PLUGIN_DIR_ENV, baseline_arm, with_skill_arm
 from tasks.shared.eval import readback, staging
 from tasks.shared.eval.locations import EVALS_SKILLS_DIR, results_dir
 from tasks.shared.eval.workdirs import cleanup_workdirs
-from tasks.shared.paths import REPO_ROOT, binary_path
+from tasks.shared.paths import REPO_ROOT, WORKSPACE_ROOT
+from tasks.shared.rust import LAUNCHER_CRATE
+from tasks.shared.targets import host_triple
 
 _STAGING_DIR = REPO_ROOT / "cli" / "target" / "eval-plugin"
 _MAX_CONCURRENT_SAMPLES = 4
@@ -22,11 +24,24 @@ def _ensure_repo_on_path() -> None:
         sys.path.insert(0, root)
 
 
+def host_binary_path() -> Path:
+    # `build:launcher` (which the eval leaves depend on) leaves its release
+    # build in the cargo target dir. The launcher's bin/ dir is only populated
+    # by the distribution build, so reading it would stage whatever binary a
+    # past release left behind — silently evaluating stale code.
+    triple = host_triple(platform.system(), platform.machine())
+    return WORKSPACE_ROOT / "target" / triple / "release" / LAUNCHER_CRATE
+
+
 def _host_binary() -> Path:
-    machine = platform.machine()
-    arch = "arm64" if machine in ("arm64", "aarch64") else "x64"
-    os_name = "darwin" if platform.system() == "Darwin" else "linux"
-    return binary_path(f"{os_name}-{arch}")
+    binary = host_binary_path()
+    if not binary.is_file():
+        raise Exit(
+            f"eval: no host launcher at {binary} — run "
+            f"`mise run build:launcher`",
+            code=1,
+        )
+    return binary
 
 
 def _tmp_dirs() -> set[str]:
