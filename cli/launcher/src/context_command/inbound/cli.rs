@@ -151,11 +151,31 @@ pub fn run(
     }
 
     if options.explain {
-        for line in explain(assembler, &project, skill.as_ref())? {
+        for line in diagnostic(assembler, &project, skill.as_ref(), options)? {
             eprintln!("{line}");
         }
     }
     Ok(())
+}
+
+/// The `--explain` lines, with the same degrade policy as the blocks above
+/// them: under `--fail-safe` a diagnostic that cannot be built is itself
+/// reported as a line rather than propagated. Otherwise `--explain` would be a
+/// hole in the fail-safe boundary — the one error in `run` that still exits
+/// non-zero, discarding the prompt the flag was only meant to describe.
+fn diagnostic(
+    assembler: &impl AssembleContext,
+    project: &Section,
+    skill: Option<&Section>,
+    options: &Options,
+) -> Result<Vec<String>, ConfigError> {
+    match explain(assembler, project, skill) {
+        Ok(lines) => Ok(lines),
+        Err(error) if options.on_failure == OnFailure::Degrade => {
+            Ok(vec![format!("explain unavailable: {error}")])
+        }
+        Err(error) => Err(error),
+    }
 }
 
 fn assemble(
@@ -258,10 +278,15 @@ fn section_lines(
         Section::Resolved(source, outcome) => {
             source_lines(assembler, source, outcome)
         }
-        // No path was ever constructed for a name that did not parse, and
-        // fabricating one would be the very path-rebuild the design forbids.
-        Section::Unresolved(error) => Ok(vec![error.to_string()]),
+        Section::Unresolved(error) => Ok(vec![invalid_skill_line(error)]),
     }
+}
+
+/// Names the skill source without naming a file: no path was ever constructed
+/// for a name that did not parse, and fabricating one would be the very
+/// path-rebuild the design forbids.
+fn invalid_skill_line(error: &ConfigError) -> String {
+    format!("skill: {error}")
 }
 
 fn source_lines(
@@ -314,12 +339,14 @@ fn explain_line(contribution: &LevelContribution) -> String {
 #[cfg(test)]
 mod tests {
     use config::{
-        AssembledContext, ConfigError, Level, LevelContribution, SkillName,
+        AssembleContext, AssembledContext, Assembly, ConfigError,
+        ContextSource, Level, LevelContribution, SkillName, SourceLocation,
     };
 
     use super::{
-        explain_lines, join_blocks, render_project, render_project_unavailable,
-        render_skill, render_skill_unavailable,
+        explain_lines, invalid_skill_line, join_blocks, render_project,
+        render_project_unavailable, render_skill, render_skill_unavailable,
+        run, OnFailure, Options,
     };
 
     fn contribution(discovered: bool, has_body: bool) -> LevelContribution {
@@ -468,5 +495,69 @@ mod tests {
                     .to_owned(),
             ]
         );
+    }
+
+    #[test]
+    fn an_invalid_skill_name_explains_under_a_skill_prefix() {
+        let error = ConfigError::InvalidSkillName {
+            name: "../../etc".to_owned(),
+        };
+        let line = invalid_skill_line(&error);
+        assert!(line.starts_with("skill: "));
+        assert!(line.contains("../../etc"));
+        assert!(!line.contains("skills/"));
+    }
+
+    /// Fails every port method, standing in for a broken working directory —
+    /// the only way `locate` can fail, since `discover` itself is infallible.
+    struct Unlocatable;
+
+    impl Unlocatable {
+        fn error() -> ConfigError {
+            ConfigError::Io {
+                path: ".".to_owned(),
+                detail: "no such working directory".to_owned(),
+            }
+        }
+    }
+
+    impl AssembleContext for Unlocatable {
+        fn assemble(
+            &self,
+            _source: &ContextSource,
+        ) -> Result<Assembly, ConfigError> {
+            Err(Self::error())
+        }
+
+        fn locate(
+            &self,
+            _source: &ContextSource,
+        ) -> Result<SourceLocation, ConfigError> {
+            Err(Self::error())
+        }
+    }
+
+    fn options(explain: bool, on_failure: OnFailure) -> Options {
+        Options {
+            skill: Some("configure".to_owned()),
+            explain,
+            on_failure,
+        }
+    }
+
+    #[test]
+    fn explain_degrades_with_the_rest_under_fail_safe() {
+        // `--explain` must not be a hole in the fail-safe boundary: a caller
+        // that splices this stdout into a prompt cannot survive a non-zero
+        // exit, and the diagnostic flag must not be what causes one.
+        assert!(
+            run(&Unlocatable, &options(true, OnFailure::Degrade)).is_ok(),
+            "an unlocatable root under --explain --fail-safe must exit zero"
+        );
+    }
+
+    #[test]
+    fn explain_still_fails_loudly_without_fail_safe() {
+        assert!(run(&Unlocatable, &options(true, OnFailure::Fail)).is_err());
     }
 }

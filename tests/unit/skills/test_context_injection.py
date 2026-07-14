@@ -43,8 +43,10 @@ INJECTION_TEMPLATE = (
 )
 CONTEXT_GRANT = "Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity context*)"
 
-# The Python mirror of SkillName::parse (cli/config/src/source.rs).
-SKILL_NAME_ALLOW_LIST = re.compile(r"^[A-Za-z0-9_-]+$")
+# The Python mirror of SkillName::parse (cli/config/src/source.rs). Matched with
+# `fullmatch`, not `match`: Python's `$` also matches before a trailing newline,
+# so `match` would accept a "configure\n" that the Rust allow-list rejects.
+SKILL_NAME_ALLOW_LIST = re.compile(r"[A-Za-z0-9_-]+")
 
 _NAME_FIELD = re.compile(r"^name:\s*(.+?)\s*$", re.MULTILINE)
 
@@ -112,7 +114,7 @@ class TestEverySkillIsWired:
     def test_the_frontmatter_name_satisfies_the_skill_name_allow_list(
         self, skill_file: Path
     ) -> None:
-        assert SKILL_NAME_ALLOW_LIST.match(_skill_name(skill_file))
+        assert SKILL_NAME_ALLOW_LIST.fullmatch(_skill_name(skill_file))
 
     def test_the_frontmatter_name_matches_the_skill_directory_name(
         self, skill_file: Path

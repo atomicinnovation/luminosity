@@ -3,11 +3,18 @@
 //!
 //! It owns the whole path rule — which file a `(ContextSource, Level)` pair
 //! names — so no caller ever composes `skills/<name>/<file>` itself, and the two
-//! rules that guard a free-form context file: containment (a symlinked file or
-//! directory component whose target escapes `.luminosity/` is refused, never
-//! followed) and the mapping-only frontmatter strip (a `---` fence is stripped
-//! only when it parses as a YAML mapping, so prose opening with a thematic break
-//! is never silently truncated).
+//! rules that guard a `.luminosity` document:
+//!
+//! - **Containment**, applied to *every* read and write: a symlinked file or
+//!   directory component whose target escapes `.luminosity/` is refused, never
+//!   followed. One file therefore has one safety contract, whichever port
+//!   reaches it — a config read cannot be lured through a symlink that a context
+//!   read would refuse, and a write cannot clobber its target.
+//! - **The mapping-only frontmatter strip**, applied to every document *body*: a
+//!   `---` fence is stripped only when it parses as a YAML mapping, so prose
+//!   opening with a thematic break is never silently truncated. This governs
+//!   `config.md`'s body as well as a skill's, so the bodies spliced into a prompt
+//!   follow one rule rather than two.
 
 use std::fs;
 use std::io::ErrorKind;
@@ -150,6 +157,7 @@ impl FileConfigStore {
 impl ReadConfigLevel for FileConfigStore {
     fn read(&self, level: Level) -> Result<Option<Node>, ConfigError> {
         let path = self.config_path(level);
+        self.refuse_escaping_path(&path)?;
         let Some((_, split)) = read_and_split(&path)? else {
             return Ok(None);
         };
@@ -191,6 +199,7 @@ impl ReadContextBody for FileConfigStore {
 impl WriteConfigLevel for FileConfigStore {
     fn write(&self, level: Level, document: &Node) -> Result<(), ConfigError> {
         let path = self.config_path(level);
+        self.refuse_escaping_path(&path)?;
         let existing = match fs::read_to_string(&path) {
             Ok(content) => Some(content),
             Err(error) if error.kind() == ErrorKind::NotFound => None,
@@ -274,7 +283,7 @@ mod tests {
 
     use config::{
         ConfigAccess, ConfigError, ConfigService, ContextSource, Key, Level,
-        Node, ReadConfigLevel, ReadContextBody, Scalar, SkillName,
+        Mapping, Node, ReadConfigLevel, ReadContextBody, Scalar, SkillName,
         WriteConfigLevel,
     };
 
@@ -785,6 +794,63 @@ mod tests {
                 Some(ConfigError::UnsafePath { .. })
             )
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn a_project_context_with_non_mapping_frontmatter_is_injected_whole(
+    ) -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed(&root, "config.md", "---\n- alpha\n- beta\n---\nThe body.\n")?;
+
+        assert_eq!(
+            project_body(&root, Level::Team)?,
+            Some("---\n- alpha\n- beta\n---\nThe body.\n".to_owned())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_symlinked_config_file_pointing_outside_is_refused(
+    ) -> Result<(), TestError> {
+        let root = tempdir()?;
+        let outside = root.join("outside.md");
+        fs::write(&outside, "---\ncore:\n  example: stolen\n---\n")?;
+        fs::create_dir_all(root.join(".luminosity"))?;
+        std::os::unix::fs::symlink(
+            &outside,
+            root.join(".luminosity/config.md"),
+        )?;
+
+        assert!(matches!(
+            FileConfigStore::rooted_at(&root).read(Level::Team),
+            Err(ConfigError::UnsafePath { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn writing_through_a_symlinked_config_file_is_refused(
+    ) -> Result<(), TestError> {
+        let root = tempdir()?;
+        let outside = root.join("outside.md");
+        fs::write(&outside, "---\ncore:\n  example: original\n---\n")?;
+        fs::create_dir_all(root.join(".luminosity"))?;
+        std::os::unix::fs::symlink(
+            &outside,
+            root.join(".luminosity/config.md"),
+        )?;
+
+        let document = Node::Mapping(Mapping::default());
+        assert!(matches!(
+            FileConfigStore::rooted_at(&root).write(Level::Team, &document),
+            Err(ConfigError::UnsafePath { .. })
+        ));
+        assert_eq!(
+            fs::read_to_string(&outside)?,
+            "---\ncore:\n  example: original\n---\n",
+            "the symlink target must not be clobbered"
+        );
         Ok(())
     }
 

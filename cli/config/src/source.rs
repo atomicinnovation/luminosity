@@ -38,6 +38,7 @@ impl SkillName {
         Ok(Self(raw.to_owned()))
     }
 
+    /// The validated name, for an adapter composing it into a path.
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
