@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use config::{
     ConfigError, ContextSource, Level, LevelBody, Node, ReadConfigLevel,
-    ReadContextBody, WriteConfigLevel,
+    ReadContextBody, SourceLocation, WriteConfigLevel,
 };
 
 use crate::document;
@@ -66,21 +66,6 @@ impl FileConfigStore {
                 .join(name.as_str())
                 .join(format!("context{}.md", level.qualifier())),
         }
-    }
-
-    /// Both of `source`'s level paths, root-relative for display. The single
-    /// source of the path rule, so a diagnostic that must name the files even
-    /// when the read failed never rebuilds the shape itself.
-    #[must_use]
-    pub fn context_paths(&self, source: &ContextSource) -> [String; 2] {
-        [Level::Team, Level::Personal]
-            .map(|level| self.relative(&self.context_path(source, level)))
-    }
-
-    /// The project root the documents are discovered beneath.
-    #[must_use]
-    pub fn root(&self) -> String {
-        display(&self.root)
     }
 
     fn relative(&self, path: &Path) -> String {
@@ -188,6 +173,17 @@ impl ReadContextBody for FileConfigStore {
         Ok(LevelBody {
             path: self.relative(&path),
             body: self.read_context_body(&path)?,
+        })
+    }
+
+    fn locate(
+        &self,
+        source: &ContextSource,
+    ) -> Result<SourceLocation, ConfigError> {
+        Ok(SourceLocation {
+            root: display(&self.root),
+            paths: [Level::Team, Level::Personal]
+                .map(|level| self.relative(&self.context_path(source, level))),
         })
     }
 }
@@ -826,7 +822,7 @@ mod tests {
     fn the_skill_context_path_nests_under_skills() -> Result<(), TestError> {
         let store = FileConfigStore::rooted_at(tempdir()?);
         assert_eq!(
-            store.context_paths(&configure()?),
+            store.locate(&configure()?)?.paths,
             [
                 ".luminosity/skills/configure/context.md".to_owned(),
                 ".luminosity/skills/configure/context.local.md".to_owned(),
@@ -839,7 +835,7 @@ mod tests {
     fn the_project_context_path_is_the_config_file() -> Result<(), TestError> {
         let store = FileConfigStore::rooted_at(tempdir()?);
         assert_eq!(
-            store.context_paths(&ContextSource::Project),
+            store.locate(&ContextSource::Project)?.paths,
             [
                 ".luminosity/config.md".to_owned(),
                 ".luminosity/config.local.md".to_owned(),
@@ -859,10 +855,12 @@ mod tests {
     }
 
     #[test]
-    fn the_root_is_the_discovered_project_directory() -> Result<(), TestError> {
+    fn locate_reports_the_discovered_project_root() -> Result<(), TestError> {
         let root = tempdir()?;
         assert_eq!(
-            FileConfigStore::rooted_at(&root).root(),
+            FileConfigStore::rooted_at(&root)
+                .locate(&ContextSource::Project)?
+                .root,
             root.display().to_string()
         );
         Ok(())

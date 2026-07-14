@@ -907,24 +907,24 @@ composition invariants, below the process boundary):
 
 #### Automated Verification
 
-- [ ] Rust format and lint pass: `mise run cli:check`
-- [ ] Workspace unit tests and the black-box suite pass: `mise run test:unit:cli`
-- [ ] The context black-box suite passes in isolation:
+- [x] Rust format and lint pass: `mise run cli:check`
+- [x] Workspace unit tests and the black-box suite pass: `mise run test:unit:cli`
+- [x] The context black-box suite passes in isolation:
       `cd cli && cargo nextest run -p luminosity -E 'test(context)'`
 
 #### Manual Verification
 
-- [ ] In a scratch repo with a `.luminosity/skills/configure/context.md`,
+- [x] In a scratch repo with a `.luminosity/skills/configure/context.md`,
       `luminosity context --skill=configure` prints the project block then the
       skill block, separated by exactly one blank line, with no trailing blank.
-- [ ] `luminosity context --skill=configure --explain` prints the root and the
+- [x] `luminosity context --skill=configure --explain` prints the root and the
       four files' root-relative paths, and still prints the skill lines when the
       skill context is malformed.
-- [ ] `luminosity context --skill=../../etc --fail-safe` exits **0**, still
+- [x] `luminosity context --skill=../../etc --fail-safe` exits **0**, still
       prints the project block, and appends a `## Skill-Specific Context
       Unavailable` notice — confirming a bad name cannot discard a prompt or the
       other block.
-- [ ] `context_command/inbound/cli.rs`'s `//!` is rewritten to describe two
+- [x] `context_command/inbound/cli.rs`'s `//!` is rewritten to describe two
       blocks and the independent per-source degrade policy, and every new public
       item (`join_blocks`, `render_skill`, `render_skill_unavailable`) carries a
       `///` summary — there is no `missing_docs` lint to catch a miss.

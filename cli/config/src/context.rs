@@ -45,6 +45,17 @@ pub struct LevelBody {
     pub body: Option<String>,
 }
 
+/// Where a source's two levels live: the project root, and each level's path
+/// relative to it, ordered `[team, personal]`.
+///
+/// Answers "which files would have been read" for a diagnostic that must name
+/// them even when the read failed and yielded no [`Assembly`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceLocation {
+    pub root: String,
+    pub paths: [String; 2],
+}
+
 /// Reads a single level of a single document — a driven port.
 pub trait ReadContextBody {
     /// Returns `source`'s body at `level` (absent when the file is), and the
@@ -59,9 +70,19 @@ pub trait ReadContextBody {
         source: &ContextSource,
         level: Level,
     ) -> Result<LevelBody, ConfigError>;
+
+    /// Reports where `source`'s levels live, without reading them.
+    ///
+    /// # Errors
+    ///
+    /// A [`ConfigError`] when the project root cannot be discovered.
+    fn locate(
+        &self,
+        source: &ContextSource,
+    ) -> Result<SourceLocation, ConfigError>;
 }
 
-/// The operation the assembler offers callers — the driving port.
+/// The operations the assembler offers callers — the driving port.
 pub trait AssembleContext {
     /// Reads both of `source`'s levels once and combines their bodies.
     ///
@@ -70,6 +91,16 @@ pub trait AssembleContext {
     /// A [`ConfigError`] when either level cannot be read.
     fn assemble(&self, source: &ContextSource)
         -> Result<Assembly, ConfigError>;
+
+    /// Reports where `source`'s levels live, without reading them.
+    ///
+    /// # Errors
+    ///
+    /// A [`ConfigError`] when the project root cannot be discovered.
+    fn locate(
+        &self,
+        source: &ContextSource,
+    ) -> Result<SourceLocation, ConfigError>;
 }
 
 /// The application service. Depends only on the [`ReadContextBody`] driven port.
@@ -99,6 +130,13 @@ impl<R: ReadContextBody> AssembleContext for ContextAssembler<R> {
             contribution(Level::Personal, &personal),
         ];
         Ok(Assembly { context, levels })
+    }
+
+    fn locate(
+        &self,
+        source: &ContextSource,
+    ) -> Result<SourceLocation, ConfigError> {
+        self.reader.locate(source)
     }
 }
 
@@ -145,7 +183,7 @@ fn trim_blank_lines(body: &str) -> &str {
 mod tests {
     use super::{
         AssembleContext, AssembledContext, Assembly, ContextAssembler,
-        LevelBody, LevelContribution, ReadContextBody,
+        LevelBody, LevelContribution, ReadContextBody, SourceLocation,
     };
     use crate::error::ConfigError;
     use crate::level::Level;
@@ -201,6 +239,17 @@ mod tests {
             Ok(LevelBody {
                 path: path_of(source, level),
                 body,
+            })
+        }
+
+        fn locate(
+            &self,
+            source: &ContextSource,
+        ) -> Result<SourceLocation, ConfigError> {
+            Ok(SourceLocation {
+                root: "/root".to_owned(),
+                paths: [Level::Team, Level::Personal]
+                    .map(|level| path_of(source, level)),
             })
         }
     }
@@ -431,6 +480,26 @@ mod tests {
             assert_eq!(assembly.levels[0].level, Level::Team);
             assert_eq!(assembly.levels[1].level, Level::Personal);
         }
+        Ok(())
+    }
+
+    #[test]
+    fn locating_a_source_reports_its_root_and_both_paths(
+    ) -> Result<(), ConfigError> {
+        let assembler = ContextAssembler::new(FakeReader::new(
+            BodyState::Missing,
+            BodyState::Missing,
+        ));
+        assert_eq!(
+            assembler.locate(&skill()?)?,
+            SourceLocation {
+                root: "/root".to_owned(),
+                paths: [
+                    ".luminosity/skills/configure/context.md".to_owned(),
+                    ".luminosity/skills/configure/context.local.md".to_owned(),
+                ],
+            }
+        );
         Ok(())
     }
 

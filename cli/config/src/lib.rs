@@ -18,7 +18,7 @@ pub mod source;
 
 pub use context::{
     AssembleContext, AssembledContext, Assembly, ContextAssembler, LevelBody,
-    LevelContribution, ReadContextBody,
+    LevelContribution, ReadContextBody, SourceLocation,
 };
 pub use error::{ConfigError, Existing};
 pub use key::Key;

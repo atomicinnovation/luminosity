@@ -10,7 +10,7 @@ use clap::{CommandFactory as _, Parser as _};
 
 use config::{
     ConfigAccess, ConfigError, ConfigService, ContextAssembler, ContextSource,
-    Key, Level, LevelBody, ReadContextBody, Resolved,
+    Key, Level, LevelBody, ReadContextBody, Resolved, SourceLocation,
 };
 use config_adapters::FileConfigStore;
 use luminosity::launch::core::{
@@ -95,6 +95,13 @@ impl ReadContextBody for LazyContextBody {
         level: Level,
     ) -> Result<LevelBody, ConfigError> {
         discover_store()?.read_body(source, level)
+    }
+
+    fn locate(
+        &self,
+        source: &ContextSource,
+    ) -> Result<SourceLocation, ConfigError> {
+        discover_store()?.locate(source)
     }
 }
 
