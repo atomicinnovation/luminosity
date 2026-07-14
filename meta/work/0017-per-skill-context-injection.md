@@ -84,50 +84,50 @@ injection, consistent with every other file the Luminosity CLI reads.
 
 ## Acceptance Criteria
 
-- [ ] Given a per-skill context file for skill X with non-empty content and a
+- [x] Given a per-skill context file for skill X with non-empty content and a
       `## Project Context` block present, when skill X is invoked, then its
       prompt contains a `## Skill-Specific Context` block with that content,
       positioned immediately after the `## Project Context` block.
-- [ ] Given a per-skill context file for skill X with non-empty content and no
+- [x] Given a per-skill context file for skill X with non-empty content and no
       `## Project Context` block, when skill X is invoked, then the
       `## Skill-Specific Context` block appears at the fixed near-top injection
       point as the first injected block there — the same structural point it
       would occupy immediately after a `## Project Context` block, which is
       simply absent.
-- [ ] Given only a team `context.md` for skill X, when skill X is invoked, then
+- [x] Given only a team `context.md` for skill X, when skill X is invoked, then
       the `## Skill-Specific Context` block carries the team body.
-- [ ] Given only a personal `context.local.md` for skill X, when skill X is
+- [x] Given only a personal `context.local.md` for skill X, when skill X is
       invoked, then the `## Skill-Specific Context` block carries the personal
       body.
-- [ ] Given both a `context.md` and a `context.local.md` for skill X, when skill
+- [x] Given both a `context.md` and a `context.local.md` for skill X, when skill
       X is invoked, then a **single** `## Skill-Specific Context` block carries
       both bodies joined team-then-personal by one blank line.
-- [ ] Given a per-skill context file carrying YAML frontmatter, when the block is
+- [x] Given a per-skill context file carrying YAML frontmatter, when the block is
       emitted, then only the body beneath the frontmatter appears — the
       frontmatter itself is never injected.
-- [ ] Given neither a `context.md` nor a `context.local.md` for skill X (or both
+- [x] Given neither a `context.md` nor a `context.local.md` for skill X (or both
       empty), when skill X is invoked, then no `## Skill-Specific Context` block
       is emitted.
-- [ ] Given a per-skill context file with surrounding blank lines, when the block
+- [x] Given a per-skill context file with surrounding blank lines, when the block
       is emitted, then it has no leading or trailing blank lines.
-- [ ] Given both plugin-global context and per-skill context exist, the ordering
+- [x] Given both plugin-global context and per-skill context exist, the ordering
       is global-then-skill.
-- [ ] The emitted header line and wrapper prose match the exact
+- [x] The emitted header line and wrapper prose match the exact
       `## Skill-Specific Context` block reproduced in Technical Notes,
       byte-for-byte (including the skill-name-interpolated lead sentence); the
       header and prose are load-bearing.
-- [ ] Given the set of skills enumerated in `.claude-plugin/plugin.json`, when
+- [x] Given the set of skills enumerated in `.claude-plugin/plugin.json`, when
       each skill with a fixture per-skill context file is invoked, then every one
       emits the `## Skill-Specific Context` block — a test iterates the registry
       and asserts each entry, rather than checking a single skill.
-- [ ] Given the `configure` skill is invoked, then its rendered surface lists an
+- [x] Given the `configure` skill is invoked, then its rendered surface lists an
       action for managing per-skill context that names **both** the
       `.luminosity/skills/<skill-name>/context.md` and
       `.luminosity/skills/<skill-name>/context.local.md` paths as the sources,
       and the skill body includes that action.
-- [ ] The personal `context.local.md` is git-ignored by default, while the team
+- [x] The personal `context.local.md` is git-ignored by default, while the team
       `context.md` stays tracked.
-- [ ] The eval suite exercises each injection scenario: per-skill context present
+- [x] The eval suite exercises each injection scenario: per-skill context present
       (block emitted after any `## Project Context`), absent/empty (no block),
       team-and-personal combination, and global-then-skill ordering — each
       asserting the presence/absence and position of the
