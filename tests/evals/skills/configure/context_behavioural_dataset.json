@@ -18,7 +18,7 @@
     }
   },
   {
-    "input": "Briefly describe how configuration levels work in this project.",
+    "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
     "target": "",
     "metadata": {
       "scenario": "skill_behavioural",

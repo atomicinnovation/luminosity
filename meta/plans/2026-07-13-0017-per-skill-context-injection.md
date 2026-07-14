@@ -1302,19 +1302,38 @@ at `PASS_K_FLOOR = 0.8` over `TRIALS = 3`.
 
 #### Automated Verification
 
-- [ ] `mise run eval:skills:configure` exits 0 (every behavioural arm clears the
-      pass^k floor)
-- [ ] The committed-log assertions pass, including the new dataset-coverage pin:
+- [x] `mise run eval:skills:configure` exits 0 (every behavioural arm clears the
+      pass^k floor) — both context arms at pass^k 1.000 (6/6 samples).
+- [x] The committed-log assertions pass, including the new dataset-coverage pin:
       `mise run test:unit:evals`
-- [ ] No absolute host paths leak into the committed logs (asserted by
+- [x] No absolute host paths leak into the committed logs (asserted by
       `TestCommittedLog::test_carries_no_absolute_host_path`)
 
 #### Manual Verification
 
-- [ ] The `context_global_and_skill` transcript shows the agent applying **both**
+- [x] The `context_global_and_skill` transcript shows the agent applying **both**
       the project-wide and the skill-specific convention — proving both blocks
-      landed, in order.
-- [ ] Inspect the run in the log viewer: `mise run eval:view -- --skill configure`
+      landed, in order. (The agent wrote "How configuration works here
+      (**Lantern**) … resolved across two **Tiers**" — `Lantern` comes only from
+      the project body, `Tier` only from the skill body.)
+- [x] Inspect the run in the log viewer: `mise run eval:view -- --skill configure`
+
+#### Two grading defects the first run exposed (fixed, then re-run)
+
+Both were flaws in the *grader/fixtures*, not in injection — in every failing
+sample the block had demonstrably landed:
+
+1. **Case-sensitive sentinels.** An agent that applied the skill convention and
+   wrote "resolved across two **tiers**" scored incorrect purely on
+   capitalisation. A sentinel asserts a terminology *convention*, and English
+   prose lower-cases a term used as a common noun, so `grade_behaviour` now
+   matches case-insensitively.
+2. **A prompt that did not reliably trigger the skill.** Injection fires at skill
+   *load*, so an agent that never invokes the skill never receives the block.
+   "Briefly describe how configuration levels work" sent the agent
+   filesystem-spelunking until it exhausted `MAX_TURNS`. Both behavioural rows now
+   lead with the explicit config read that story 0016's proven prompt used, which
+   routes the agent through the skill.
 
 ---
 

@@ -45,8 +45,15 @@ def grade_block(stdout: str, expected_block: str) -> bool:
 def grade_behaviour(transcript_text: str, sentinels: list[str]) -> bool:
     # Every sentinel, not any: the global-and-skill arm exists to prove that
     # *both* blocks reached the model, so clearing on one would not assert it.
+    #
+    # Case-insensitively, because a sentinel is a terminology *convention* the
+    # agent adopts, and prose naturally lower-cases a term used as a common noun
+    # ("resolved across two tiers"). Capitalisation is not part of what the
+    # convention asserts, so grading on it would fail an arm that demonstrably
+    # received the block.
+    haystack = transcript_text.casefold()
     return bool(sentinels) and all(
-        sentinel in transcript_text for sentinel in sentinels
+        sentinel.casefold() in haystack for sentinel in sentinels
     )
 
 

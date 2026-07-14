@@ -51,6 +51,12 @@ class TestGradeBehaviour:
     def test_no_sentinels_is_not_a_pass(self) -> None:
         assert not grade_behaviour("anything at all", [])
 
+    def test_a_sentinel_used_as_a_common_noun_still_counts(self) -> None:
+        # The agent applied the convention — "resolved across two tiers" — and
+        # lower-cased it as English prose does. That is the convention landing,
+        # not failing to.
+        assert grade_behaviour("resolved across two tiers", ["Tier"])
+
 
 class TestTranscriptText:
     def test_joins_assistant_content_only(self) -> None:
