@@ -71,6 +71,14 @@ on macOS) and asserts the static-link / arch invariants. It lives in the bare
 read-only checks); CI's `build-launcher` matrix covers all four triples across
 both OSes.
 
+`test:unit:evals` also `depends` on it. The eval-logic tier was once pure Python
+(parse the goldens, scrape the Rust literals) and so cost nothing; it now also
+runs the *compiled* launcher against each eval fixture and byte-compares stdout
+against the committed golden, which is the only tier that proves a fixture and
+its golden agree without paying for a live agent. That makes `test:unit:evals`
+pull a host-native release build. `check` stays build-free — it excludes the
+`test` roll-up entirely.
+
 ## Family aggregates
 
 `format:check`, `lint:check`, and `types:check` run the corresponding family across every component; `check` runs all of them plus the workspace-scope

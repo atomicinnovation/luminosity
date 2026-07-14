@@ -37,10 +37,19 @@ class TestGradeBlock:
 
 class TestGradeBehaviour:
     def test_sentinel_present(self) -> None:
-        assert grade_behaviour("... GILDED-OTTER-42 ...", "GILDED-OTTER-42")
+        assert grade_behaviour("... GILDED-OTTER-42 ...", ["GILDED-OTTER-42"])
 
     def test_sentinel_absent(self) -> None:
-        assert not grade_behaviour("no marker here", "GILDED-OTTER-42")
+        assert not grade_behaviour("no marker here", ["GILDED-OTTER-42"])
+
+    def test_every_sentinel_must_be_present(self) -> None:
+        # The global-and-skill arm exists to prove both blocks reached the
+        # model, so one sentinel out of two must not clear it.
+        assert grade_behaviour("Lantern and Tier", ["Lantern", "Tier"])
+        assert not grade_behaviour("Lantern only", ["Lantern", "Tier"])
+
+    def test_no_sentinels_is_not_a_pass(self) -> None:
+        assert not grade_behaviour("anything at all", [])
 
 
 class TestTranscriptText:

@@ -5,6 +5,9 @@
     "metadata": {
       "scenario": "team_only",
       "fixture": "context_team_only",
+      "sources": [
+        "config.md"
+      ],
       "behavioural": false,
       "expected_block": "## Project Context\n\nThe following project-specific context has been provided. Take this into\naccount when making decisions, selecting approaches, and generating output.\n\nTerminology: in this project, the configuration subsystem is called Lantern.\nRefer to it as Lantern when describing or summarising configuration work."
     }
@@ -15,6 +18,9 @@
     "metadata": {
       "scenario": "personal_only",
       "fixture": "context_personal_only",
+      "sources": [
+        "config.local.md"
+      ],
       "behavioural": false,
       "expected_block": "## Project Context\n\nThe following project-specific context has been provided. Take this into\naccount when making decisions, selecting approaches, and generating output.\n\nPersonal working note: prefer the SILVER-FOX approach."
     }
@@ -25,6 +31,10 @@
     "metadata": {
       "scenario": "both",
       "fixture": "context_both",
+      "sources": [
+        "config.md",
+        "config.local.md"
+      ],
       "behavioural": false,
       "expected_block": "## Project Context\n\nThe following project-specific context has been provided. Take this into\naccount when making decisions, selecting approaches, and generating output.\n\nTeam rule: BOTH-TEAM-SENTINEL.\n\nPersonal rule: BOTH-PERSONAL-SENTINEL."
     }
@@ -35,6 +45,50 @@
     "metadata": {
       "scenario": "both_empty",
       "fixture": "context_empty",
+      "sources": [
+        "config.md",
+        "config.local.md"
+      ],
+      "behavioural": false,
+      "expected_block": ""
+    }
+  },
+  {
+    "input": "Summarise how you would approach a small task in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "skill_team_only",
+      "fixture": "context_skill_team_only",
+      "sources": [
+        "skills/configure/context.md"
+      ],
+      "behavioural": false,
+      "expected_block": "## Skill-Specific Context\n\nThe following context is specific to the configure skill. Apply this\ncontext in addition to any project-wide context above.\n\nSkill rule: TEAM-SKILL-SENTINEL."
+    }
+  },
+  {
+    "input": "Summarise how you would approach a small task in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "skill_both_levels",
+      "fixture": "context_skill_both_levels",
+      "sources": [
+        "skills/configure/context.md",
+        "skills/configure/context.local.md"
+      ],
+      "behavioural": false,
+      "expected_block": "## Skill-Specific Context\n\nThe following context is specific to the configure skill. Apply this\ncontext in addition to any project-wide context above.\n\nSkill team rule: SKILL-TEAM-SENTINEL.\n\nSkill personal rule: SKILL-PERSONAL-SENTINEL."
+    }
+  },
+  {
+    "input": "Summarise how you would approach a small task in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "skill_empty",
+      "fixture": "context_skill_empty",
+      "sources": [
+        "skills/configure/context.md"
+      ],
       "behavioural": false,
       "expected_block": ""
     }
@@ -43,10 +97,34 @@
     "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
     "target": "",
     "metadata": {
-      "scenario": "behavioural",
-      "fixture": "context_team_only",
+      "scenario": "global_and_skill",
+      "fixture": "context_global_and_skill",
+      "sources": [
+        "config.md",
+        "skills/configure/context.md"
+      ],
       "behavioural": true,
-      "sentinel": "Lantern"
+      "expected_block": "## Project Context\n\nThe following project-specific context has been provided. Take this into\naccount when making decisions, selecting approaches, and generating output.\n\nTerminology: in this project, the configuration subsystem is called Lantern.\nRefer to it as Lantern when describing or summarising configuration work.\n\n## Skill-Specific Context\n\nThe following context is specific to the configure skill. Apply this\ncontext in addition to any project-wide context above.\n\nTerminology: a configuration level is called a Tier in this project. Refer to\nthe team and personal levels as Tiers when describing configuration.",
+      "sentinels": [
+        "Lantern",
+        "Tier"
+      ]
+    }
+  },
+  {
+    "input": "Briefly describe how configuration levels work in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "skill_behavioural",
+      "fixture": "context_skill_behavioural",
+      "sources": [
+        "skills/configure/context.md"
+      ],
+      "behavioural": true,
+      "expected_block": "## Skill-Specific Context\n\nThe following context is specific to the configure skill. Apply this\ncontext in addition to any project-wide context above.\n\nTerminology: in this project, the configuration subsystem is called Beacon.\nRefer to it as Beacon when describing or summarising configuration work.",
+      "sentinels": [
+        "Beacon"
+      ]
     }
   }
 ]

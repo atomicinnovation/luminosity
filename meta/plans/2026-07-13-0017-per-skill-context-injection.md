@@ -1260,16 +1260,18 @@ turns the gate red instead of leaving it green.
 
 #### Automated Verification
 
-- [ ] Eval-logic tests pass: `mise run test:unit:evals`
-- [ ] The three exact-list tripwires stay green **without modification** —
+- [x] Eval-logic tests pass: `mise run test:unit:evals` — with the single
+      deliberate exception of `test_the_committed_log_covers_the_behavioural_dataset`,
+      which is red *by design* until Phase 5's live run replaces the stale log.
+- [x] The three exact-list tripwires stay green **without modification** —
       `capabilities("configure") == ["context", "values"]` in
       `tests/unit/tasks/shared/eval/test_run.py`, plus `test_collection.py` and
       `test_results.py`: `mise run test:unit:tasks`
-- [ ] Python format, lint, and types pass: `mise run check`
+- [x] Python format, lint, and types pass: `mise run check`
 
 #### Manual Verification
 
-- [ ] Each new fixture's `.luminosity/skills/configure/context.local.md` is
+- [x] Each new fixture's `.luminosity/skills/configure/context.local.md` is
       actually tracked by git (the `.gitignore` negation from Phase 3 works).
 
 ---

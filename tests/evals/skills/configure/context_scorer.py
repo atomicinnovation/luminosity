@@ -17,6 +17,14 @@ from tests.evals.skills.configure.environment import luminosity_binary
 if TYPE_CHECKING:
     from inspect_ai.solver import TaskState
 
+# The argv the `configure` SKILL.md's ! preprocessor injects, verbatim —
+# including --fail-safe, so the graded command is the shipped command on the
+# failure path as well as the healthy one.
+# test_context_dataset.py scrapes the injection line out of SKILL.md and pins
+# this against it.
+SKILL = "configure"
+SCORER_ARGV = ["context", f"--skill={SKILL}", "--fail-safe"]
+
 
 @dataclass(frozen=True)
 class CommandResult:
@@ -34,8 +42,12 @@ def grade_block(stdout: str, expected_block: str) -> bool:
     return stdout == f"{expected_block}\n"
 
 
-def grade_behaviour(transcript_text: str, sentinel: str) -> bool:
-    return sentinel in transcript_text
+def grade_behaviour(transcript_text: str, sentinels: list[str]) -> bool:
+    # Every sentinel, not any: the global-and-skill arm exists to prove that
+    # *both* blocks reached the model, so clearing on one would not assert it.
+    return bool(sentinels) and all(
+        sentinel in transcript_text for sentinel in sentinels
+    )
 
 
 def transcript_text(messages: list[Any]) -> str:
@@ -69,9 +81,9 @@ async def _grade(state: TaskState) -> bool:
     metadata = state.metadata
     if metadata.get("behavioural"):
         return grade_behaviour(
-            transcript_text(state.messages), metadata["sentinel"]
+            transcript_text(state.messages), metadata["sentinels"]
         )
-    result = await _exec(["context"], workdir=metadata["workdir"])
+    result = await _exec(SCORER_ARGV, workdir=metadata["workdir"])
     return result.exit_code == 0 and grade_block(
         result.stdout, metadata["expected_block"]
     )

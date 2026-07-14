@@ -30,8 +30,14 @@ _HERE = Path(__file__).parent
 
 @task
 def configure_context_with_skill() -> Task:
+    # The billed arm reads the behavioural dataset, not the full one: the
+    # deterministic scenarios are graded for free against the compiled binary by
+    # tests/unit/evals/.../test_context_render.py, so paying a live agent to
+    # re-run them would buy nothing. This file is also the single source of
+    # truth for "the graded subset" that test_results.py pins the committed log
+    # against.
     return Task(
-        dataset=json_dataset(str(_HERE / "context_dataset.json")),
+        dataset=json_dataset(str(_HERE / "context_behavioural_dataset.json")),
         solver=run_configure_agent(with_skill=True),
         scorer=context_scorer(),
         epochs=Epochs(TRIALS, pass_k(TRIALS)),

@@ -1,20 +1,26 @@
 import json
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from inspect_ai.model import ChatMessageAssistant
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 from tests.evals.skills.configure.solvers import (
     CLAUDE_MODEL,
     ClaudeCliVersionError,
     _agent_env,
     _claude_argv,
+    _seed,
     parse_cli_version,
     parse_transcript,
     provenance,
+)
+
+_FIXTURES = (
+    Path(__file__).resolve().parents[4]
+    / "evals"
+    / "skills"
+    / "configure"
+    / "fixtures"
 )
 
 
@@ -173,3 +179,32 @@ class TestProvenance:
             "claude_model": CLAUDE_MODEL,
             "claude_cli_version": "2.1.203",
         }
+
+
+class TestSeed:
+    def test_copies_a_nested_per_skill_fixture_tree(self, tmp_path: Path):
+        # The flat glob + shutil.copy this replaced raised IsADirectoryError the
+        # moment a fixture carried a skills/ directory.
+        fixture = "context_skill_both_levels"
+        workdir = tmp_path / "workdir"
+
+        _seed(workdir, fixture)
+
+        for name in ("context.md", "context.local.md"):
+            seeded = workdir / ".luminosity" / "skills" / "configure" / name
+            source = (
+                _FIXTURES
+                / fixture
+                / ".luminosity"
+                / "skills"
+                / "configure"
+                / name
+            )
+            assert seeded.read_text() == source.read_text()
+
+    def test_marks_the_workdir_as_a_project_root(self, tmp_path: Path):
+        # Without the .git marker the launcher's upward walk would escape the
+        # fixture and root somewhere in the real working tree.
+        workdir = tmp_path / "workdir"
+        _seed(workdir, "context_team_only")
+        assert (workdir / ".git").is_dir()

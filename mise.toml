@@ -81,8 +81,8 @@ depends = ["deps:install:rust-components"]
 run = "invoke test.cli.run"
 
 [tasks."test:unit:evals"]
-description = "Run the eval-logic unit tests (scorer, dataset, coherence); the live eval tier stays out of CI"
-depends = ["deps:install:python"]
+description = "Run the eval-logic unit tests (scorer, dataset, coherence, and the compiled binary's stdout against every golden); the live eval tier stays out of CI"
+depends = ["deps:install:python", "build:launcher"]
 run = "invoke test.evals.run"
 
 [tasks."test:unit:skills"]
