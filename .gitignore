@@ -18,6 +18,11 @@
 # …except the eval fixtures, which deliberately commit a personal config to
 # exercise the precedence + malformed-frontmatter paths.
 !tests/evals/skills/configure/fixtures/**/config.local.md
+# The same pair for per-skill personal context; the team `context.md` stays
+# tracked, and the eval fixtures commit a personal one to exercise the
+# team-then-personal combination.
+**/.luminosity/skills/**/context.local.md
+!tests/evals/skills/configure/fixtures/**/context.local.md
 .claude/settings.local.json
 # Local mise overrides may carry secrets (e.g. ANTHROPIC_API_KEY for the eval
 # tier's live run) — never commit them.

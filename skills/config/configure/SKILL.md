@@ -13,7 +13,7 @@ allowed-tools:
 
 # Configure
 
-!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity context --fail-safe`
+!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity context --skill=configure --fail-safe`
 
 You manage the CLI-owned configuration **values** **only** through the
 `luminosity config` command. You never read, parse, or write those values in the
@@ -54,8 +54,42 @@ ${CLAUDE_PLUGIN_ROOT}/bin/luminosity context
 ```
 
 It prints the assembled block (or nothing when both bodies are empty). Add
-`--explain` to see, per level, whether each file was discovered and whether its
-body was non-empty — the way to diagnose an empty or unexpected block.
+`--skill=<skill-name>` to render that skill's own block after it, and `--explain`
+to see, per level, whether each file was discovered and whether its body was
+non-empty — the way to diagnose an empty or unexpected block.
+
+## Managing skill-specific context
+
+Context can also be scoped to a **single skill**, so it steers only that skill's
+prompt rather than every skill's. It is injected as a `## Skill-Specific Context`
+block immediately after the project one. As with project context, the two levels
+combine team-first:
+
+- `.luminosity/skills/configure/context.md` — the shared, committed **team**
+  body.
+- `.luminosity/skills/configure/context.local.md` — the local, git-ignored
+  **personal** body.
+
+The `<skill-name>` in that path is the name the skill is **invoked by** (its
+frontmatter `name:`, e.g. `configure`), *not* the category directory the skill's
+source happens to sit in. The user creates the nested directory and the file by
+hand; a wrong or mistyped name is silent — it emits **nothing** rather than an
+error, because the CLI has no registry of skills to check the name against.
+
+As with project context, editing these bodies is a **user** action. Point the
+user at the relevant file and let them edit it directly.
+
+One hazard worth naming: a context file must not open with an **unterminated**
+`---` line. A leading `---` with no closing `---` reads as an open frontmatter
+block and degrades the whole block. A *terminated* `---…---` block is fine — its
+content is stripped when it is YAML frontmatter, and preserved whole when it is
+prose (a thematic break).
+
+To see the root and the exact paths the CLI read, run:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/bin/luminosity context --skill=configure --explain
+```
 
 ## Reading a value
 

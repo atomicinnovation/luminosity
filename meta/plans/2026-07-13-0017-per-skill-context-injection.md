@@ -1042,19 +1042,19 @@ placement assertion, and the `allowed-tools` assertion all stay as they are.
 
 #### Automated Verification
 
-- [ ] Skill-wiring tests pass: `mise run test:unit:skills`
-- [ ] A single test runs green:
+- [x] Skill-wiring tests pass: `mise run test:unit:skills`
+- [x] A single test runs green:
       `uv run pytest tests/unit/skills/test_context_injection.py -v`
-- [ ] `git check-ignore -v .luminosity/skills/x/context.local.md` reports the new
+- [x] `git check-ignore -v .luminosity/skills/x/context.local.md` reports the new
       rule, and `git check-ignore` does **not** match
       `tests/evals/skills/configure/fixtures/*/.luminosity/skills/configure/context.local.md`
       nor any `context.md`
 
 #### Manual Verification
 
-- [ ] The rendered `configure` skill reads coherently: project context, then
+- [x] The rendered `configure` skill reads coherently: project context, then
       skill-specific context, then the skill's own prose.
-- [ ] The new surface section frames editing as a user action, states the naming
+- [x] The new surface section frames editing as a user action, states the naming
       rule, and warns that a wrong name is silent.
 
 ---
@@ -1084,9 +1084,10 @@ the accelerator-adoption context (verified).
 
 #### Automated Verification
 
-- [ ] A proposed successor ADR (or an amended ADR-0003) exists in
+- [x] A proposed successor ADR (or an amended ADR-0003) exists in
       `meta/decisions/`, recording the two-level per-skill layout and the
       frontmatter-stripping divergence, and referencing ADR-0003.
+      (`ADR-0012-two-level-per-skill-context-with-frontmatter-stripped.md`)
 
 ---
 
