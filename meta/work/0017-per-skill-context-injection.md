@@ -5,7 +5,7 @@ title: "Per-Skill Context Injection"
 date: "2026-07-11T11:19:14+00:00"
 author: Toby Clemson
 producer: extract-work-items
-status: ready
+status: done
 kind: story
 priority: medium
 parent: "work-item:0011"
@@ -20,7 +20,7 @@ schema_version: 1
 # 0017: Per-Skill Context Injection
 
 **Kind**: Story
-**Status**: Ready
+**Status**: Done
 **Priority**: Medium
 **Author**: Toby Clemson
 

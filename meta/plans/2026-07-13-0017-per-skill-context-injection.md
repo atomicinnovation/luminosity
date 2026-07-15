@@ -5,7 +5,7 @@ title: "Per-Skill Context Injection Implementation Plan"
 date: "2026-07-13T21:18:06+00:00"
 author: Toby Clemson
 producer: create-plan
-status: ready
+status: done
 work_item_id: "work-item:0017"
 parent: "work-item:0017"
 derived_from: ["codebase-research:2026-07-13-0017-per-skill-context-injection"]
