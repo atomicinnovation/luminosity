@@ -69,11 +69,21 @@ class TestCommittedLog:
 
 class TestCommittedGate:
     def _arm(self, name: str) -> Json:
-        for path in _LOGS:
-            log = _log(path)
-            if log["eval"]["task"] == name:
-                return log
-        pytest.fail(f"no committed log for arm {name!r}")
+        # Exactly one log per arm, never merely the first: nothing prunes
+        # results/, so a second run committed alongside the first would leave
+        # this gate silently grading whichever log sorted earliest — that is,
+        # the stale evidence — while looking green.
+        logs = [
+            log for path in _LOGS if (log := _log(path))["eval"]["task"] == name
+        ]
+        if not logs:
+            pytest.fail(f"no committed log for arm {name!r}")
+        if len(logs) > 1:
+            pytest.fail(
+                f"{len(logs)} committed logs for arm {name!r}: prune the stale "
+                f"ones, or the gate grades whichever sorts first"
+            )
+        return logs[0]
 
     @pytest.mark.parametrize(
         "capability", [values_eval.CAPABILITY, context_eval.CAPABILITY]
