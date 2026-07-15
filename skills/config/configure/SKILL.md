@@ -79,11 +79,12 @@ error, because the CLI has no registry of skills to check the name against.
 As with project context, editing these bodies is a **user** action. Point the
 user at the relevant file and let them edit it directly.
 
-One hazard worth naming: a context file must not open with an **unterminated**
-`---` line. A leading `---` with no closing `---` reads as an open frontmatter
-block and degrades the whole block. A *terminated* `---…---` block is fine — its
-content is stripped when it is YAML frontmatter, and preserved whole when it is
-prose (a thematic break).
+One hazard worth naming, and it applies to **every** injected body — a
+`config.md` body just as much as a skill's `context.md`: the file must not open
+with an **unterminated** `---` line. A leading `---` with no closing `---` reads
+as an open frontmatter block and degrades the whole block. A *terminated*
+`---…---` block is fine — its content is stripped when it is YAML frontmatter,
+and preserved whole when it is prose (a thematic break).
 
 To see the root and the exact paths the CLI read, run:
 
