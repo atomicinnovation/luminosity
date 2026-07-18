@@ -26,7 +26,7 @@ def _ensure_repo_on_path() -> None:
 
 
 def host_binary_path() -> Path:
-    # `build:launcher` (which the eval leaves depend on) leaves its release
+    # `build:launcher:host` (which the eval leaves depend on) leaves its release
     # build in the cargo target dir. The launcher's bin/ dir is only populated
     # by the distribution build, so reading it would stage whatever binary a
     # past release left behind — silently evaluating stale code.
@@ -42,14 +42,14 @@ def host_binary() -> Path:
     say nothing about the build that produces it.
 
     Raises:
-        Exit: when `build:launcher` has not produced the artifact.
+        Exit: when `build:launcher:host` has not produced the artifact.
 
     """
     binary = host_binary_path()
     if not binary.is_file():
         raise Exit(
             f"eval: no host launcher at {binary} — run "
-            f"`mise run build:launcher`",
+            f"`mise run build:launcher:host`",
             code=1,
         )
     return binary

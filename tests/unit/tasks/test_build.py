@@ -191,6 +191,49 @@ class TestBuildLauncher:
             build.launcher(ctx)
 
 
+class TestBuildLauncherHost:
+    """`launcher_host` builds only the one triple this host executes.
+
+    The eval tiers run/byte-compare that single binary; pulling in the
+    sibling-arch cross build (as the full `launcher` does) would demand a
+    cross-linker the unit-test CI job deliberately does not install.
+    """
+
+    def test_builds_only_the_single_host_triple(
+        self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr(build.platform, "system", lambda: "Darwin")
+        monkeypatch.setattr(build.platform, "machine", lambda: "arm64")
+        ctx.run.side_effect = _fake_run
+        build.launcher_host(ctx)
+        assert _build_commands(ctx) == [
+            f"cargo build --release --bin {LAUNCHER_CRATE} "
+            f"--target aarch64-apple-darwin"
+        ]
+
+    def test_intel_linux_host_omits_the_aarch64_musl_cross_build(
+        self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr(build.platform, "system", lambda: "Linux")
+        monkeypatch.setattr(build.platform, "machine", lambda: "x86_64")
+        ctx.run.side_effect = _fake_run
+        assert _build_commands(ctx) == []
+        build.launcher_host(ctx)
+        assert _build_commands(ctx) == [
+            f"cargo build --release --bin {LAUNCHER_CRATE} "
+            f"--target x86_64-unknown-linux-musl"
+        ]
+
+    def test_raises_when_the_host_build_fails(
+        self, ctx: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr(build.platform, "system", lambda: "Linux")
+        monkeypatch.setattr(build.platform, "machine", lambda: "x86_64")
+        ctx.run.return_value = MagicMock(exited=1, stdout="", stderr="")
+        with pytest.raises(Exit):
+            build.launcher_host(ctx)
+
+
 def _zigbuild_commands(ctx: MagicMock) -> list[str]:
     return [
         call.args[0]

@@ -82,7 +82,7 @@ run = "invoke test.cli.run"
 
 [tasks."test:unit:evals"]
 description = "Run the eval-logic unit tests (scorer, dataset, coherence, and the compiled binary's stdout against every golden); the live eval tier stays out of CI"
-depends = ["deps:install:python", "build:launcher"]
+depends = ["deps:install:python", "build:launcher:host"]
 run = "invoke test.evals.run"
 
 [tasks."test:unit:skills"]
@@ -114,7 +114,7 @@ depends = ["test:unit", "test:integration"]
 
 [tasks."eval:skills:configure"]
 description = "Run the configure skill Inspect evals on demand — the get/set arms plus the context-injection arm (host-native claude -p; excluded from CI for token/subscription cost)"
-depends = ["deps:install:python", "deps:install:claude-native", "build:launcher"]
+depends = ["deps:install:python", "deps:install:claude-native", "build:launcher:host"]
 run = "invoke eval.skills.configure"
 
 [tasks."eval:skills"]
@@ -238,6 +238,11 @@ depends = ["format:kernel:check", "lint:kernel:check"]
 description = "Release-build the host-native triples (link/arch guard; in `mise run` default, not `check`)"
 depends = ["deps:install:rust-targets"]
 run = "invoke build.launcher"
+
+[tasks."build:launcher:host"]
+description = "Release-build only this host's single native triple — the one binary the eval tiers run (no sibling-arch cross-linker needed)"
+depends = ["deps:install:rust-targets"]
+run = "invoke build.launcher-host"
 
 [tasks."build:release"]
 description = "Cross-build all four shipped triples from one host via cargo-zigbuild, staging binaries + debug archives + checksums"

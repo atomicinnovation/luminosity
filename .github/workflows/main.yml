@@ -29,6 +29,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      # The eval-logic tier byte-compares the compiled launcher's stdout against
+      # the committed goldens, so test:unit:evals `build:launcher:host`-builds
+      # the single host triple — x86_64-unknown-linux-musl here. Its `ring`
+      # dependency's C build script needs the musl C toolchain (musl-tools);
+      # without it cc-rs fails to find `x86_64-linux-musl-gcc`. Only the host
+      # arch is built, so — unlike the build-launcher job — no aarch64
+      # cross-linker is needed.
+      - name: Install musl toolchain
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
       - name: Install dependencies
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
