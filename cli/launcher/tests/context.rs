@@ -369,6 +369,18 @@ fn both_sources_absent_prints_nothing_and_exits_zero() -> TestResult {
 }
 
 #[test]
+fn an_empty_skill_context_with_no_project_prints_nothing_and_exits_zero(
+) -> TestResult {
+    let dir = workspace()?;
+    seed_skill(&dir, "context.md", "\n  \n")?;
+
+    let output = run(&dir, &["context", SKILL])?;
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "");
+    Ok(())
+}
+
+#[test]
 fn skill_surrounding_blank_lines_leave_no_leading_or_trailing_blanks(
 ) -> TestResult {
     let dir = workspace()?;

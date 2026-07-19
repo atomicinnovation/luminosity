@@ -185,26 +185,19 @@ class TestSeed:
     def test_copies_a_nested_per_skill_fixture_tree(self, tmp_path: Path):
         # The flat glob + shutil.copy this replaced raised IsADirectoryError the
         # moment a fixture carried a skills/ directory.
-        fixture = "context_skill_both_levels"
+        fixture = "context_global_and_skill"
         workdir = tmp_path / "workdir"
 
         _seed(workdir, fixture)
 
-        for name in ("context.md", "context.local.md"):
-            seeded = workdir / ".luminosity" / "skills" / "configure" / name
-            source = (
-                _FIXTURES
-                / fixture
-                / ".luminosity"
-                / "skills"
-                / "configure"
-                / name
-            )
-            assert seeded.read_text() == source.read_text()
+        nested = Path(".luminosity") / "skills" / "configure" / "context.md"
+        assert (workdir / nested).read_text() == (
+            _FIXTURES / fixture / nested
+        ).read_text()
 
     def test_marks_the_workdir_as_a_project_root(self, tmp_path: Path):
         # Without the .git marker the launcher's upward walk would escape the
         # fixture and root somewhere in the real working tree.
         workdir = tmp_path / "workdir"
-        _seed(workdir, "context_team_only")
+        _seed(workdir, "context_global_and_skill")
         assert (workdir / ".git").is_dir()

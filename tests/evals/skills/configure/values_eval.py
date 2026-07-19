@@ -30,7 +30,7 @@ _HERE = Path(__file__).parent
 
 def _task(*, with_skill: bool) -> Task:
     return Task(
-        dataset=json_dataset(str(_HERE / "dataset.json")),
+        dataset=json_dataset(str(_HERE / "values_dataset.json")),
         solver=run_configure_agent(with_skill=with_skill),
         scorer=configure_scorer(skill=SKILL, with_skill=with_skill),
         epochs=Epochs(TRIALS, pass_k(TRIALS)),

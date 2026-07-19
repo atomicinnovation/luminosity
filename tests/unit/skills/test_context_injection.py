@@ -189,6 +189,11 @@ class TestConfigureSurface:
 
 
 class TestGitignore:
+    # This fixture carries no eval dataset row: it is retained solely as the
+    # witness that the .gitignore negation commits a personal *skill* context
+    # under the eval fixtures. It is the only committed tree carrying a
+    # skills/**/context.local.md, so deleting it would silently defang the two
+    # eval-fixture tests below.
     _FIXTURE = (
         "tests/evals/skills/configure/fixtures/context_skill_both_levels"
         "/.luminosity/skills/configure"

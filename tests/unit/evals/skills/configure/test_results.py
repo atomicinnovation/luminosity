@@ -25,9 +25,7 @@ type Json = dict[str, Any]
 
 
 def _behavioural_scenarios() -> set[str]:
-    dataset = json.loads(
-        (_EVAL_DIR / "context_behavioural_dataset.json").read_text()
-    )
+    dataset = json.loads((_EVAL_DIR / "context_dataset.json").read_text())
     return {record["metadata"]["scenario"] for record in dataset}
 
 

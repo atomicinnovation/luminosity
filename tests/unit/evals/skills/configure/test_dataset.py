@@ -8,7 +8,7 @@ import yaml
 _EVAL_DIR = (
     Path(__file__).resolve().parents[4] / "evals" / "skills" / "configure"
 )
-_DATASET = _EVAL_DIR / "dataset.json"
+_DATASET = _EVAL_DIR / "values_dataset.json"
 _FIXTURES = _EVAL_DIR / "fixtures"
 
 # A Python transcription of the cli/config/src/error.rs Display templates. The

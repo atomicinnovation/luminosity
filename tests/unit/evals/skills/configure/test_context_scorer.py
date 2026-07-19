@@ -2,37 +2,8 @@ from inspect_ai.model import ChatMessageAssistant, ChatMessageUser
 
 from tests.evals.skills.configure.context_scorer import (
     grade_behaviour,
-    grade_block,
     transcript_text,
 )
-
-
-class TestGradeBlock:
-    def test_stdout_reconciles_the_single_terminating_newline(self) -> None:
-        assert grade_block(
-            "## Project Context\n\nx\n", "## Project Context\n\nx"
-        )
-
-    def test_a_block_with_no_terminator_is_rejected(self) -> None:
-        assert not grade_block(
-            "## Project Context\n\nx", "## Project Context\n\nx"
-        )
-
-    def test_mismatch_is_rejected(self) -> None:
-        assert not grade_block(
-            "## Project Context\n\nx\n", "## Project Context"
-        )
-
-    def test_empty_block_accepts_empty_stdout(self) -> None:
-        assert grade_block("", "")
-
-    def test_a_present_block_against_an_empty_expectation_is_rejected(
-        self,
-    ) -> None:
-        assert not grade_block("## Project Context\n\nx\n", "")
-
-    def test_a_trailing_blank_line_breaks_the_match(self) -> None:
-        assert not grade_block("body\n\n", "body")
 
 
 class TestGradeBehaviour:

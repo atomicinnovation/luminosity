@@ -15,8 +15,8 @@
     "task_args": {},
     "task_args_passed": {},
     "dataset": {
-      "name": "context_behavioural_dataset",
-      "location": "context_behavioural_dataset.json",
+      "name": "context_dataset",
+      "location": "context_dataset.json",
       "samples": 2,
       "sample_ids": [
         1,
