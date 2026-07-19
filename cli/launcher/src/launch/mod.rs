@@ -6,7 +6,7 @@ pub mod help;
 pub mod inbound;
 pub mod outbound;
 
-use config::{AssembleProjectContext, ConfigAccess};
+use config::{AssembleContext, ConfigAccess};
 
 use crate::config_command::inbound::cli as config_cli;
 use crate::context_command::inbound::cli as context_cli;
@@ -27,7 +27,7 @@ pub fn dispatch(
     cli: &Cli,
     reporter: &impl ReportVersion,
     config: &impl ConfigAccess,
-    context: &impl AssembleProjectContext,
+    context: &impl AssembleContext,
     resolver: &impl ResolveBinary,
     executor: &impl ExecBinary,
 ) -> Result<(), kernel::Error> {
@@ -37,8 +37,13 @@ pub fn dispatch(
             Ok(())
         }
         Command::Config { action } => Ok(config_cli::run(config, action)?),
-        Command::Context { explain, fail_safe } => {
+        Command::Context {
+            skill,
+            explain,
+            fail_safe,
+        } => {
             let options = context_cli::Options {
+                skill: skill.clone(),
                 explain: *explain,
                 on_failure: if *fail_safe {
                     context_cli::OnFailure::Degrade
@@ -46,7 +51,7 @@ pub fn dispatch(
                     context_cli::OnFailure::Fail
                 },
             };
-            Ok(context_cli::run(context, options)?)
+            Ok(context_cli::run(context, &options)?)
         }
         Command::External(raw) => {
             let command = ExternalCommand::from_raw(raw.clone())?;

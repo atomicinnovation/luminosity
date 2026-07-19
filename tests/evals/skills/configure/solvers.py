@@ -81,12 +81,10 @@ def _agent_env(plugin: Path) -> dict[str, str]:
 
 
 def _seed(workdir: Path, fixture: str) -> None:
-    source = _FIXTURES / fixture / ".luminosity"
     (workdir / ".git").mkdir(parents=True)
-    destination = workdir / ".luminosity"
-    destination.mkdir()
-    for path in sorted(source.glob("*")):
-        shutil.copy(path, destination / path.name)
+    shutil.copytree(
+        _FIXTURES / fixture / ".luminosity", workdir / ".luminosity"
+    )
 
 
 def _claude_argv(prompt: str, *, with_skill: bool, plugin: Path) -> list[str]:

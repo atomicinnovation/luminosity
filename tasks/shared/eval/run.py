@@ -26,7 +26,7 @@ def _ensure_repo_on_path() -> None:
 
 
 def host_binary_path() -> Path:
-    # `build:launcher` (which the eval leaves depend on) leaves its release
+    # `build:launcher:host` (which the eval leaves depend on) leaves its release
     # build in the cargo target dir. The launcher's bin/ dir is only populated
     # by the distribution build, so reading it would stage whatever binary a
     # past release left behind — silently evaluating stale code.
@@ -34,12 +34,22 @@ def host_binary_path() -> Path:
     return WORKSPACE_ROOT / "target" / triple / "release" / LAUNCHER_CRATE
 
 
-def _host_binary() -> Path:
+def host_binary() -> Path:
+    """Return the host-native release launcher, or fail actionably.
+
+    Shared with the eval-logic tier, which byte-compares the compiled binary's
+    stdout against the committed goldens — a raw FileNotFoundError there would
+    say nothing about the build that produces it.
+
+    Raises:
+        Exit: when `build:launcher:host` has not produced the artifact.
+
+    """
     binary = host_binary_path()
     if not binary.is_file():
         raise Exit(
             f"eval: no host launcher at {binary} — run "
-            f"`mise run build:launcher`",
+            f"`mise run build:launcher:host`",
             code=1,
         )
     return binary
@@ -98,7 +108,7 @@ def run_skill_eval(context: Context, skill: str) -> float:
     _ensure_repo_on_path()
     os.environ[PLUGIN_DIR_ENV] = str(
         staging.stage_plugin(
-            repo_root=REPO_ROOT, host_binary=_host_binary(), dest=_STAGING_DIR
+            repo_root=REPO_ROOT, host_binary=host_binary(), dest=_STAGING_DIR
         )
     )
     results = results_dir(skill)

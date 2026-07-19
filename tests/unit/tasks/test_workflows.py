@@ -217,6 +217,22 @@ def test_existing_test_jobs_still_gate_release(wf: dict[str, Any]) -> None:
     assert TEST_INTEGRATION_JOB in needs
 
 
+def test_test_unit_job_provisions_the_musl_toolchain_on_linux(
+    wf: dict[str, Any],
+) -> None:
+    # test:unit:evals build:launcher:host-builds the single host musl triple;
+    # its `ring` dependency's C build needs musl-tools, or cc-rs fails to find
+    # x86_64-linux-musl-gcc. The step must be Linux-guarded — macOS builds a
+    # darwin triple and has no apt-get.
+    musl_steps = [
+        step
+        for step in _steps(wf["jobs"][TEST_UNIT_JOB])
+        if "musl-tools" in step.get("run", "")
+    ]
+    assert len(musl_steps) == 1
+    assert musl_steps[0].get("if") == "runner.os == 'Linux'"
+
+
 RELEASE_STEP_SEQUENCE = ["prepare", "sign", "attest", "finalise"]
 _RELEASE_SEQUENCE_REPETITIONS = {PRERELEASE_JOB: 1, RELEASE_JOB: 2}
 

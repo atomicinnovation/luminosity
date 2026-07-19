@@ -19,6 +19,7 @@ from tasks.shared.targets import (
     MACOS_DEPLOYMENT_TARGET,
     TARGETS,
     host_targets,
+    host_triple,
 )
 
 _SYSTEM_LIBRARY_PREFIXES = ("/usr/lib/", "/System/Library/")
@@ -180,21 +181,40 @@ def _write_checksums(digests: dict[str, str]) -> None:
     atomic_write_text(CHECKSUMS, json.dumps(data, indent=2) + "\n")
 
 
+def _release_build_triple(
+    context: Context, triple: str, host_system: str
+) -> None:
+    result = context.run(
+        f"cargo build --release --bin {LAUNCHER_CRATE} --target {triple}",
+        warn=True,
+        pty=False,
+    )
+    if result.exited != 0:
+        raise Exit(f"release build failed: {triple}", code=1)
+    _verify_output(context, triple, host_system)
+
+
 @task
 def launcher(context: Context) -> None:
     """Release-build the host-native triples, checking link/arch invariants."""
     host_system = platform.system()
     with context.cd(str(WORKSPACE_ROOT)):
         for triple in host_targets(host_system):
-            result = context.run(
-                f"cargo build --release --bin {LAUNCHER_CRATE} "
-                f"--target {triple}",
-                warn=True,
-                pty=False,
-            )
-            if result.exited != 0:
-                raise Exit(f"release build failed: {triple}", code=1)
-            _verify_output(context, triple, host_system)
+            _release_build_triple(context, triple, host_system)
+
+
+@task
+def launcher_host(context: Context) -> None:
+    """Release-build only this host's single native triple (arch + OS).
+
+    The eval tiers run — and byte-compare — the one binary this host executes.
+    They do not need the sibling-arch cross build that `launcher` also produces,
+    and which would demand a cross-linker the unit-test CI job does not install.
+    """
+    host_system = platform.system()
+    triple = host_triple(host_system, platform.machine())
+    with context.cd(str(WORKSPACE_ROOT)):
+        _release_build_triple(context, triple, host_system)
 
 
 @task

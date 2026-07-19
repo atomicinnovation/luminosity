@@ -27,18 +27,6 @@ pub trait ReadConfigLevel {
     fn read(&self, level: Level) -> Result<Option<Node>, ConfigError>;
 }
 
-/// Reads a single level's raw Markdown body — a driven port.
-pub trait ReadConfigBody {
-    /// Returns the body below the level's closing frontmatter fence, or `None`
-    /// when the level's file is absent.
-    ///
-    /// # Errors
-    ///
-    /// [`ConfigError::MalformedFrontmatter`] or [`ConfigError::Io`] when a
-    /// present file cannot be split or read.
-    fn read_body(&self, level: Level) -> Result<Option<String>, ConfigError>;
-}
-
 /// Writes a whole document to a single level — a driven port.
 pub trait WriteConfigLevel {
     /// # Errors

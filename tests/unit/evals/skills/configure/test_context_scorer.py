@@ -2,45 +2,31 @@ from inspect_ai.model import ChatMessageAssistant, ChatMessageUser
 
 from tests.evals.skills.configure.context_scorer import (
     grade_behaviour,
-    grade_block,
     transcript_text,
 )
 
 
-class TestGradeBlock:
-    def test_stdout_reconciles_the_single_terminating_newline(self) -> None:
-        assert grade_block(
-            "## Project Context\n\nx\n", "## Project Context\n\nx"
-        )
-
-    def test_a_block_with_no_terminator_is_rejected(self) -> None:
-        assert not grade_block(
-            "## Project Context\n\nx", "## Project Context\n\nx"
-        )
-
-    def test_mismatch_is_rejected(self) -> None:
-        assert not grade_block(
-            "## Project Context\n\nx\n", "## Project Context"
-        )
-
-    def test_empty_block_accepts_empty_stdout(self) -> None:
-        assert grade_block("", "")
-
-    def test_a_present_block_against_an_empty_expectation_is_rejected(
-        self,
-    ) -> None:
-        assert not grade_block("## Project Context\n\nx\n", "")
-
-    def test_a_trailing_blank_line_breaks_the_match(self) -> None:
-        assert not grade_block("body\n\n", "body")
-
-
 class TestGradeBehaviour:
     def test_sentinel_present(self) -> None:
-        assert grade_behaviour("... GILDED-OTTER-42 ...", "GILDED-OTTER-42")
+        assert grade_behaviour("... GILDED-OTTER-42 ...", ["GILDED-OTTER-42"])
 
     def test_sentinel_absent(self) -> None:
-        assert not grade_behaviour("no marker here", "GILDED-OTTER-42")
+        assert not grade_behaviour("no marker here", ["GILDED-OTTER-42"])
+
+    def test_every_sentinel_must_be_present(self) -> None:
+        # The global-and-skill arm exists to prove both blocks reached the
+        # model, so one sentinel out of two must not clear it.
+        assert grade_behaviour("Lantern and Tier", ["Lantern", "Tier"])
+        assert not grade_behaviour("Lantern only", ["Lantern", "Tier"])
+
+    def test_no_sentinels_is_not_a_pass(self) -> None:
+        assert not grade_behaviour("anything at all", [])
+
+    def test_a_sentinel_used_as_a_common_noun_still_counts(self) -> None:
+        # The agent applied the convention — "resolved across two tiers" — and
+        # lower-cased it as English prose does. That is the convention landing,
+        # not failing to.
+        assert grade_behaviour("resolved across two tiers", ["Tier"])
 
 
 class TestTranscriptText:

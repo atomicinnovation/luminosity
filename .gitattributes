@@ -1,0 +1,4 @@
+# The eval goldens are byte-compared against the Rust trimmer's output, and the
+# Python model of that trimmer strips a trailing \r. A fixture checked out with
+# CRLF would make the two disagree on a body's last line, so pin them to LF.
+tests/evals/**/fixtures/** text eol=lf

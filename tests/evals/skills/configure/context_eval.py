@@ -30,6 +30,11 @@ _HERE = Path(__file__).parent
 
 @task
 def configure_context_with_skill() -> Task:
+    # Every row here is behavioural: injection is only worth a live, billed
+    # agent when what is asserted is that the block *reached the model*. The
+    # deterministic rendering — which bytes the block is — is graded for free
+    # by the compiled binary's own tests (cli/launcher/tests/context.rs), so
+    # no deterministic scenario belongs in this dataset.
     return Task(
         dataset=json_dataset(str(_HERE / "context_dataset.json")),
         solver=run_configure_agent(with_skill=True),

@@ -21,9 +21,14 @@ pub enum Command {
         #[command(subcommand)]
         action: ConfigAction,
     },
-    /// Print the project-context block assembled from the config-file bodies
-    /// (prints nothing when both bodies are empty or absent).
+    /// Print the project-context block assembled from the config-file bodies,
+    /// and — with `--skill` — that skill's own `## Skill-Specific Context`
+    /// block after it. Prints nothing when no block survives.
     Context {
+        /// Also render this skill's own context block, assembled from
+        /// `.luminosity/skills/<name>/context.md` and `context.local.md`.
+        #[arg(long)]
+        skill: Option<String>,
         /// Also print a per-level discovery diagnostic to stderr.
         #[arg(long)]
         explain: bool,

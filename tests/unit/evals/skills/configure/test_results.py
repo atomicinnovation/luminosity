@@ -17,10 +17,16 @@ from tests.evals.skills.configure import context_eval, values_eval
 from tests.evals.skills.configure.solvers import CLAUDE_MODEL
 
 _SKILL = values_eval.SKILL
-_RESULTS = Path(values_eval.__file__).parent / "results"
+_EVAL_DIR = Path(values_eval.__file__).parent
+_RESULTS = _EVAL_DIR / "results"
 _LOGS = sorted(_RESULTS.glob("*.json"))
 
 type Json = dict[str, Any]
+
+
+def _behavioural_scenarios() -> set[str]:
+    dataset = json.loads((_EVAL_DIR / "context_dataset.json").read_text())
+    return {record["metadata"]["scenario"] for record in dataset}
 
 
 def _log(path: Path) -> Json:
@@ -61,11 +67,21 @@ class TestCommittedLog:
 
 class TestCommittedGate:
     def _arm(self, name: str) -> Json:
-        for path in _LOGS:
-            log = _log(path)
-            if log["eval"]["task"] == name:
-                return log
-        pytest.fail(f"no committed log for arm {name!r}")
+        # Exactly one log per arm, never merely the first: nothing prunes
+        # results/, so a second run committed alongside the first would leave
+        # this gate silently grading whichever log sorted earliest — that is,
+        # the stale evidence — while looking green.
+        logs = [
+            log for path in _LOGS if (log := _log(path))["eval"]["task"] == name
+        ]
+        if not logs:
+            pytest.fail(f"no committed log for arm {name!r}")
+        if len(logs) > 1:
+            pytest.fail(
+                f"{len(logs)} committed logs for arm {name!r}: prune the stale "
+                f"ones, or the gate grades whichever sorts first"
+            )
+        return logs[0]
 
     @pytest.mark.parametrize(
         "capability", [values_eval.CAPABILITY, context_eval.CAPABILITY]
@@ -76,6 +92,17 @@ class TestCommittedGate:
             pass_k_reducer(TRIALS),
         )
         assert metrics[ACCURACY_METRIC]["value"] >= PASS_K_FLOOR
+
+    def test_the_committed_log_covers_the_behavioural_dataset(self):
+        # The committed log is the story's durable evidence, so it must cover
+        # the dataset as it stands *now*: a behavioural row added after the run
+        # turns this red rather than leaving stale evidence looking green.
+        log = self._arm(with_skill_arm(_SKILL, context_eval.CAPABILITY))
+        scenarios = _behavioural_scenarios()
+        assert {
+            sample["metadata"]["scenario"] for sample in log["samples"]
+        } == scenarios
+        assert log["results"]["total_samples"] == len(scenarios) * TRIALS
 
     def test_the_values_arm_beats_its_baseline(self):
         # Only `values` has a baseline: an agent without the skill can still

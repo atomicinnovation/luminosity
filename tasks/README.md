@@ -71,6 +71,21 @@ on macOS) and asserts the static-link / arch invariants. It lives in the bare
 read-only checks); CI's `build-launcher` matrix covers all four triples across
 both OSes.
 
+`build:launcher:host` is its single-triple sibling: it release-builds only the
+one triple this host actually executes (the host arch, not both), with the same
+link/arch guard. It exists for the eval tiers, which run exactly that one binary
+— building the sibling arch too would drag in a cross-linker (e.g.
+`aarch64-linux-musl-gcc`) that the `test-unit` CI job deliberately does not
+install, so depending on the two-triple `build:launcher` there breaks the job.
+
+`test:unit:evals` `depends` on `build:launcher:host`. The eval-logic tier was
+once pure Python (parse the goldens, scrape the Rust literals) and so cost
+nothing; it now also runs the *compiled* launcher against each eval fixture and
+byte-compares stdout against the committed golden, which is the only tier that
+proves a fixture and its golden agree without paying for a live agent. That
+makes `test:unit:evals` pull a host-native release build (its single triple).
+`check` stays build-free — it excludes the `test` roll-up entirely.
+
 ## Family aggregates
 
 `format:check`, `lint:check`, and `types:check` run the corresponding family across every component; `check` runs all of them plus the workspace-scope

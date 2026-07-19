@@ -153,6 +153,30 @@ class TestBuildLauncherWiring:
         assert "deps:install:rust-targets" in _depends(mise, "build:launcher")
 
 
+class TestBuildLauncherHostWiring:
+    """`build:launcher:host` builds the single host triple for the eval tiers.
+
+    Unlike `build:launcher` it never builds the sibling arch, so the unit-test
+    CI job (which runs the eval-logic golden compare) needs no cross-linker.
+    """
+
+    def test_build_launcher_host_wraps_the_invoke_task(self, mise: Mise):
+        assert (
+            _tasks(mise)["build:launcher:host"]["run"]
+            == "invoke build.launcher-host"
+        )
+
+    def test_build_launcher_host_provisions_rust_targets(self, mise: Mise):
+        assert "deps:install:rust-targets" in _depends(
+            mise, "build:launcher:host"
+        )
+
+    def test_build_launcher_host_is_absent_from_default(self, mise: Mise):
+        # The default sweep runs the two-triple `build:launcher` guard; the
+        # single-triple task exists only to feed the eval leaves.
+        assert "build:launcher:host" not in _depends(mise, "default")
+
+
 class TestTestUnitCliWiring:
     """`test:unit:cli` is the workspace-wide coverage pass in `test:unit`."""
 
@@ -289,10 +313,12 @@ class TestEvalTierWiring:
         assert "deps:install:python" in leaf.get("depends", [])
 
     def test_configure_leaf_provisions_the_host_launcher(self, mise: Mise):
-        # Host-native `claude -p` runs the host launcher (build:launcher stages
-        # it) at the plugin's bin/luminosity — not the cross-built release.
+        # Host-native `claude -p` runs the one host launcher, staged at the
+        # plugin's bin/luminosity — not the cross-built release, and not the
+        # sibling-arch triple the two-triple `build:launcher` also produces.
         depends = _depends(mise, "eval:skills:configure")
-        assert "build:launcher" in depends
+        assert "build:launcher:host" in depends
+        assert "build:launcher" not in depends
         assert "build:release" not in depends
 
     def test_configure_leaf_provisions_the_native_claude(self, mise: Mise):
@@ -337,6 +363,16 @@ class TestEvalUnitSuiteWiring:
 
     def test_test_unit_evals_provisions_python(self, mise: Mise):
         assert "deps:install:python" in _depends(mise, "test:unit:evals")
+
+    def test_test_unit_evals_provisions_only_the_host_launcher(
+        self, mise: Mise
+    ):
+        # The golden byte-compare runs the single host binary. Depending on the
+        # two-triple `build:launcher` here dragged the aarch64-musl cross build
+        # into the unit-test CI job, which installs no cross-linker for it.
+        depends = _depends(mise, "test:unit:evals")
+        assert "build:launcher:host" in depends
+        assert "build:launcher" not in depends
 
 
 class TestSkillWiringSuiteWiring:

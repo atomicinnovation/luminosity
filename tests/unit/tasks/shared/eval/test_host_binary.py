@@ -1,7 +1,7 @@
 """Pin the binary the skill evals stage.
 
-The eval leaves depend on `build:launcher`, which release-builds into the cargo
-target dir and never populates the launcher's bin/ dir — that is the
+The eval leaves depend on `build:launcher:host`, which release-builds into the
+cargo target dir and never populates the launcher's bin/ dir — that is the
 distribution build's job. Staging from bin/ therefore evaluates whatever binary
 a past release left behind, which is how a stale launcher silently graded a
 skill eval. These tests hold the resolution to the fresh build.
@@ -54,6 +54,6 @@ class TestHostBinaryPath:
         )
 
     def test_never_resolves_into_the_distribution_bin_dir(self) -> None:
-        # The regression: bin/ holds release artifacts, not the build:launcher
-        # output the eval depends on.
+        # The regression: bin/ holds release artifacts, not the
+        # build:launcher:host output the eval depends on.
         assert BIN_DIR not in Path(host_binary_path()).parents
