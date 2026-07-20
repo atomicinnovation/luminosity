@@ -1,165 +1,96 @@
-"""Data-hygiene tests for the instructions injection eval datasets.
+"""Data-hygiene tests for the instructions injection eval dataset.
 
-The deterministic scenarios carry an `expected_block` golden that the CI render
-test byte-compares the compiled binary against; these tests keep those goldens
-honest — each is re-derived here from the fixture bodies the adapter would read
-(frontmatter stripped, blank-trimmed, combined team-then-personal) and pinned to
-the block's prose, which is scraped from the Rust source. The behavioural
-scenarios instead carry sentinels; those are pinned to the fixture bodies they
-must appear in, and to their twins in the live behavioural dataset.
+Every row is behavioural — a live, billed agent run asserting that an injected
+block *reached the model*. What the block renders to, byte for byte, is proved
+for free by the compiled binary's own tests
+(cli/launcher/tests/instructions.rs), so nothing here re-derives goldens or
+scrapes the Rust source. These tests instead keep the billed dataset's premises
+honest: that each row's sentinels actually appear in the fixture it seeds, and
+that each prompt reads a key its fixture defines — so a rotten premise fails in
+free CI rather than mid-billed-run.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
-from tests.evals.skills.configure.instructions_scorer import SCORER_ARGV
+import pytest
+import yaml
 
 _EVAL_DIR = (
     Path(__file__).resolve().parents[4] / "evals" / "skills" / "configure"
 )
 _DATASET = _EVAL_DIR / "instructions_dataset.json"
-_BEHAVIOURAL_DATASET = _EVAL_DIR / "instructions_behavioural_dataset.json"
 _FIXTURES = _EVAL_DIR / "fixtures"
-_RUST_CLI = (
-    Path(__file__).resolve().parents[4].parent
-    / "cli"
-    / "launcher"
-    / "src"
-    / "instructions_command"
-    / "inbound"
-    / "cli.rs"
-)
 
 SKILL = "configure"
 
+# The dotted key a behavioural prompt tells the agent to read, e.g. the
+# `core.example` in "Read the luminosity config value core.example".
+_KEY_REFERENCE = re.compile(r"config value ([a-z0-9_.]+)")
 
-# A Python transcription of the block header and the instructions_prose literal
-# in cli/launcher/src/instructions_command/inbound/cli.rs. The Rust literal is
-# not reachable from Python, so test_instructions_block_prefix_matches_the_rust
-# _source scrapes the source to keep this in step; the render test proves the
-# compiled binary agrees byte-for-byte.
-def _block_prefix(skill: str) -> str:
-    return (
-        "## Additional Instructions\n\n"
-        "The following additional instructions have been provided for the\n"
-        f"{skill} skill. Follow these instructions in addition to all\n"
-        "instructions above.\n\n"
-    )
-
-
-INSTRUCTIONS_BLOCK_PREFIX = _block_prefix(SKILL)
+_SCENARIOS = {"behavioural", "context_and_instructions_ordering"}
 
 
 def _records() -> list[dict[str, Any]]:
     return json.loads(_DATASET.read_text())
 
 
-def _behavioural_records() -> list[dict[str, Any]]:
-    return json.loads(_BEHAVIOURAL_DATASET.read_text())
-
-
 def _record(scenario: str) -> dict[str, Any]:
-    return next(
-        record
-        for record in _records()
-        if record["metadata"]["scenario"] == scenario
-    )
+    return next(r for r in _records() if r["metadata"]["scenario"] == scenario)
 
 
-def _instruction_body(fixture: str, name: str) -> str:
-    path = _FIXTURES / fixture / ".luminosity" / "skills" / "configure" / name
-    if not path.is_file():
-        return ""
-    text = path.read_text()
-    # Mirrors the adapter: a leading frontmatter fence is stripped, a file
-    # without one is injected whole. The fixtures carry no frontmatter, so this
-    # returns the body verbatim.
-    if not text.startswith("---"):
-        return text
-    return text.split("---", 2)[2]
-
-
-def _trim(body: str) -> str:
-    # Mirrors the Rust trim_blank_lines: drop leading and trailing
-    # whitespace-only lines and the trailing terminator; preserve the interior.
-    lines = body.split("\n")
-    start = 0
-    while start < len(lines) and not lines[start].strip():
-        start += 1
-    end = len(lines)
-    while end > start and not lines[end - 1].strip():
-        end -= 1
-    return "\n".join(lines[start:end])
-
-
-def _block(fixture: str) -> str:
-    parts = [
-        trimmed
-        for name in ("instructions.md", "instructions.local.md")
-        if (trimmed := _trim(_instruction_body(fixture, name)))
-    ]
-    if not parts:
-        return ""
-    return INSTRUCTIONS_BLOCK_PREFIX + "\n\n".join(parts)
-
-
-def _fixture_body(fixture: str, relative_path: str) -> str:
+def _body(fixture: str, relative_path: str) -> str:
     path = _FIXTURES / fixture / ".luminosity" / relative_path
     if not path.is_file():
         message = (
             f"{fixture} declares a source it does not carry: {relative_path}"
         )
         raise AssertionError(message)
-    return path.read_text()
+    text = path.read_text()
+    # Mirrors the adapter: a frontmatter mapping is stripped, a file without one
+    # is injected whole.
+    if not text.startswith("---"):
+        return text
+    return text.split("---", 2)[2]
 
 
-def test_instructions_block_prefix_matches_the_rust_source() -> None:
-    rust = _RUST_CLI.read_text()
-    prose = (
-        "The following additional instructions have been provided for the\n"
-        "{skill} skill. Follow these instructions in addition to all\n"
-        "instructions above."
-    )
-    assert prose in rust, "instructions_prose drifted from the transcription"
-    assert r'"## Additional Instructions\n\n{prose}\n\n{}"' in rust
-    reconstructed = (
-        "## Additional Instructions\n\n" + prose.format(skill=SKILL) + "\n\n"
-    )
-    assert reconstructed == INSTRUCTIONS_BLOCK_PREFIX
+def _frontmatter(fixture: str, relative_path: str) -> dict[str, Any]:
+    path = _FIXTURES / fixture / ".luminosity" / relative_path
+    if not path.is_file():
+        message = f"{fixture} carries no {relative_path}"
+        raise AssertionError(message)
+    text = path.read_text()
+    if not text.startswith("---"):
+        return {}
+    parsed = yaml.safe_load(text.split("---", 2)[1])
+    return parsed if isinstance(parsed, dict) else {}
 
 
-def test_the_instructions_prose_interpolates_the_skill_name() -> None:
-    short = _block_prefix("a").split("\n")
-    long = _block_prefix("create-plan").split("\n")
-    assert len(short) == len(long)
-    differing = [
-        index for index in range(len(short)) if short[index] != long[index]
-    ]
-    assert differing == [3], "only the skill-name line may differ"
-    assert short[3] == "a skill. Follow these instructions in addition to all"
-
-
-def test_the_scorer_argv_matches_the_skill_injection_line() -> None:
-    configure_md = (
-        Path(__file__).resolve().parents[4].parent
-        / "skills"
-        / "config"
-        / "configure"
-        / "SKILL.md"
-    ).read_text()
-    assert f"luminosity {' '.join(SCORER_ARGV)}`" in configure_md
+def _defines(frontmatter: dict[str, Any], key: str) -> bool:
+    node: Any = frontmatter
+    for segment in key.split("."):
+        if not isinstance(node, dict) or segment not in node:
+            return False
+        node = node[segment]
+    return True
 
 
 def test_every_line_parses_and_carries_required_fields() -> None:
     for record in _records():
-        metadata = record["metadata"]
         assert isinstance(record["input"], str)
+        metadata = record["metadata"]
+        assert metadata["scenario"] in _SCENARIOS
         assert (_FIXTURES / metadata["fixture"]).is_dir()
-        assert isinstance(metadata["behavioural"], bool)
-        assert isinstance(metadata["expected_block"], str)
-        assert isinstance(metadata["sentinels"], list)
+        assert metadata["behavioural"] is True
         assert metadata["sources"]
+        assert metadata["sentinels"]
+
+
+def test_one_case_per_scenario() -> None:
+    scenarios = [r["metadata"]["scenario"] for r in _records()]
+    assert sorted(scenarios) == sorted(_SCENARIOS)
 
 
 def test_every_scenario_fixture_file_exists_on_disk() -> None:
@@ -170,68 +101,46 @@ def test_every_scenario_fixture_file_exists_on_disk() -> None:
             assert path.is_file(), f"missing fixture source: {path}"
 
 
-def test_deterministic_golden_matches_the_fixture_body() -> None:
-    for record in _records():
-        metadata = record["metadata"]
-        assert _block(metadata["fixture"]) == metadata["expected_block"], (
-            f"golden drifted for {metadata['scenario']}"
-        )
-
-
-def test_both_levels_orders_team_before_personal_within_the_block() -> None:
-    block = _record("both_levels")["metadata"]["expected_block"]
-    team = block.index("Cite the relevant ADR")
-    personal = block.index("Prefer jj over raw git")
-    assert team < personal
-
-
-def test_mixed_empty_level_drops_the_empty_with_no_doubled_blank() -> None:
-    block = _record("mixed_empty")["metadata"]["expected_block"]
-    assert block.endswith("Cite the relevant ADR when explaining a decision.")
-    assert "\n\n\n" not in block
-
-
-def test_instructions_empty_expects_no_block() -> None:
-    assert _record("empty")["metadata"]["expected_block"] == ""
-
-
-def test_ordering_carries_both_sentinels() -> None:
-    metadata = _record("context_and_instructions_ordering")["metadata"]
-    context_sentinel, instructions_sentinel = metadata["sentinels"]
-    assert context_sentinel in _fixture_body(
-        metadata["fixture"], "skills/configure/context.md"
-    )
-    assert instructions_sentinel in _fixture_body(
-        metadata["fixture"], "skills/configure/instructions.md"
-    )
+def test_a_mispathed_declared_source_raises() -> None:
+    with pytest.raises(AssertionError):
+        _body("instructions_skill_behavioural", "config.local.md")
 
 
 def test_the_bodies_are_declarative_conventions() -> None:
-    # A behavioural body must read as a declarative convention the agent adopts,
-    # not an imperative "emit this token" the model recognises as an injection
-    # and refuses — the failure mode the context dataset test documents.
+    # The behavioural body must read as a declarative convention the agent
+    # applies, not an imperative "emit this token in every response" — the model
+    # recognises the latter as a prompt injection and refuses it, failing the
+    # arm for a reason unrelated to injection.
     for record in _records():
         metadata = record["metadata"]
-        if not metadata["behavioural"]:
-            continue
         bodies = "".join(
-            _fixture_body(metadata["fixture"], source)
-            for source in metadata["sources"]
+            _body(metadata["fixture"], source) for source in metadata["sources"]
         )
         for sentinel in metadata["sentinels"]:
             assert sentinel in bodies
 
 
-def test_the_behavioural_dataset_rows_match_their_main_dataset_twins() -> None:
-    for record in _behavioural_records():
-        scenario = record["metadata"]["scenario"]
-        assert record == _record(scenario), (
-            f"{scenario} drifted between the datasets"
-        )
+def test_ordering_carries_a_context_and_an_instructions_sentinel() -> None:
+    metadata = _record("context_and_instructions_ordering")["metadata"]
+    context_sentinel, instructions_sentinel = metadata["sentinels"]
+    assert context_sentinel in _body(
+        metadata["fixture"], f"skills/{SKILL}/context.md"
+    )
+    assert instructions_sentinel in _body(
+        metadata["fixture"], f"skills/{SKILL}/instructions.md"
+    )
 
 
-def test_the_behavioural_dataset_holds_only_behavioural_rows() -> None:
-    scenarios = {
-        record["metadata"]["scenario"] for record in _behavioural_records()
-    }
-    assert scenarios == {"behavioural", "context_and_instructions_ordering"}
+def test_every_prompt_reads_a_key_its_fixture_defines() -> None:
+    # Each behavioural prompt opens with a config read, because that is what
+    # routes the agent through the skill — which is where injection fires. A
+    # prompt naming a key the fixture does not define still *usually* passes
+    # (the agent recovers and describes configuration anyway), so the premise
+    # can rot silently and only surface as a flake mid-billed-run. Pin it.
+    for record in _records():
+        fixture = record["metadata"]["fixture"]
+        for key in _KEY_REFERENCE.findall(record["input"]):
+            defined = _defines(_frontmatter(fixture, "config.md"), key)
+            assert defined, (
+                f"{fixture} does not define '{key}', which its prompt reads"
+            )

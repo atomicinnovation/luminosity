@@ -5,10 +5,11 @@ block injected at the end of the prompt. Injection is passive — no agent comma
 can be attributed to it — so it declares **no baseline arm**, the same as
 context: without the skill there is no prompt for the instructions to land in.
 
-Only the two behavioural arms run live here. The deterministic rendering — which
-bytes the block is — is graded for free in CI by the compiled binary
-(test_instructions_render.py), so no deterministic scenario belongs in the live
-dataset.
+Every row here is behavioural: injection is only worth a live, billed agent when
+what is asserted is that the block *reached the model*. The deterministic
+rendering — which bytes the block is — is graded for free by the compiled
+binary's own tests (cli/launcher/tests/instructions.rs), so no deterministic
+scenario belongs in this dataset.
 """
 
 from pathlib import Path
@@ -35,9 +36,7 @@ _HERE = Path(__file__).parent
 @task
 def configure_instructions_with_skill() -> Task:
     return Task(
-        dataset=json_dataset(
-            str(_HERE / "instructions_behavioural_dataset.json")
-        ),
+        dataset=json_dataset(str(_HERE / "instructions_dataset.json")),
         solver=run_configure_agent(with_skill=True),
         scorer=instructions_scorer(),
         epochs=Epochs(TRIALS, pass_k(TRIALS)),

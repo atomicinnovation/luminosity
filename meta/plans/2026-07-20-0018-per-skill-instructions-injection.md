@@ -88,8 +88,9 @@ SKILL.md line — not a new subsystem.
   hygiene tests pin prose against a hand-maintained transcription
   (`test_dataset.py`'s `_DOMAIN_TEMPLATES`) rather than scraping the Rust source,
   and `solvers.py::_seed` already `copytree`s nested `.luminosity/skills/`
-  fixtures (fixed in 0017). The byte-exact golden/render tier 0018 needs is **not**
-  among the reused parts — it is net-new (built in Phase 4).
+  fixtures (fixed in 0017). 0018 reuses this framework as-is: its eval tier is
+  behavioural-only (like context), with deterministic rendering left entirely to
+  the Rust black-box tier.
 
 **What is missing or in the way:**
 
@@ -154,12 +155,12 @@ context blocks land near the top and the instructions block lands last.
 
 Verified by: `luminosity instructions --skill=configure` printing the block;
 `cli/launcher/tests/instructions.rs` black-box tests covering every level and
-degrade permutation and the empty-output policy; the registry-walking contract
-test asserting every registered skill carries the end-of-body instructions line
-(independent of fixtures); a CI pytest that runs the compiled binary against each
-fixture and byte-compares stdout against goldens; and a live eval run in which
-the real `claude -p` agent, driven through the real skill, demonstrably receives
-the instructions block after the context block.
+degrade permutation and the empty-output policy (the deterministic rendering
+lives entirely at this tier); the registry-walking contract test asserting every
+registered skill carries the end-of-body instructions line (independent of
+fixtures); and a live eval run in which the real `claude -p` agent, driven
+through the real skill, demonstrably receives the instructions block after the
+context block.
 
 ## What We're NOT Doing
 
@@ -541,8 +542,7 @@ matching the `context_command` tree.
 The renderer reproduces the story's exact block. The three prose lines carry
 **fixed hard line breaks** encoded by the `format!` literal, with the skill name
 interpolated into line 2 via an inline `{skill}` capture — so a longer or shorter
-name shifts no break, and the literal stays a single scrapable string for the
-golden-pinning test:
+name shifts no break:
 
 ```rust
 fn instructions_prose(skill: &SkillName) -> String {
@@ -887,11 +887,14 @@ shape.
 
 ### Overview
 
-Add a new `instructions` eval capability — fixtures, dataset rows, scorer argv,
-the golden-pinning chain, and a CI render test that runs the compiled binary — 
-plus the coordinated growth of the three exact-list capability tripwires. This is
-the **inverse** of 0017's Phase 4: because instructions is a *new* command, a new
-`instructions_eval.py` registers a third capability, so the tripwires that pin
+Add a new `instructions` eval capability — the behavioural fixtures, the single
+behavioural dataset, the scorer, and the coordinated growth of the three
+exact-list capability tripwires. Deterministic rendering is the launcher's
+concern and is already proved for free by `cli/launcher/tests/instructions.rs`
+(Phase 2), so — exactly as with context — the eval carries **only** the
+behavioural rows; there is no deterministic dataset, golden, or render test at
+this tier. Because instructions is a *new* command, a new `instructions_eval.py`
+registers a third capability, so the tripwires that pin
 `capabilities("configure")` must grow rather than stay frozen.
 
 ### Changes Required
@@ -902,82 +905,65 @@ the **inverse** of 0017's Phase 4: because instructions is a *new* command, a ne
 
 | Fixture | Contents | Scenario it pins |
 |---|---|---|
-| `instructions_skill_team_only` | `skills/configure/instructions.md`, with surrounding blank lines | block alone; blank-line trimming |
-| `instructions_skill_both_levels` | `instructions.md` + `instructions.local.md` | team-then-personal combination |
-| `instructions_skill_mixed_empty` | non-empty `instructions.md` + whitespace-only `instructions.local.md` | drop-empty join (no doubled blank) |
-| `instructions_skill_empty` | whitespace-only `instructions.md` | no block emitted |
-| `instructions_skill_behavioural` | `instructions.md` carrying a declarative directive | the block reaches the model |
-| `context_and_instructions_ordering` | `config.md` + `skills/configure/context.md` + `skills/configure/instructions.md`, each with a distinguishable sentinel | context-early / instructions-last, all blocks reaching the model in order |
+| `instructions_skill_behavioural` | `config.md` + `skills/configure/instructions.md` carrying a declarative directive | the block reaches the model |
+| `context_and_instructions_ordering` | `config.md` + `skills/configure/context.md` + `skills/configure/instructions.md`, each with a distinguishable sentinel | context-early / instructions-last, both blocks reaching the model |
+| `instructions_skill_both_levels` | `instructions.md` + `instructions.local.md` | the `.gitignore` witness only — no dataset row |
 
 Fixtures are authored LF-only (guarded by the `.gitattributes` `text eol=lf`
 entry 0017 added for `tests/evals/**/fixtures/**`). Behavioural bodies read as
 **declarative directives** (a convention the agent applies), not an imperative
 "emit this token" — the imperative form reads as a prompt injection the model
 refuses, failing the arm for an unrelated reason (the reason 0017's dataset test
-documents).
+documents). Each behavioural fixture carries a `config.md` defining `core.example`
+so its config-read prompt routes the agent through the skill, where injection
+fires.
 
-The `instructions_skill_both_levels` fixture is the committed witness that the
-`.gitignore` negation commits a personal instructions file (the analogue of
-0017's `context_skill_both_levels` witness that `TestGitignore` depends on).
+The `instructions_skill_both_levels` fixture carries no dataset row: it is the
+committed witness that the `.gitignore` negation commits a personal instructions
+file (the analogue of 0017's `context_skill_both_levels` witness that
+`TestGitignore` depends on).
 
-#### 2. The capability module, scorer, and datasets
+The deterministic scenarios (team-only, both-levels, drop-empty join, empty) are
+**not** fixtures here — they are inlined black-box cases in
+`cli/launcher/tests/instructions.rs`, which already covers every permutation.
+
+#### 2. The capability module, scorer, and dataset
 
 **Files**: `tests/evals/skills/configure/instructions_eval.py` (new),
-`instructions_scorer.py` (new), `instructions_dataset.json` (new),
-`instructions_behavioural_dataset.json` (new)
+`instructions_scorer.py` (new), `instructions_dataset.json` (new)
 **Changes**: Mirror `context_eval.py` / `context_scorer.py` / `context_dataset.json`:
 
 - `instructions_eval.py` declares `CAPABILITY = "instructions"` and a
-  `configure_instructions_with_skill` task loading the behavioural dataset. It
+  `configure_instructions_with_skill` task loading `instructions_dataset.json`. It
   declares a with-skill arm and **no baseline arm** (passive injection has no
   no-skill control — same as context).
-- `instructions_scorer.py` extracts `SCORER_ARGV = ["instructions",
-  "--skill=configure", "--fail-safe"]` (the injected argv verbatim) as a module
-  constant and re-executes exactly that against the seeded workdir.
-- `instructions_dataset.json` carries the deterministic rows (with
-  `expected_block` goldens for the render test); `instructions_behavioural_dataset.json`
-  carries only the behavioural rows (`instructions_skill_behavioural`,
-  `context_and_instructions_ordering`), each with structural guards mirroring the
-  context dataset (every row parses, its sentinel is present in the referenced
-  fixture body, each behavioural row equals its main-dataset twin).
-  `context_and_instructions_ordering` carries a context sentinel **and** an
-  instructions sentinel and the scorer requires **both** in the transcript.
+- `instructions_scorer.py` reuses `grade_behaviour` / `transcript_text` from
+  `context_scorer` and grades that **every** sentinel appears in the transcript.
+- `instructions_dataset.json` carries **only** the two behavioural rows
+  (`behavioural`, `context_and_instructions_ordering`), each with the structural
+  guards mirroring the context dataset (every row parses and is declarative, its
+  sentinels appear in the referenced fixture bodies, its prompt reads a key the
+  fixture defines). `context_and_instructions_ordering` carries a context sentinel
+  **and** an instructions sentinel and the scorer requires **both** in the
+  transcript.
 
-#### 3. The golden-pinning chain and render test (net-new infrastructure)
+#### 3. Dataset hygiene and the capability tripwires
 
 **Files**: `tests/unit/evals/skills/configure/test_instructions_dataset.py`
-(new), `test_instructions_render.py` (new), and the shared tripwire files.
+(new) and the shared tripwire files.
 
-Unlike 0017 — which was behavioural-only, left byte-exactness entirely to the Rust
-binary tests, and carried **no** goldens in its dataset — 0018 adds a free CI-tier
-byte grade for the deterministic scenarios. That grading machinery does **not**
-exist yet (there is no `grade_block`, no `_trim`, no host-binary-path resolver, no
-render test, and no Rust-source scraper; `test_dataset.py`'s `_DOMAIN_TEMPLATES` is
-a hand-transcribed constant with a manual-refresh note, not an automated pin), so
-this section is **net-new**, not reuse:
+Deterministic rendering — every level permutation, the drop-empty join, the
+empty/absent policy — is owned by `cli/launcher/tests/instructions.rs`, so this
+tier adds **no** golden, render test, or Rust-source scraper; it stays
+behavioural-only, matching context.
 
-- `test_instructions_dataset.py` pins an `INSTRUCTIONS_BLOCK_PREFIX` — the
-  `## Additional Instructions` header plus the three prose lines with the skill
-  name substituted for `{skill}` — as a **hand-transcribed Python constant**
-  mirroring `_DOMAIN_TEMPLATES`, carrying the same manual-refresh-trigger note (the
-  Rust `instructions_prose` literal is unreachable from Python; the render test
-  below is what actually proves the binary agrees). It pins `SCORER_ARGV` against
-  the SKILL.md `!`-line, and asserts each deterministic golden equals its fixture
-  body assembled the adapter's way (frontmatter stripped, blank-trimmed, combined
-  team-then-personal). Reuse `_body` / `_frontmatter` from `test_context_dataset.py`
-  (extract them to a shared helper module first) and **add** a `_trim` helper
-  transcribing the Rust `trim_blank_lines` rule (it does not exist today).
-- `test_instructions_render.py` is the pin for the seam the Rust tiers cannot see:
-  it runs the **compiled** `luminosity` binary with the exact `SCORER_ARGV` scraped
-  from the SKILL.md line, against each committed fixture directory, and
-  byte-compares stdout against the golden. Its unique value over the Rust black-box
-  `instructions.rs` is precisely this SKILL.md-argv × committed-eval-fixture seam —
-  it is not re-proving block bytes for their own sake. It requires a **new**
-  `grade_block` helper (defined here) for the trailing-newline / empty-output
-  comparison semantics and a **new** host-binary-path resolver (with the actionable
-  "run `mise run build:launcher`" message). The `build:launcher:host` task and its
-  `test:unit:evals` dependency already exist (0017 pre-wired them for this render
-  tier); only the resolver and the test that consume the built binary are new.
+- `test_instructions_dataset.py` mirrors `test_context_dataset.py`: behavioural
+  data-hygiene only. It keeps the billed dataset's premises honest — every row
+  parses and reads as a declarative convention, its sentinels appear in the
+  fixture bodies it seeds, the ordering row carries a context and an instructions
+  sentinel in their respective bodies, and each prompt reads a config key its
+  fixture defines — so a rotten premise fails in free CI rather than mid-billed
+  run. It re-derives no goldens and scrapes no Rust source.
 - **The exact-list capability tripwires grow by `instructions`** (0017 kept these
   frozen; here they must grow because a new `instructions_eval.py` registers a
   third capability):
@@ -994,10 +980,9 @@ this section is **net-new**, not reuse:
   `pytest.param(instructions_eval.CAPABILITY, marks=pytest.mark.xfail(strict=True,
   reason="…pending the Phase 5 live log"))`, and add an `xfail(strict=True)`
   instructions analogue of `test_the_committed_log_covers_the_behavioural_dataset`
-  that reads `instructions_behavioural_dataset.json` — **not** the existing
-  `_behavioural_scenarios()` helper, which hard-codes `context_dataset.json`;
-  parametrise that helper by dataset (or add a sibling) so the instructions gate
-  grades the instructions scenario set, not the context one.
+  that reads `instructions_dataset.json` (parametrise `_behavioural_scenarios` by
+  dataset so the instructions gate grades the instructions scenario set, not the
+  context one).
   Because the mark is strict, Phase 4 merges **green** (the arm xfails cleanly with
   no committed log), and the instant Phase 5 commits the log the assertion xpasses —
   which strict xfail reports as a failure, forcing Phase 5 to remove the marker in
@@ -1007,25 +992,22 @@ this section is **net-new**, not reuse:
 
 **File**: `tests/unit/evals/skills/configure/test_solvers.py`
 **Changes**: `_seed`'s `copytree` already handles nested `.luminosity/skills/`
-(fixed in 0017), so add a case seeding a fixture carrying
-`skills/configure/instructions.local.md` and assert the file lands at the
-expected workdir path with the fixture's content.
+(fixed in 0017), so add a case seeding `instructions_skill_both_levels` (which
+carries `skills/configure/instructions.local.md`) and assert the file lands at
+the expected workdir path with the fixture's content.
 
 ### Tests (write first)
 
-- `test_instructions_block_prefix_matches_the_rust_source`
-- `test_the_instructions_prose_interpolates_the_skill_name`
-- `test_the_scorer_argv_matches_the_skill_injection_line`
-- `test_deterministic_golden_matches_the_fixture_body` (over the new scenarios)
-- `test_both_levels_orders_team_before_personal_within_the_block`
-- `test_mixed_empty_level_drops_the_empty_with_no_doubled_blank`
-- `test_instructions_empty_expects_no_block`
-- `test_context_and_instructions_carries_both_sentinels_present_in_both_bodies`
-- `test_the_behavioural_dataset_rows_match_their_main_dataset_twins`
+- `test_every_line_parses_and_carries_required_fields`
+- `test_one_case_per_scenario`
+- `test_the_bodies_are_declarative_conventions`
+- `test_ordering_carries_a_context_and_an_instructions_sentinel`
+- `test_every_prompt_reads_a_key_its_fixture_defines`
 - `test_every_scenario_fixture_file_exists_on_disk`
-- `test_instructions_render.py::test_binary_output_matches_each_golden`
+- `test_a_mispathed_declared_source_raises`
 - `test_run.py` / `test_collection.py` / `test_results.py` tripwire updates
-- `test_solvers.py::seeds_a_personal_skill_instructions_file`
+  (including the `xfail(strict=True)` committed-log gate arms)
+- `test_solvers.py::test_copies_a_personal_skill_instructions_file`
 
 ### Success Criteria
 
@@ -1041,11 +1023,11 @@ expected workdir path with the fixture's content.
 
 #### Manual Verification
 
-- [x] Each new fixture's `instructions.local.md` is actually tracked by git (the
-      `.gitignore` negation from Phase 3 works).
-- [x] `tasks/README`'s eval-tier shape gains the byte-grade render tier: the
-      `build:launcher:host` task and its `test:unit:evals` dependency were wired in
-      0017, and this story adds the first test that consumes the built binary.
+- [x] The `instructions_skill_both_levels` witness's `instructions.local.md` is
+      actually tracked by git (the `.gitignore` negation from Phase 3 works).
+- [x] The eval tier stays behavioural-only, matching context: no golden, render
+      test, or Rust-source scraper is added, and deterministic rendering is
+      covered entirely by `cli/launcher/tests/instructions.rs`.
 
 ---
 
@@ -1057,7 +1039,7 @@ The eval-coverage acceptance criterion is satisfied only by a committed result
 log for the new `instructions` capability. This is a live, **billed** `claude -p`
 run, as 0016/0017's were. Only the two behavioural arms
 (`instructions_skill_behavioural`, `context_and_instructions_ordering`) run live;
-the deterministic scenarios are graded by the Phase 4 CI render test.
+the deterministic scenarios are graded by `cli/launcher/tests/instructions.rs`.
 
 ### Changes Required
 
@@ -1066,11 +1048,11 @@ the deterministic scenarios are graded by the Phase 4 CI render test.
 host paths by `readback.scrub_result_dir`)
 
 The run drives the real `claude -p` against the staged plugin in a seeded temp
-workdir, then re-executes the compiled `luminosity` binary with the injected argv
-and byte-compares stdout against the goldens. Gated at the established
-`PASS_K_FLOOR` over `TRIALS`. The behavioural prompts must route the agent
-through the `configure` skill (injection fires at skill load), following the
-proven-prompt shape 0017 landed on.
+workdir and grades, per row, that every sentinel appears in the assistant
+transcript — proving the injected block reached the model. Gated at the
+established `PASS_K_FLOOR` over `TRIALS`. The behavioural prompts must route the
+agent through the `configure` skill (injection fires at skill load), following
+the proven-prompt shape 0017 landed on.
 
 ### Success Criteria
 
@@ -1144,10 +1126,12 @@ instructions line exists, in the right place (after the context line and all
 subsections), with a representable skill name, in **every** registered skill, and
 that the personal file is git-ignored while the team file is tracked.
 
-**Python eval-logic tests (`tests/unit/evals/`)** — that the goldens have not
-drifted from the Rust literals, that the compiled binary's stdout matches the
-goldens for every fixture, and that the committed live log covers the current
-`instructions` dataset. Runs in CI; costs nothing.
+**Python eval-logic tests (`tests/unit/evals/`)** — that the billed dataset's
+premises hold (each row is declarative, its sentinels appear in the fixture it
+seeds, its prompt reads a key the fixture defines) and that the committed live
+log covers the current `instructions` dataset. Behavioural-only, mirroring
+context; the deterministic rendering is proved by the Rust tier above. Runs in
+CI; costs nothing.
 
 **The live eval (`mise run eval:skills:configure`)** — that injection actually
 reaches the model, and that context lands above instructions, for the two

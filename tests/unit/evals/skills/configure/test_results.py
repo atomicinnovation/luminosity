@@ -124,13 +124,9 @@ class TestCommittedGate:
         assert log["results"]["total_samples"] == len(scenarios) * TRIALS
 
     @pytest.mark.xfail(strict=True, reason=_PENDING_LIVE_LOG)
-    def test_the_committed_log_covers_the_instructions_behavioural_dataset(
-        self,
-    ):
+    def test_the_committed_log_covers_the_instructions_dataset(self):
         log = self._arm(with_skill_arm(_SKILL, instructions_eval.CAPABILITY))
-        scenarios = _behavioural_scenarios(
-            "instructions_behavioural_dataset.json"
-        )
+        scenarios = _behavioural_scenarios("instructions_dataset.json")
         assert {
             sample["metadata"]["scenario"] for sample in log["samples"]
         } == scenarios

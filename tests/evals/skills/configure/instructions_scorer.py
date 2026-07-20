@@ -20,11 +20,6 @@ if TYPE_CHECKING:
 
 SKILL = "configure"
 
-# The exact argv the configure SKILL.md injects at the end of the body. Pinned
-# against that line by test_instructions_dataset.py and re-executed against each
-# seeded fixture by the CI render test, which byte-compares the block.
-SCORER_ARGV = ["instructions", "--skill=configure", "--fail-safe"]
-
 
 def instructions_scorer():
     @scorer(metrics=[accuracy(), stderr()])
