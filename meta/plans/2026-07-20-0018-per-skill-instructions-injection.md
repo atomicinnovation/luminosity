@@ -5,7 +5,7 @@ title: "Per-Skill Instructions Injection Implementation Plan"
 date: "2026-07-19T23:29:16+00:00"
 author: Toby Clemson
 producer: create-plan
-status: ready
+status: done
 work_item_id: "work-item:0018"
 parent: "work-item:0018"
 derived_from: ["codebase-research:2026-07-19-0018-per-skill-instructions-injection"]
