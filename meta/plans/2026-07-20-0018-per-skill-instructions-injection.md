@@ -480,19 +480,19 @@ symlinked-*file* test plus the existing directory-component tests suffice.
 
 #### Automated Verification
 
-- [ ] Rust format and lint pass: `mise run cli:check`
-- [ ] Workspace unit tests pass: `mise run test:unit:cli`
-- [ ] The new adapter tests pass in isolation:
+- [x] Rust format and lint pass: `mise run cli:check`
+- [x] Workspace unit tests pass: `mise run test:unit:cli`
+- [x] The new adapter tests pass in isolation:
       `cd cli && cargo nextest run -p config-adapters -E 'test(instructions)'`
-- [ ] `mise run deny:check` passes
-- [ ] The full local CI mirror is green: `mise run`
+- [x] `mise run deny:check` passes
+- [x] The full local CI mirror is green: `mise run`
 
 #### Manual Verification
 
-- [ ] `cli/config/` still has no filesystem or serde dependency — the
+- [x] `cli/config/` still has no filesystem or serde dependency — the
       instructions arm is a value-object variant; the path rule and strip live in
       `config-adapters`.
-- [ ] The context command's behaviour is unchanged (its black-box suite is green
+- [x] The context command's behaviour is unchanged (its black-box suite is green
       without edits beyond the arm rename).
 
 ---

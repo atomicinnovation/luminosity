@@ -212,9 +212,12 @@ mod tests {
 
     fn path_of(source: &FragmentSource, level: Level) -> String {
         let base = match source {
-            FragmentSource::Project => ".luminosity/config".to_owned(),
-            FragmentSource::Skill(name) => {
+            FragmentSource::ProjectContext => ".luminosity/config".to_owned(),
+            FragmentSource::SkillContext(name) => {
                 format!(".luminosity/skills/{name}/context")
+            }
+            FragmentSource::SkillInstructions(name) => {
+                format!(".luminosity/skills/{name}/instructions")
             }
         };
         format!("{base}{}.md", level.qualifier())
@@ -263,7 +266,13 @@ mod tests {
     }
 
     fn skill() -> Result<FragmentSource, ConfigError> {
-        Ok(FragmentSource::Skill(SkillName::parse("configure")?))
+        Ok(FragmentSource::SkillContext(SkillName::parse("configure")?))
+    }
+
+    fn skill_instructions() -> Result<FragmentSource, ConfigError> {
+        Ok(FragmentSource::SkillInstructions(SkillName::parse(
+            "configure",
+        )?))
     }
 
     fn assemble_source(
@@ -278,7 +287,7 @@ mod tests {
         team: BodyState,
         personal: BodyState,
     ) -> Result<Assembly, ConfigError> {
-        assemble_source(&FragmentSource::Project, team, personal)
+        assemble_source(&FragmentSource::ProjectContext, team, personal)
     }
 
     fn fragment(
@@ -469,7 +478,7 @@ mod tests {
     #[test]
     fn assembles_a_skill_source_identically_to_a_project_source(
     ) -> Result<(), ConfigError> {
-        for source in [FragmentSource::Project, skill()?] {
+        for source in [FragmentSource::ProjectContext, skill()?] {
             let assembly = assemble_source(
                 &source,
                 present("\nteam\n\n"),
@@ -518,6 +527,44 @@ mod tests {
         assert_eq!(
             assembly.levels[1].path,
             ".luminosity/skills/configure/context.local.md"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn assembles_a_skill_instructions_source_identically_to_a_skill_context_source(
+    ) -> Result<(), ConfigError> {
+        for source in [skill()?, skill_instructions()?] {
+            let assembly = assemble_source(
+                &source,
+                present("\nteam\n\n"),
+                present("\n\npersonal\n"),
+            )?;
+            assert_eq!(
+                assembly.fragment,
+                Some(Fragment {
+                    body: "team\n\npersonal".to_owned()
+                })
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn reports_the_instructions_paths_for_a_skill_instructions_source(
+    ) -> Result<(), ConfigError> {
+        let assembly = assemble_source(
+            &skill_instructions()?,
+            present("team\n"),
+            BodyState::Missing,
+        )?;
+        assert_eq!(
+            assembly.levels[0].path,
+            ".luminosity/skills/configure/instructions.md"
+        );
+        assert_eq!(
+            assembly.levels[1].path,
+            ".luminosity/skills/configure/instructions.local.md"
         );
         Ok(())
     }

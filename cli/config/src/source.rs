@@ -52,10 +52,14 @@ impl Display for SkillName {
 }
 
 /// Which document a fragment is assembled from.
+///
+/// Instructions are always skill-scoped, so there is no project-instructions
+/// arm — a project-global instructions state is unrepresentable by construction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FragmentSource {
-    Project,
-    Skill(SkillName),
+    ProjectContext,
+    SkillContext(SkillName),
+    SkillInstructions(SkillName),
 }
 
 #[cfg(test)]

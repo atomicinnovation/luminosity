@@ -66,11 +66,28 @@ enum Outcome {
     Degraded(ConfigError),
 }
 
+/// The two context sources this command renders. Converted to the kernel's
+/// [`FragmentSource`] only at the assembly boundary, so the render match stays
+/// total without a `SkillInstructions` arm this command never assembles.
+enum ContextSource {
+    Project,
+    Skill(SkillName),
+}
+
+impl ContextSource {
+    fn fragment_source(&self) -> FragmentSource {
+        match self {
+            Self::Project => FragmentSource::ProjectContext,
+            Self::Skill(name) => FragmentSource::SkillContext(name.clone()),
+        }
+    }
+}
+
 /// One section of the output. `Resolved` pairs a source with its assembly
 /// outcome; `Unresolved` is a `--skill` name that never parsed — degraded under
 /// `--fail-safe` before any source, and so any path, could exist.
 enum Section {
-    Resolved(FragmentSource, Outcome),
+    Resolved(ContextSource, Outcome),
     Unresolved(ConfigError),
 }
 
@@ -210,8 +227,8 @@ fn resolve_project(
     assembler: &impl AssembleFragment,
     options: &Options,
 ) -> Result<Section, ConfigError> {
-    let source = FragmentSource::Project;
-    let outcome = assemble(assembler, &source, options)?;
+    let source = ContextSource::Project;
+    let outcome = assemble(assembler, &source.fragment_source(), options)?;
     Ok(Section::Resolved(source, outcome))
 }
 
@@ -233,22 +250,22 @@ fn resolve_skill(
         }
         Err(error) => return Err(error),
     };
-    let source = FragmentSource::Skill(name);
-    let outcome = assemble(assembler, &source, options)?;
+    let source = ContextSource::Skill(name);
+    let outcome = assemble(assembler, &source.fragment_source(), options)?;
     Ok(Some(Section::Resolved(source, outcome)))
 }
 
-fn block(source: &FragmentSource, outcome: &Outcome) -> Option<String> {
+fn block(source: &ContextSource, outcome: &Outcome) -> Option<String> {
     match outcome {
         Outcome::Assembled(assembly) => {
             assembly.fragment.as_ref().map(|context| match source {
-                FragmentSource::Project => render_project(context),
-                FragmentSource::Skill(name) => render_skill(name, context),
+                ContextSource::Project => render_project(context),
+                ContextSource::Skill(name) => render_skill(name, context),
             })
         }
         Outcome::Degraded(error) => Some(match source {
-            FragmentSource::Project => render_project_unavailable(error),
-            FragmentSource::Skill(_) => render_skill_unavailable(error),
+            ContextSource::Project => render_project_unavailable(error),
+            ContextSource::Skill(_) => render_skill_unavailable(error),
         }),
     }
 }
@@ -265,7 +282,7 @@ fn explain(
     project: &Section,
     skill: Option<&Section>,
 ) -> Result<Vec<String>, ConfigError> {
-    let root = assembler.locate(&FragmentSource::Project)?.root;
+    let root = assembler.locate(&FragmentSource::ProjectContext)?.root;
     let mut lines = vec![format!("root: {root}")];
     lines.extend(section_lines(assembler, project)?);
     if let Some(skill) = skill {
@@ -295,14 +312,14 @@ fn invalid_skill_line(error: &ConfigError) -> String {
 
 fn source_lines(
     assembler: &impl AssembleFragment,
-    source: &FragmentSource,
+    source: &ContextSource,
     outcome: &Outcome,
 ) -> Result<Vec<String>, ConfigError> {
     match outcome {
         Outcome::Assembled(assembly) => Ok(explain_lines(&assembly.levels)),
         Outcome::Degraded(error) => {
             let state = degraded_state(error);
-            let paths = assembler.locate(source)?.paths;
+            let paths = assembler.locate(&source.fragment_source())?.paths;
             Ok([Level::Team, Level::Personal]
                 .into_iter()
                 .zip(paths)
