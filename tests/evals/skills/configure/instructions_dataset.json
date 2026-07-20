@@ -1,0 +1,94 @@
+[
+  {
+    "input": "",
+    "target": "",
+    "metadata": {
+      "scenario": "team_only",
+      "fixture": "instructions_skill_team_only",
+      "sources": [
+        "skills/configure/instructions.md"
+      ],
+      "behavioural": false,
+      "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nAlways cite the relevant ADR when explaining a decision.",
+      "sentinels": []
+    }
+  },
+  {
+    "input": "",
+    "target": "",
+    "metadata": {
+      "scenario": "both_levels",
+      "fixture": "instructions_skill_both_levels",
+      "sources": [
+        "skills/configure/instructions.md",
+        "skills/configure/instructions.local.md"
+      ],
+      "behavioural": false,
+      "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nCite the relevant ADR when explaining a decision.\n\nPrefer jj over raw git for VCS operations.",
+      "sentinels": []
+    }
+  },
+  {
+    "input": "",
+    "target": "",
+    "metadata": {
+      "scenario": "mixed_empty",
+      "fixture": "instructions_skill_mixed_empty",
+      "sources": [
+        "skills/configure/instructions.md",
+        "skills/configure/instructions.local.md"
+      ],
+      "behavioural": false,
+      "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nCite the relevant ADR when explaining a decision.",
+      "sentinels": []
+    }
+  },
+  {
+    "input": "",
+    "target": "",
+    "metadata": {
+      "scenario": "empty",
+      "fixture": "instructions_skill_empty",
+      "sources": [
+        "skills/configure/instructions.md"
+      ],
+      "behavioural": false,
+      "expected_block": "",
+      "sentinels": []
+    }
+  },
+  {
+    "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "behavioural",
+      "fixture": "instructions_skill_behavioural",
+      "sources": [
+        "skills/configure/instructions.md"
+      ],
+      "behavioural": true,
+      "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+      "sentinels": [
+        "Lodestar"
+      ]
+    }
+  },
+  {
+    "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+    "target": "",
+    "metadata": {
+      "scenario": "context_and_instructions_ordering",
+      "fixture": "context_and_instructions_ordering",
+      "sources": [
+        "skills/configure/context.md",
+        "skills/configure/instructions.md"
+      ],
+      "behavioural": true,
+      "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+      "sentinels": [
+        "Waypoint",
+        "Marker"
+      ]
+    }
+  }
+]

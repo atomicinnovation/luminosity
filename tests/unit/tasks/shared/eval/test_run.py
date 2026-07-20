@@ -10,18 +10,23 @@ so none of them leaves you guessing.
 
 from common.eval import baseline_arm, with_skill_arm
 from tasks.shared.eval.run import arms, capabilities
-from tests.evals.skills.configure import context_eval, values_eval
+from tests.evals.skills.configure import (
+    context_eval,
+    instructions_eval,
+    values_eval,
+)
 
 _SKILL = "configure"
 
 
 class TestCapabilities:
     def test_discovers_every_capability_of_the_skill(self) -> None:
-        assert capabilities(_SKILL) == ["context", "values"]
+        assert capabilities(_SKILL) == ["context", "instructions", "values"]
 
     def test_a_capability_is_named_by_its_eval_file(self) -> None:
         assert values_eval.CAPABILITY in capabilities(_SKILL)
         assert context_eval.CAPABILITY in capabilities(_SKILL)
+        assert instructions_eval.CAPABILITY in capabilities(_SKILL)
 
 
 class TestArms:
@@ -39,6 +44,11 @@ class TestArms:
         # omission.
         assert arms(_SKILL, "context") == ["configure_context_with_skill"]
 
+    def test_instructions_declares_only_with_skill(self) -> None:
+        assert arms(_SKILL, "instructions") == [
+            "configure_instructions_with_skill"
+        ]
+
     def test_the_with_skill_arm_comes_first(self) -> None:
         assert arms(_SKILL, "values")[0] == with_skill_arm(_SKILL, "values")
 
@@ -51,6 +61,7 @@ class TestArmsMatchTheDeclaredTasks:
         modules = {
             values_eval.CAPABILITY: values_eval,
             context_eval.CAPABILITY: context_eval,
+            instructions_eval.CAPABILITY: instructions_eval,
         }
         for capability, module in modules.items():
             for arm in arms(_SKILL, capability):

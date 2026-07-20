@@ -1031,19 +1031,19 @@ expected workdir path with the fixture's content.
 
 #### Automated Verification
 
-- [ ] Eval-logic tests pass **green**: `mise run test:unit:evals` — the new
+- [x] Eval-logic tests pass **green**: `mise run test:unit:evals` — the new
       `instructions` capability's committed-log assertions are marked
       `xfail(strict=True)` (no live log yet), so they xfail cleanly rather than
       failing; every other new eval-logic test passes outright.
-- [ ] The updated capability tripwires pass: `mise run test:unit:tasks`
-- [ ] Python format, lint, and types pass: `mise run check`
-- [ ] The full local CI mirror is green: `mise run`
+- [x] The updated capability tripwires pass: `mise run test:unit:tasks`
+- [x] Python format, lint, and types pass: `mise run check`
+- [x] The full local CI mirror is green: `mise run`
 
 #### Manual Verification
 
-- [ ] Each new fixture's `instructions.local.md` is actually tracked by git (the
+- [x] Each new fixture's `instructions.local.md` is actually tracked by git (the
       `.gitignore` negation from Phase 3 works).
-- [ ] `tasks/README`'s eval-tier shape gains the byte-grade render tier: the
+- [x] `tasks/README`'s eval-tier shape gains the byte-grade render tier: the
       `build:launcher:host` task and its `test:unit:evals` dependency were wired in
       0017, and this story adds the first test that consumes the built binary.
 
