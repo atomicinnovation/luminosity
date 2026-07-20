@@ -5,7 +5,7 @@ title: "Per-Skill Instructions Injection"
 date: "2026-07-11T11:19:14+00:00"
 author: Toby Clemson
 producer: extract-work-items
-status: ready
+status: done
 kind: story
 priority: medium
 parent: "work-item:0011"
