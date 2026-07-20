@@ -1,0 +1,2419 @@
+{
+  "version": 2,
+  "status": "success",
+  "eval": {
+    "eval_id": "2oxMyeYMWwXSYXdMaxGTgD",
+    "run_id": "SMzGUHB6T3hUK7LR2BpiNC",
+    "created": "2026-07-20T11:01:15+00:00",
+    "task": "configure_instructions_with_skill",
+    "task_id": "bRrCdx3FrcqEfYxHEXMQrq",
+    "task_version": 0,
+    "task_file": "tests/evals/skills/configure/instructions_eval.py",
+    "task_display_name": "configure_instructions_with_skill",
+    "task_registry_name": "configure_instructions_with_skill",
+    "task_attribs": {},
+    "task_args": {},
+    "task_args_passed": {},
+    "dataset": {
+      "name": "instructions_dataset",
+      "location": "instructions_dataset.json",
+      "samples": 2,
+      "sample_ids": [
+        1,
+        2
+      ],
+      "shuffled": false
+    },
+    "model": "mockllm/model",
+    "model_generate_config": {},
+    "model_args": {},
+    "config": {
+      "epochs": 3,
+      "epochs_reducer": [
+        "pass_k_3"
+      ],
+      "fail_on_error": true,
+      "continue_on_fail": false,
+      "score_on_error": false,
+      "max_samples": 4,
+      "sandbox_cleanup": true,
+      "log_samples": true,
+      "log_realtime": true,
+      "log_images": true,
+      "score_display": true
+    },
+    "revision": {
+      "type": "git",
+      "origin": "git@github.com:atomicinnovation/luminosity.git",
+      "commit": "51da03e9",
+      "dirty": true
+    },
+    "packages": {
+      "inspect_ai": "0.3.244"
+    },
+    "scorers": [
+      {
+        "name": "instructions",
+        "options": {},
+        "metrics": [
+          {
+            "name": "inspect_ai/accuracy",
+            "options": {}
+          },
+          {
+            "name": "inspect_ai/stderr",
+            "options": {}
+          }
+        ],
+        "metadata": {}
+      }
+    ]
+  },
+  "plan": {
+    "name": "plan",
+    "steps": [
+      {
+        "solver": "run_configure_agent",
+        "params": {
+          "with_skill": true
+        },
+        "params_passed": {
+          "with_skill": true
+        }
+      }
+    ],
+    "config": {}
+  },
+  "results": {
+    "total_samples": 6,
+    "completed_samples": 6,
+    "scores": [
+      {
+        "name": "instructions",
+        "scorer": "instructions",
+        "reducer": "pass_k_3",
+        "scored_samples": 2,
+        "unscored_samples": 0,
+        "params": {},
+        "metrics": {
+          "accuracy": {
+            "name": "accuracy",
+            "value": 1.0,
+            "params": {}
+          },
+          "stderr": {
+            "name": "stderr",
+            "value": 0.0,
+            "params": {}
+          }
+        }
+      }
+    ]
+  },
+  "stats": {
+    "started_at": "2026-07-20T11:01:15+00:00",
+    "completed_at": "2026-07-20T11:01:50+00:00",
+    "model_usage": {},
+    "role_usage": {},
+    "connection_limit_history": []
+  },
+  "invalidated": false,
+  "tags": [],
+  "metadata": {},
+  "samples": [
+    {
+      "id": 1,
+      "epoch": 1,
+      "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+      "target": "",
+      "messages": [
+        {
+          "id": "oQGUnGe7xtdb9S5BFH7f2H",
+          "content": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+          "source": "input",
+          "role": "user"
+        },
+        {
+          "id": "DUHyJYauMddpPdeSxsA52D",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "DhPJv2JaD9z7nzV3yHxqix",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_01Fmg258AmoATRbngrPrnWeK",
+              "function": "Skill",
+              "arguments": {
+                "skill": "luminosity:configure",
+                "args": "get core.example"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "NnBdjMLCNVDokkwttUYPKY",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "JTAXPp3dX2uVDm8DQZDbiK",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_01HsUUUZ8DACqE9JT1PPaHYn",
+              "function": "Bash",
+              "arguments": {
+                "command": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+                "description": "Read core.example config value"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "3jAYctsGisUkQdZZyRbTwi",
+          "content": "`core.example` = **team-v** (resolved from the team level, since no personal override exists).\n\nLodestar — this project's configuration subsystem — organizes settings as a tree of dotted `section.key` values across two levels: a shared, committed **team** config and a local, git-ignored **personal** config that overrides it. A plain read (no `--level` flag) resolves personal-over-team, so personal overrides are invisible unless you ask for a specific level. Beyond key/value pairs, each level also carries a free-form Markdown body that's injected as project context into every skill's prompt, plus optional per-skill context and instructions files scoped to just one skill.",
+          "role": "assistant"
+        }
+      ],
+      "output": {
+        "model": "mockllm/model",
+        "choices": [],
+        "completion": ""
+      },
+      "scores": {
+        "instructions": {
+          "value": "C",
+          "metadata": {
+            "scenario": "behavioural"
+          },
+          "history": []
+        }
+      },
+      "metadata": {
+        "scenario": "behavioural",
+        "fixture": "instructions_skill_behavioural",
+        "sources": [
+          "skills/configure/instructions.md"
+        ],
+        "behavioural": true,
+        "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+        "sentinels": [
+          "Lodestar"
+        ],
+        "workdir": "<tmp>/luminosity-eval-n9h_xyb4",
+        "agent_stderr": "",
+        "claude_model": "claude-sonnet-5",
+        "claude_cli_version": "2.1.203"
+      },
+      "store": {},
+      "events": [
+        {
+          "uuid": "f8N3ji4kq3gpakvp89uffa",
+          "span_id": "DuMqQuELzY3CnV59byQrua",
+          "timestamp": "2026-07-20T11:01:15.566856+00:00",
+          "working_start": 474340.235033583,
+          "event": "span_begin",
+          "id": "DuMqQuELzY3CnV59byQrua",
+          "type": "init",
+          "name": "init"
+        },
+        {
+          "uuid": "YB8BE7TbrgMHZE4MgRsACu",
+          "span_id": "DuMqQuELzY3CnV59byQrua",
+          "timestamp": "2026-07-20T11:01:15.567122+00:00",
+          "working_start": 474340.2352955,
+          "event": "sample_init",
+          "sample": {
+            "input": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+            "target": "",
+            "id": 1,
+            "metadata": {
+              "scenario": "behavioural",
+              "fixture": "instructions_skill_behavioural",
+              "sources": [
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+              "sentinels": [
+                "Lodestar"
+              ]
+            }
+          },
+          "state": {
+            "messages": [
+              {
+                "id": "oQGUnGe7xtdb9S5BFH7f2H",
+                "content": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+                "source": "input",
+                "role": "user"
+              }
+            ],
+            "tools": [],
+            "tool_choice": null,
+            "store": {},
+            "output": {
+              "model": "mockllm/model",
+              "choices": [],
+              "completion": ""
+            },
+            "completed": false,
+            "metadata": {
+              "scenario": "behavioural",
+              "fixture": "instructions_skill_behavioural",
+              "sources": [
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "attachment://6ce522170ccf1005bf9830f1725c7a36",
+              "sentinels": [
+                "Lodestar"
+              ]
+            }
+          }
+        },
+        {
+          "uuid": "LtSTM2LudCfcDvPHYygGQv",
+          "span_id": "DuMqQuELzY3CnV59byQrua",
+          "timestamp": "2026-07-20T11:01:15.567443+00:00",
+          "working_start": 474340.235616166,
+          "event": "span_end",
+          "id": "DuMqQuELzY3CnV59byQrua"
+        },
+        {
+          "uuid": "93kvjmtb7mYATHa3kiqh6f",
+          "span_id": "La3P2RQHLpnGxDSSvTLgVy",
+          "timestamp": "2026-07-20T11:01:15.569460+00:00",
+          "working_start": 0.0019398329895921052,
+          "event": "span_begin",
+          "id": "La3P2RQHLpnGxDSSvTLgVy",
+          "type": "solvers",
+          "name": "solvers"
+        },
+        {
+          "uuid": "bEYNjcBPfpmQfAx7EstRhk",
+          "span_id": "WWwao6JLEHL7DKJYpzvjsP",
+          "timestamp": "2026-07-20T11:01:15.569660+00:00",
+          "working_start": 0.0021386250155046582,
+          "event": "span_begin",
+          "id": "WWwao6JLEHL7DKJYpzvjsP",
+          "parent_id": "La3P2RQHLpnGxDSSvTLgVy",
+          "type": "solver",
+          "name": "run_configure_agent"
+        },
+        {
+          "uuid": "dyr3wAjeWgsNPmEweEzU3W",
+          "span_id": "WWwao6JLEHL7DKJYpzvjsP",
+          "timestamp": "2026-07-20T11:01:28.059414+00:00",
+          "working_start": 12.491858791967388,
+          "event": "state",
+          "changes": [
+            {
+              "op": "add",
+              "path": "/messages/1",
+              "value": {
+                "id": "DUHyJYauMddpPdeSxsA52D",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/2",
+              "value": {
+                "id": "DhPJv2JaD9z7nzV3yHxqix",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_01Fmg258AmoATRbngrPrnWeK",
+                    "function": "Skill",
+                    "arguments": {
+                      "skill": "luminosity:configure",
+                      "args": "get core.example"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/3",
+              "value": {
+                "id": "NnBdjMLCNVDokkwttUYPKY",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/4",
+              "value": {
+                "id": "JTAXPp3dX2uVDm8DQZDbiK",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_01HsUUUZ8DACqE9JT1PPaHYn",
+                    "function": "Bash",
+                    "arguments": {
+                      "command": "attachment://9aefa06343db3e8c74cbecc309b1919f",
+                      "description": "Read core.example config value"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/5",
+              "value": {
+                "id": "3jAYctsGisUkQdZZyRbTwi",
+                "content": "attachment://f05724019179e33f52de1a80b2b6ef7f",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/metadata/agent_stderr",
+              "value": ""
+            },
+            {
+              "op": "add",
+              "path": "/metadata/workdir",
+              "value": "<tmp>/luminosity-eval-n9h_xyb4"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_model",
+              "value": "claude-sonnet-5"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_cli_version",
+              "value": "2.1.203"
+            }
+          ]
+        },
+        {
+          "uuid": "E6AV5ddK9VZRxwtjZhor4s",
+          "span_id": "WWwao6JLEHL7DKJYpzvjsP",
+          "timestamp": "2026-07-20T11:01:28.059858+00:00",
+          "working_start": 12.4922967919847,
+          "event": "span_end",
+          "id": "WWwao6JLEHL7DKJYpzvjsP"
+        },
+        {
+          "uuid": "FDBfeqgHEbs4PYpFwkZh4u",
+          "span_id": "La3P2RQHLpnGxDSSvTLgVy",
+          "timestamp": "2026-07-20T11:01:28.059999+00:00",
+          "working_start": 12.492436999978963,
+          "event": "span_end",
+          "id": "La3P2RQHLpnGxDSSvTLgVy"
+        },
+        {
+          "uuid": "58WB3xQsWvNotbfcFgVbDY",
+          "span_id": "X9APMQpPX96wf5TCJf2enL",
+          "timestamp": "2026-07-20T11:01:28.060396+00:00",
+          "working_start": 12.4928358750185,
+          "event": "span_begin",
+          "id": "X9APMQpPX96wf5TCJf2enL",
+          "type": "scorers",
+          "name": "scorers"
+        },
+        {
+          "uuid": "Jn3eWdPQhHMeHAoV3DWk5Q",
+          "span_id": "ZKSHH7vjPHsLsx33bU5UE6",
+          "timestamp": "2026-07-20T11:01:28.060558+00:00",
+          "working_start": 12.49299624998821,
+          "event": "span_begin",
+          "id": "ZKSHH7vjPHsLsx33bU5UE6",
+          "parent_id": "X9APMQpPX96wf5TCJf2enL",
+          "type": "scorer",
+          "name": "instructions"
+        },
+        {
+          "uuid": "izKbZdsLUjcbaRmqUjHhi5",
+          "span_id": "ZKSHH7vjPHsLsx33bU5UE6",
+          "timestamp": "2026-07-20T11:01:28.060679+00:00",
+          "working_start": 12.493116792000365,
+          "event": "score",
+          "score": {
+            "value": "C",
+            "metadata": {
+              "scenario": "behavioural"
+            },
+            "history": []
+          },
+          "target": "",
+          "intermediate": false,
+          "scorer": "instructions",
+          "scorer_args": {}
+        },
+        {
+          "uuid": "QkFMrYeu5dE9iHW3bWjysJ",
+          "span_id": "ZKSHH7vjPHsLsx33bU5UE6",
+          "timestamp": "2026-07-20T11:01:28.060799+00:00",
+          "working_start": 12.493237541988492,
+          "event": "span_end",
+          "id": "ZKSHH7vjPHsLsx33bU5UE6"
+        },
+        {
+          "uuid": "MpJbfgSAQbp39d9XzXvQUA",
+          "span_id": "X9APMQpPX96wf5TCJf2enL",
+          "timestamp": "2026-07-20T11:01:28.060872+00:00",
+          "working_start": 12.493309332989156,
+          "event": "span_end",
+          "id": "X9APMQpPX96wf5TCJf2enL"
+        }
+      ],
+      "model_usage": {},
+      "role_usage": {},
+      "started_at": "2026-07-20T11:01:15.567524+00:00",
+      "completed_at": "2026-07-20T11:01:28.061478+00:00",
+      "total_time": 12.494,
+      "working_time": 12.494,
+      "uuid": "P9YA9pmCCnJzBxeoEhNBy3",
+      "error_retries": [],
+      "attachments": {
+        "e4fe036fa713fbcd92e91ee28ada847a": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+        "6ce522170ccf1005bf9830f1725c7a36": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+        "9aefa06343db3e8c74cbecc309b1919f": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+        "f05724019179e33f52de1a80b2b6ef7f": "`core.example` = **team-v** (resolved from the team level, since no personal override exists).\n\nLodestar — this project's configuration subsystem — organizes settings as a tree of dotted `section.key` values across two levels: a shared, committed **team** config and a local, git-ignored **personal** config that overrides it. A plain read (no `--level` flag) resolves personal-over-team, so personal overrides are invisible unless you ask for a specific level. Beyond key/value pairs, each level also carries a free-form Markdown body that's injected as project context into every skill's prompt, plus optional per-skill context and instructions files scoped to just one skill."
+      },
+      "events_data": {
+        "messages": [],
+        "calls": []
+      }
+    },
+    {
+      "id": 2,
+      "epoch": 1,
+      "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+      "target": "",
+      "messages": [
+        {
+          "id": "ByVrDgaMvFz8S4peduBd6U",
+          "content": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+          "source": "input",
+          "role": "user"
+        },
+        {
+          "id": "RpsA7JnH89FBWCux5rG6UU",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "2uJ8uNTgzhiticFXdpwYrR",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_01C9j3Fh1Evxdu21DxYQ5Wmv",
+              "function": "Skill",
+              "arguments": {
+                "skill": "luminosity:configure",
+                "args": "get core.example"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "acuwZo93gZWFQZ4uKCQHg7",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "ihYuakmdTRCtG8FiFihBR3",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_01XYiok9aQpQgom2MxQETCS6",
+              "function": "Bash",
+              "arguments": {
+                "command": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+                "description": "Read core.example config value via luminosity CLI"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "gYc38uABeXR3T78ZF23Eox",
+          "content": "`core.example` resolves to **`team-v`** (from the shared team-level file — no personal override present).\n\nHow configuration works here (Waypoint): values are dotted `section.key` pairs resolved across two Markers — `team` (shared, committed) and `personal` (local, git-ignored, overrides team). A plain `get`/`set` with no `--level` resolves/writes personal-over-team, so casual edits never land in shared state. Each config file also carries a free-form Markdown body injected into every skill's prompt as project context, plus skills can have their own scoped context and instructions files — but I only read the CLI-owned value here, not those bodies.",
+          "role": "assistant"
+        }
+      ],
+      "output": {
+        "model": "mockllm/model",
+        "choices": [],
+        "completion": ""
+      },
+      "scores": {
+        "instructions": {
+          "value": "C",
+          "metadata": {
+            "scenario": "context_and_instructions_ordering"
+          },
+          "history": []
+        }
+      },
+      "metadata": {
+        "scenario": "context_and_instructions_ordering",
+        "fixture": "context_and_instructions_ordering",
+        "sources": [
+          "skills/configure/context.md",
+          "skills/configure/instructions.md"
+        ],
+        "behavioural": true,
+        "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+        "sentinels": [
+          "Waypoint",
+          "Marker"
+        ],
+        "workdir": "<tmp>/luminosity-eval-hfpcw3x3",
+        "agent_stderr": "",
+        "claude_model": "claude-sonnet-5",
+        "claude_cli_version": "2.1.203"
+      },
+      "store": {},
+      "events": [
+        {
+          "uuid": "bWSzegSa6CvKT29aT7FiZ7",
+          "span_id": "LgzpvRjgszcYvYW4Zxxhff",
+          "timestamp": "2026-07-20T11:01:15.567810+00:00",
+          "working_start": 474340.23598225,
+          "event": "span_begin",
+          "id": "LgzpvRjgszcYvYW4Zxxhff",
+          "type": "init",
+          "name": "init"
+        },
+        {
+          "uuid": "RgEbRt6XuFe6TVxksspeKr",
+          "span_id": "LgzpvRjgszcYvYW4Zxxhff",
+          "timestamp": "2026-07-20T11:01:15.567897+00:00",
+          "working_start": 474340.236069583,
+          "event": "sample_init",
+          "sample": {
+            "input": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+            "target": "",
+            "id": 2,
+            "metadata": {
+              "scenario": "context_and_instructions_ordering",
+              "fixture": "context_and_instructions_ordering",
+              "sources": [
+                "skills/configure/context.md",
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+              "sentinels": [
+                "Waypoint",
+                "Marker"
+              ]
+            }
+          },
+          "state": {
+            "messages": [
+              {
+                "id": "ByVrDgaMvFz8S4peduBd6U",
+                "content": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+                "source": "input",
+                "role": "user"
+              }
+            ],
+            "tools": [],
+            "tool_choice": null,
+            "store": {},
+            "output": {
+              "model": "mockllm/model",
+              "choices": [],
+              "completion": ""
+            },
+            "completed": false,
+            "metadata": {
+              "scenario": "context_and_instructions_ordering",
+              "fixture": "context_and_instructions_ordering",
+              "sources": [
+                "skills/configure/context.md",
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "attachment://05f0678a18992cc232e9bd49107d20b2",
+              "sentinels": [
+                "Waypoint",
+                "Marker"
+              ]
+            }
+          }
+        },
+        {
+          "uuid": "PoNu3axEDyNnin5KXbC9sj",
+          "span_id": "LgzpvRjgszcYvYW4Zxxhff",
+          "timestamp": "2026-07-20T11:01:15.568100+00:00",
+          "working_start": 474340.236272916,
+          "event": "span_end",
+          "id": "LgzpvRjgszcYvYW4Zxxhff"
+        },
+        {
+          "uuid": "CguYpNzv3HTGASbHMydMQn",
+          "span_id": "HsXpskLdkUELSmLS3nd92j",
+          "timestamp": "2026-07-20T11:01:15.575981+00:00",
+          "working_start": 0.007815041986759752,
+          "event": "span_begin",
+          "id": "HsXpskLdkUELSmLS3nd92j",
+          "type": "solvers",
+          "name": "solvers"
+        },
+        {
+          "uuid": "RCdTaYuFDLNiLozZ4wjoAo",
+          "span_id": "UQZWWXeXbMwUp4Fh9Jy7Xv",
+          "timestamp": "2026-07-20T11:01:15.576339+00:00",
+          "working_start": 0.00816666695754975,
+          "event": "span_begin",
+          "id": "UQZWWXeXbMwUp4Fh9Jy7Xv",
+          "parent_id": "HsXpskLdkUELSmLS3nd92j",
+          "type": "solver",
+          "name": "run_configure_agent"
+        },
+        {
+          "uuid": "FD8HJm4iS6w6x79UJQiyuE",
+          "span_id": "UQZWWXeXbMwUp4Fh9Jy7Xv",
+          "timestamp": "2026-07-20T11:01:32.383197+00:00",
+          "working_start": 16.81497499998659,
+          "event": "state",
+          "changes": [
+            {
+              "op": "add",
+              "path": "/messages/1",
+              "value": {
+                "id": "RpsA7JnH89FBWCux5rG6UU",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/2",
+              "value": {
+                "id": "2uJ8uNTgzhiticFXdpwYrR",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_01C9j3Fh1Evxdu21DxYQ5Wmv",
+                    "function": "Skill",
+                    "arguments": {
+                      "skill": "luminosity:configure",
+                      "args": "get core.example"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/3",
+              "value": {
+                "id": "acuwZo93gZWFQZ4uKCQHg7",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/4",
+              "value": {
+                "id": "ihYuakmdTRCtG8FiFihBR3",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_01XYiok9aQpQgom2MxQETCS6",
+                    "function": "Bash",
+                    "arguments": {
+                      "command": "attachment://9aefa06343db3e8c74cbecc309b1919f",
+                      "description": "Read core.example config value via luminosity CLI"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/5",
+              "value": {
+                "id": "gYc38uABeXR3T78ZF23Eox",
+                "content": "attachment://8f646c76ae0a1e14a6817369d5208ac7",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/metadata/agent_stderr",
+              "value": ""
+            },
+            {
+              "op": "add",
+              "path": "/metadata/workdir",
+              "value": "<tmp>/luminosity-eval-hfpcw3x3"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_model",
+              "value": "claude-sonnet-5"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_cli_version",
+              "value": "2.1.203"
+            }
+          ]
+        },
+        {
+          "uuid": "FJSi2euspis6atxUYVxT2W",
+          "span_id": "UQZWWXeXbMwUp4Fh9Jy7Xv",
+          "timestamp": "2026-07-20T11:01:32.383634+00:00",
+          "working_start": 16.81540620897431,
+          "event": "span_end",
+          "id": "UQZWWXeXbMwUp4Fh9Jy7Xv"
+        },
+        {
+          "uuid": "RBpzGyd2mgQgxQVqQRefzN",
+          "span_id": "HsXpskLdkUELSmLS3nd92j",
+          "timestamp": "2026-07-20T11:01:32.383755+00:00",
+          "working_start": 16.815527083992492,
+          "event": "span_end",
+          "id": "HsXpskLdkUELSmLS3nd92j"
+        },
+        {
+          "uuid": "mxbz78FFDadvTF4WFUhVfU",
+          "span_id": "WnbePDKJjFoNtzP6vEHEES",
+          "timestamp": "2026-07-20T11:01:32.384092+00:00",
+          "working_start": 16.815863833995536,
+          "event": "span_begin",
+          "id": "WnbePDKJjFoNtzP6vEHEES",
+          "type": "scorers",
+          "name": "scorers"
+        },
+        {
+          "uuid": "NJ9wyqh8oPpTitQhgUPS2Q",
+          "span_id": "EqRFhVVx8uFYDX5puoR8NJ",
+          "timestamp": "2026-07-20T11:01:32.384169+00:00",
+          "working_start": 16.8159414169495,
+          "event": "span_begin",
+          "id": "EqRFhVVx8uFYDX5puoR8NJ",
+          "parent_id": "WnbePDKJjFoNtzP6vEHEES",
+          "type": "scorer",
+          "name": "instructions"
+        },
+        {
+          "uuid": "CMgH94LvUsgoq75tskerzF",
+          "span_id": "EqRFhVVx8uFYDX5puoR8NJ",
+          "timestamp": "2026-07-20T11:01:32.384258+00:00",
+          "working_start": 16.81603029195685,
+          "event": "score",
+          "score": {
+            "value": "C",
+            "metadata": {
+              "scenario": "context_and_instructions_ordering"
+            },
+            "history": []
+          },
+          "target": "",
+          "intermediate": false,
+          "scorer": "instructions",
+          "scorer_args": {}
+        },
+        {
+          "uuid": "7d9AjLfzQJiHphu2QMQZ4Y",
+          "span_id": "EqRFhVVx8uFYDX5puoR8NJ",
+          "timestamp": "2026-07-20T11:01:32.384338+00:00",
+          "working_start": 16.81611041695578,
+          "event": "span_end",
+          "id": "EqRFhVVx8uFYDX5puoR8NJ"
+        },
+        {
+          "uuid": "JdLMY8pK2yHeCfRiBDkDqk",
+          "span_id": "WnbePDKJjFoNtzP6vEHEES",
+          "timestamp": "2026-07-20T11:01:32.384391+00:00",
+          "working_start": 16.816162541974336,
+          "event": "span_end",
+          "id": "WnbePDKJjFoNtzP6vEHEES"
+        }
+      ],
+      "model_usage": {},
+      "role_usage": {},
+      "started_at": "2026-07-20T11:01:15.568174+00:00",
+      "completed_at": "2026-07-20T11:01:32.384801+00:00",
+      "total_time": 16.817,
+      "working_time": 16.817,
+      "uuid": "Fa2o2SSyPCLDxcfiP93EaL",
+      "error_retries": [],
+      "attachments": {
+        "e4fe036fa713fbcd92e91ee28ada847a": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+        "05f0678a18992cc232e9bd49107d20b2": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+        "9aefa06343db3e8c74cbecc309b1919f": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+        "8f646c76ae0a1e14a6817369d5208ac7": "`core.example` resolves to **`team-v`** (from the shared team-level file — no personal override present).\n\nHow configuration works here (Waypoint): values are dotted `section.key` pairs resolved across two Markers — `team` (shared, committed) and `personal` (local, git-ignored, overrides team). A plain `get`/`set` with no `--level` resolves/writes personal-over-team, so casual edits never land in shared state. Each config file also carries a free-form Markdown body injected into every skill's prompt as project context, plus skills can have their own scoped context and instructions files — but I only read the CLI-owned value here, not those bodies."
+      },
+      "events_data": {
+        "messages": [],
+        "calls": []
+      }
+    },
+    {
+      "id": 1,
+      "epoch": 2,
+      "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+      "target": "",
+      "messages": [
+        {
+          "id": "4KsHdpBq5tjjw2UpwSXTYa",
+          "content": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+          "source": "input",
+          "role": "user"
+        },
+        {
+          "id": "YsdkHwpnSTgeyQRoYWnrrc",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "eigaDPRNbUEGTVdpGpUByT",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_012vRqH9fbpLhyx4u34zDx6Z",
+              "function": "Skill",
+              "arguments": {
+                "skill": "luminosity:configure",
+                "args": "get core.example"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "DrneYWehGbgduqtm36wMid",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "gXgogaCkbigFt59uHjitYG",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_012yBGTHTcS1zNnSJeGhUFPu",
+              "function": "Bash",
+              "arguments": {
+                "command": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+                "description": "Read core.example config value"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "AgxktmcZzwYAquNVBRBT4q",
+          "content": "`core.example` resolved to **`team-v`** (from the team level — no personal override is set).\n\nHow configuration (Lodestar) works in this project:\n\n- Values live as dotted `section.key` pairs across two levels: **team** (`.luminosity/config.md` frontmatter — shared, committed) and **personal** (`.luminosity/config.local.md` frontmatter — local, git-ignored).\n- A plain `get`/`set` resolves/writes personal-over-team by default, so reads see personal overrides first and writes never accidentally land in shared state.\n- Beyond the CLI-owned values, each config file also carries a free-form Markdown body that gets injected into every skill's prompt as project context (team and personal bodies combine, team-first) — separate from the key/value tree.\n- Skills can also get scoped context and instructions from files under `.luminosity/skills/<skill-name>/`, again split into team/personal pairs.",
+          "role": "assistant"
+        }
+      ],
+      "output": {
+        "model": "mockllm/model",
+        "choices": [],
+        "completion": ""
+      },
+      "scores": {
+        "instructions": {
+          "value": "C",
+          "metadata": {
+            "scenario": "behavioural"
+          },
+          "history": []
+        }
+      },
+      "metadata": {
+        "scenario": "behavioural",
+        "fixture": "instructions_skill_behavioural",
+        "sources": [
+          "skills/configure/instructions.md"
+        ],
+        "behavioural": true,
+        "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+        "sentinels": [
+          "Lodestar"
+        ],
+        "workdir": "<tmp>/luminosity-eval-1rm51b6l",
+        "agent_stderr": "",
+        "claude_model": "claude-sonnet-5",
+        "claude_cli_version": "2.1.203"
+      },
+      "store": {},
+      "events": [
+        {
+          "uuid": "KvgEwXSCiVmKTjZte6WLEB",
+          "span_id": "jfsM6brJ8FiNGCH8biyzpk",
+          "timestamp": "2026-07-20T11:01:15.568374+00:00",
+          "working_start": 474340.236546125,
+          "event": "span_begin",
+          "id": "jfsM6brJ8FiNGCH8biyzpk",
+          "type": "init",
+          "name": "init"
+        },
+        {
+          "uuid": "aB5RuLwvinh99f2FPU9A8N",
+          "span_id": "jfsM6brJ8FiNGCH8biyzpk",
+          "timestamp": "2026-07-20T11:01:15.568451+00:00",
+          "working_start": 474340.236623333,
+          "event": "sample_init",
+          "sample": {
+            "input": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+            "target": "",
+            "id": 1,
+            "metadata": {
+              "scenario": "behavioural",
+              "fixture": "instructions_skill_behavioural",
+              "sources": [
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+              "sentinels": [
+                "Lodestar"
+              ]
+            }
+          },
+          "state": {
+            "messages": [
+              {
+                "id": "4KsHdpBq5tjjw2UpwSXTYa",
+                "content": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+                "source": "input",
+                "role": "user"
+              }
+            ],
+            "tools": [],
+            "tool_choice": null,
+            "store": {},
+            "output": {
+              "model": "mockllm/model",
+              "choices": [],
+              "completion": ""
+            },
+            "completed": false,
+            "metadata": {
+              "scenario": "behavioural",
+              "fixture": "instructions_skill_behavioural",
+              "sources": [
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "attachment://6ce522170ccf1005bf9830f1725c7a36",
+              "sentinels": [
+                "Lodestar"
+              ]
+            }
+          }
+        },
+        {
+          "uuid": "iC3gyNwZ3a3aqVmfWeMisv",
+          "span_id": "jfsM6brJ8FiNGCH8biyzpk",
+          "timestamp": "2026-07-20T11:01:15.568615+00:00",
+          "working_start": 474340.236787708,
+          "event": "span_end",
+          "id": "jfsM6brJ8FiNGCH8biyzpk"
+        },
+        {
+          "uuid": "Ls4jxRxFXBmbVHgcTMLPbG",
+          "span_id": "Sz3PQckAynfT9YwBLG8Qxv",
+          "timestamp": "2026-07-20T11:01:15.580319+00:00",
+          "working_start": 0.01163670903770253,
+          "event": "span_begin",
+          "id": "Sz3PQckAynfT9YwBLG8Qxv",
+          "type": "solvers",
+          "name": "solvers"
+        },
+        {
+          "uuid": "eFCk7eJfkNnvKHcRAxfStd",
+          "span_id": "ipj9bTMY4VS6uGJEouH7Dw",
+          "timestamp": "2026-07-20T11:01:15.580732+00:00",
+          "working_start": 0.012043750029988587,
+          "event": "span_begin",
+          "id": "ipj9bTMY4VS6uGJEouH7Dw",
+          "parent_id": "Sz3PQckAynfT9YwBLG8Qxv",
+          "type": "solver",
+          "name": "run_configure_agent"
+        },
+        {
+          "uuid": "giXA5nxK3cjjvyyj5o39mp",
+          "span_id": "ipj9bTMY4VS6uGJEouH7Dw",
+          "timestamp": "2026-07-20T11:01:33.599164+00:00",
+          "working_start": 18.030420334020164,
+          "event": "state",
+          "changes": [
+            {
+              "op": "add",
+              "path": "/messages/1",
+              "value": {
+                "id": "YsdkHwpnSTgeyQRoYWnrrc",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/2",
+              "value": {
+                "id": "eigaDPRNbUEGTVdpGpUByT",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_012vRqH9fbpLhyx4u34zDx6Z",
+                    "function": "Skill",
+                    "arguments": {
+                      "skill": "luminosity:configure",
+                      "args": "get core.example"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/3",
+              "value": {
+                "id": "DrneYWehGbgduqtm36wMid",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/4",
+              "value": {
+                "id": "gXgogaCkbigFt59uHjitYG",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_012yBGTHTcS1zNnSJeGhUFPu",
+                    "function": "Bash",
+                    "arguments": {
+                      "command": "attachment://9aefa06343db3e8c74cbecc309b1919f",
+                      "description": "Read core.example config value"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/5",
+              "value": {
+                "id": "AgxktmcZzwYAquNVBRBT4q",
+                "content": "attachment://b40b974f6a0ecc468cd99cc47e5aec1e",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/metadata/agent_stderr",
+              "value": ""
+            },
+            {
+              "op": "add",
+              "path": "/metadata/workdir",
+              "value": "<tmp>/luminosity-eval-1rm51b6l"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_model",
+              "value": "claude-sonnet-5"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_cli_version",
+              "value": "2.1.203"
+            }
+          ]
+        },
+        {
+          "uuid": "N89Hx3fKnZKmKCosYhBMfm",
+          "span_id": "ipj9bTMY4VS6uGJEouH7Dw",
+          "timestamp": "2026-07-20T11:01:33.599397+00:00",
+          "working_start": 18.030650250031613,
+          "event": "span_end",
+          "id": "ipj9bTMY4VS6uGJEouH7Dw"
+        },
+        {
+          "uuid": "FaqnXcz8xGPi2heTjaqjnC",
+          "span_id": "Sz3PQckAynfT9YwBLG8Qxv",
+          "timestamp": "2026-07-20T11:01:33.599487+00:00",
+          "working_start": 18.030739834008273,
+          "event": "span_end",
+          "id": "Sz3PQckAynfT9YwBLG8Qxv"
+        },
+        {
+          "uuid": "bXtjMNPaNzQK5A6upumrnf",
+          "span_id": "4QsvTXN6AaeKaJWXQCd8Dd",
+          "timestamp": "2026-07-20T11:01:33.599780+00:00",
+          "working_start": 18.031034416984767,
+          "event": "span_begin",
+          "id": "4QsvTXN6AaeKaJWXQCd8Dd",
+          "type": "scorers",
+          "name": "scorers"
+        },
+        {
+          "uuid": "asYLrMS66YcTEwBYFj78fe",
+          "span_id": "n3ipNKRNuzGXwMBQojT9yj",
+          "timestamp": "2026-07-20T11:01:33.599939+00:00",
+          "working_start": 18.031192208989523,
+          "event": "span_begin",
+          "id": "n3ipNKRNuzGXwMBQojT9yj",
+          "parent_id": "4QsvTXN6AaeKaJWXQCd8Dd",
+          "type": "scorer",
+          "name": "instructions"
+        },
+        {
+          "uuid": "9BpRkL8ad7tnMqvxMXfL3K",
+          "span_id": "n3ipNKRNuzGXwMBQojT9yj",
+          "timestamp": "2026-07-20T11:01:33.600044+00:00",
+          "working_start": 18.031296583998483,
+          "event": "score",
+          "score": {
+            "value": "C",
+            "metadata": {
+              "scenario": "behavioural"
+            },
+            "history": []
+          },
+          "target": "",
+          "intermediate": false,
+          "scorer": "instructions",
+          "scorer_args": {}
+        },
+        {
+          "uuid": "YSXMsREmVgbZqk5jz6Xp5n",
+          "span_id": "n3ipNKRNuzGXwMBQojT9yj",
+          "timestamp": "2026-07-20T11:01:33.600129+00:00",
+          "working_start": 18.031381624983624,
+          "event": "span_end",
+          "id": "n3ipNKRNuzGXwMBQojT9yj"
+        },
+        {
+          "uuid": "Nz24jZJoZehEwnB52Sahhj",
+          "span_id": "4QsvTXN6AaeKaJWXQCd8Dd",
+          "timestamp": "2026-07-20T11:01:33.600199+00:00",
+          "working_start": 18.031452124996576,
+          "event": "span_end",
+          "id": "4QsvTXN6AaeKaJWXQCd8Dd"
+        }
+      ],
+      "model_usage": {},
+      "role_usage": {},
+      "started_at": "2026-07-20T11:01:15.568689+00:00",
+      "completed_at": "2026-07-20T11:01:33.600530+00:00",
+      "total_time": 18.032,
+      "working_time": 18.032,
+      "uuid": "6LfdGPLPyw89JU9tv4Jai6",
+      "error_retries": [],
+      "attachments": {
+        "e4fe036fa713fbcd92e91ee28ada847a": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+        "6ce522170ccf1005bf9830f1725c7a36": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+        "9aefa06343db3e8c74cbecc309b1919f": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+        "b40b974f6a0ecc468cd99cc47e5aec1e": "`core.example` resolved to **`team-v`** (from the team level — no personal override is set).\n\nHow configuration (Lodestar) works in this project:\n\n- Values live as dotted `section.key` pairs across two levels: **team** (`.luminosity/config.md` frontmatter — shared, committed) and **personal** (`.luminosity/config.local.md` frontmatter — local, git-ignored).\n- A plain `get`/`set` resolves/writes personal-over-team by default, so reads see personal overrides first and writes never accidentally land in shared state.\n- Beyond the CLI-owned values, each config file also carries a free-form Markdown body that gets injected into every skill's prompt as project context (team and personal bodies combine, team-first) — separate from the key/value tree.\n- Skills can also get scoped context and instructions from files under `.luminosity/skills/<skill-name>/`, again split into team/personal pairs."
+      },
+      "events_data": {
+        "messages": [],
+        "calls": []
+      }
+    },
+    {
+      "id": 2,
+      "epoch": 2,
+      "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+      "target": "",
+      "messages": [
+        {
+          "id": "G9SJ7QnSe9dLPtwyFDLfXs",
+          "content": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+          "source": "input",
+          "role": "user"
+        },
+        {
+          "id": "86NCHpDVLMSTnN465368Bw",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "5PbM5cssP3E26b7CqBraLc",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_01JiTGXBGGwUZsaFqqTEkYxn",
+              "function": "Skill",
+              "arguments": {
+                "skill": "luminosity:configure",
+                "args": "get core.example"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "iZe2KcfXuW95qTAeqvkLBN",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "akdbt6QQJvhBws7r9HtJHE",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_01KaMdR5sPqYoyBFyRNZrVUt",
+              "function": "Bash",
+              "arguments": {
+                "command": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+                "description": "Read core.example config value via luminosity CLI"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "kdTocS22sYsWC6W5kpoxMv",
+          "content": "`core.example` resolves to **team-v** (from the shared, committed configuration file — no personal override is set).\n\nHow configuration (Waypoint) works in this project:\n\n- Values are dotted `section.key` pairs, resolved across two **Markers**: **team** (shared, committed file — everyone sees it) and **personal** (local, git-ignored file that overrides team for the same key).\n- A `get` with no marker specified resolves personal-over-team; a `set` with no marker specified writes to personal by default, so accidental changes never land in shared state.\n- Beyond CLI-owned values, each config file also carries a free-form Markdown body (project context) that's injected into every skill's prompt, plus optional per-skill context and instructions files scoped to a single skill.",
+          "role": "assistant"
+        }
+      ],
+      "output": {
+        "model": "mockllm/model",
+        "choices": [],
+        "completion": ""
+      },
+      "scores": {
+        "instructions": {
+          "value": "C",
+          "metadata": {
+            "scenario": "context_and_instructions_ordering"
+          },
+          "history": []
+        }
+      },
+      "metadata": {
+        "scenario": "context_and_instructions_ordering",
+        "fixture": "context_and_instructions_ordering",
+        "sources": [
+          "skills/configure/context.md",
+          "skills/configure/instructions.md"
+        ],
+        "behavioural": true,
+        "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+        "sentinels": [
+          "Waypoint",
+          "Marker"
+        ],
+        "workdir": "<tmp>/luminosity-eval-4bpqh6f7",
+        "agent_stderr": "",
+        "claude_model": "claude-sonnet-5",
+        "claude_cli_version": "2.1.203"
+      },
+      "store": {},
+      "events": [
+        {
+          "uuid": "NnnMBrQtaMj7V6sdGWuxmS",
+          "span_id": "ifmNaFU6YM24P263NiYjaY",
+          "timestamp": "2026-07-20T11:01:15.568883+00:00",
+          "working_start": 474340.237055083,
+          "event": "span_begin",
+          "id": "ifmNaFU6YM24P263NiYjaY",
+          "type": "init",
+          "name": "init"
+        },
+        {
+          "uuid": "XjzfwEUNAy5yq7LEDX7p2a",
+          "span_id": "ifmNaFU6YM24P263NiYjaY",
+          "timestamp": "2026-07-20T11:01:15.568968+00:00",
+          "working_start": 474340.237140416,
+          "event": "sample_init",
+          "sample": {
+            "input": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+            "target": "",
+            "id": 2,
+            "metadata": {
+              "scenario": "context_and_instructions_ordering",
+              "fixture": "context_and_instructions_ordering",
+              "sources": [
+                "skills/configure/context.md",
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+              "sentinels": [
+                "Waypoint",
+                "Marker"
+              ]
+            }
+          },
+          "state": {
+            "messages": [
+              {
+                "id": "G9SJ7QnSe9dLPtwyFDLfXs",
+                "content": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+                "source": "input",
+                "role": "user"
+              }
+            ],
+            "tools": [],
+            "tool_choice": null,
+            "store": {},
+            "output": {
+              "model": "mockllm/model",
+              "choices": [],
+              "completion": ""
+            },
+            "completed": false,
+            "metadata": {
+              "scenario": "context_and_instructions_ordering",
+              "fixture": "context_and_instructions_ordering",
+              "sources": [
+                "skills/configure/context.md",
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "attachment://05f0678a18992cc232e9bd49107d20b2",
+              "sentinels": [
+                "Waypoint",
+                "Marker"
+              ]
+            }
+          }
+        },
+        {
+          "uuid": "dbzzbVzxkio7cPo4uWbPFy",
+          "span_id": "ifmNaFU6YM24P263NiYjaY",
+          "timestamp": "2026-07-20T11:01:15.569127+00:00",
+          "working_start": 474340.237299791,
+          "event": "span_end",
+          "id": "ifmNaFU6YM24P263NiYjaY"
+        },
+        {
+          "uuid": "9xrZcKHXRdRXvcGpAfGm9B",
+          "span_id": "MkjBuyAmtiFwyZ3E7NfKCw",
+          "timestamp": "2026-07-20T11:01:15.585453+00:00",
+          "working_start": 0.016259666997939348,
+          "event": "span_begin",
+          "id": "MkjBuyAmtiFwyZ3E7NfKCw",
+          "type": "solvers",
+          "name": "solvers"
+        },
+        {
+          "uuid": "hW8BA7iGqvk43HSmXhT4Rk",
+          "span_id": "mbSffgV3dsoB2dgst2ifX4",
+          "timestamp": "2026-07-20T11:01:15.585982+00:00",
+          "working_start": 0.016783667029812932,
+          "event": "span_begin",
+          "id": "mbSffgV3dsoB2dgst2ifX4",
+          "parent_id": "MkjBuyAmtiFwyZ3E7NfKCw",
+          "type": "solver",
+          "name": "run_configure_agent"
+        },
+        {
+          "uuid": "kqzPczxLyxNnaWrwW2iaMd",
+          "span_id": "mbSffgV3dsoB2dgst2ifX4",
+          "timestamp": "2026-07-20T11:01:28.306920+00:00",
+          "working_start": 12.737691332993563,
+          "event": "state",
+          "changes": [
+            {
+              "op": "add",
+              "path": "/messages/1",
+              "value": {
+                "id": "86NCHpDVLMSTnN465368Bw",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/2",
+              "value": {
+                "id": "5PbM5cssP3E26b7CqBraLc",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_01JiTGXBGGwUZsaFqqTEkYxn",
+                    "function": "Skill",
+                    "arguments": {
+                      "skill": "luminosity:configure",
+                      "args": "get core.example"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/3",
+              "value": {
+                "id": "iZe2KcfXuW95qTAeqvkLBN",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/4",
+              "value": {
+                "id": "akdbt6QQJvhBws7r9HtJHE",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_01KaMdR5sPqYoyBFyRNZrVUt",
+                    "function": "Bash",
+                    "arguments": {
+                      "command": "attachment://9aefa06343db3e8c74cbecc309b1919f",
+                      "description": "Read core.example config value via luminosity CLI"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/5",
+              "value": {
+                "id": "kdTocS22sYsWC6W5kpoxMv",
+                "content": "attachment://d794f1328fcd0f76356bc9c9f8237c4b",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/metadata/agent_stderr",
+              "value": ""
+            },
+            {
+              "op": "add",
+              "path": "/metadata/workdir",
+              "value": "<tmp>/luminosity-eval-4bpqh6f7"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_model",
+              "value": "claude-sonnet-5"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_cli_version",
+              "value": "2.1.203"
+            }
+          ]
+        },
+        {
+          "uuid": "4kNc2dwYjp4AqtyXK7D5aK",
+          "span_id": "mbSffgV3dsoB2dgst2ifX4",
+          "timestamp": "2026-07-20T11:01:28.307462+00:00",
+          "working_start": 12.738223000022117,
+          "event": "span_end",
+          "id": "mbSffgV3dsoB2dgst2ifX4"
+        },
+        {
+          "uuid": "N6kBkpa5vMhW6qVjfEVgHS",
+          "span_id": "MkjBuyAmtiFwyZ3E7NfKCw",
+          "timestamp": "2026-07-20T11:01:28.307618+00:00",
+          "working_start": 12.738376667024568,
+          "event": "span_end",
+          "id": "MkjBuyAmtiFwyZ3E7NfKCw"
+        },
+        {
+          "uuid": "5DEM2DBD7ceVCZJjUYz3Yt",
+          "span_id": "N4CirQ8CRGjiUrsnodzq7X",
+          "timestamp": "2026-07-20T11:01:28.308236+00:00",
+          "working_start": 12.738996125000995,
+          "event": "span_begin",
+          "id": "N4CirQ8CRGjiUrsnodzq7X",
+          "type": "scorers",
+          "name": "scorers"
+        },
+        {
+          "uuid": "VKrndciYUAN9TbDZn8sHyF",
+          "span_id": "jQZnBecUc9RMzuzKwU8oof",
+          "timestamp": "2026-07-20T11:01:28.308371+00:00",
+          "working_start": 12.739129583002068,
+          "event": "span_begin",
+          "id": "jQZnBecUc9RMzuzKwU8oof",
+          "parent_id": "N4CirQ8CRGjiUrsnodzq7X",
+          "type": "scorer",
+          "name": "instructions"
+        },
+        {
+          "uuid": "JGFd62Po2ZnwtpsNwz5MKi",
+          "span_id": "jQZnBecUc9RMzuzKwU8oof",
+          "timestamp": "2026-07-20T11:01:28.308505+00:00",
+          "working_start": 12.739263500028756,
+          "event": "score",
+          "score": {
+            "value": "C",
+            "metadata": {
+              "scenario": "context_and_instructions_ordering"
+            },
+            "history": []
+          },
+          "target": "",
+          "intermediate": false,
+          "scorer": "instructions",
+          "scorer_args": {}
+        },
+        {
+          "uuid": "PSiPUYrhoZSCDvhmLvcwA5",
+          "span_id": "jQZnBecUc9RMzuzKwU8oof",
+          "timestamp": "2026-07-20T11:01:28.308605+00:00",
+          "working_start": 12.73936412500916,
+          "event": "span_end",
+          "id": "jQZnBecUc9RMzuzKwU8oof"
+        },
+        {
+          "uuid": "SKvviFbkoVsAaFbWn8HL8k",
+          "span_id": "N4CirQ8CRGjiUrsnodzq7X",
+          "timestamp": "2026-07-20T11:01:28.308672+00:00",
+          "working_start": 12.739430792047642,
+          "event": "span_end",
+          "id": "N4CirQ8CRGjiUrsnodzq7X"
+        }
+      ],
+      "model_usage": {},
+      "role_usage": {},
+      "started_at": "2026-07-20T11:01:15.569200+00:00",
+      "completed_at": "2026-07-20T11:01:28.309314+00:00",
+      "total_time": 12.74,
+      "working_time": 12.74,
+      "uuid": "6eH9XVJCmjC97cUwjikaR7",
+      "error_retries": [],
+      "attachments": {
+        "e4fe036fa713fbcd92e91ee28ada847a": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+        "05f0678a18992cc232e9bd49107d20b2": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+        "9aefa06343db3e8c74cbecc309b1919f": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+        "d794f1328fcd0f76356bc9c9f8237c4b": "`core.example` resolves to **team-v** (from the shared, committed configuration file — no personal override is set).\n\nHow configuration (Waypoint) works in this project:\n\n- Values are dotted `section.key` pairs, resolved across two **Markers**: **team** (shared, committed file — everyone sees it) and **personal** (local, git-ignored file that overrides team for the same key).\n- A `get` with no marker specified resolves personal-over-team; a `set` with no marker specified writes to personal by default, so accidental changes never land in shared state.\n- Beyond CLI-owned values, each config file also carries a free-form Markdown body (project context) that's injected into every skill's prompt, plus optional per-skill context and instructions files scoped to a single skill."
+      },
+      "events_data": {
+        "messages": [],
+        "calls": []
+      }
+    },
+    {
+      "id": 1,
+      "epoch": 3,
+      "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+      "target": "",
+      "messages": [
+        {
+          "id": "AaMsM4vv8QeB9upZ3icJrb",
+          "content": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+          "source": "input",
+          "role": "user"
+        },
+        {
+          "id": "CzLkPEbsnURSgY2N3RauvG",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "JwT6wwsYSS4itdKkV59yzN",
+          "content": "I'll use the luminosity:configure skill to read that value.",
+          "role": "assistant"
+        },
+        {
+          "id": "ikASec7ZoNTsJBHTzoKXUQ",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_01RezUPvbMFRATu3te29A3nB",
+              "function": "Skill",
+              "arguments": {
+                "skill": "luminosity:configure",
+                "args": "get core.example"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "SdWCVnnJ4Xr2X2v3TjWJMc",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "NzNziXVzDTWhSnSHvN9F6v",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_01GDXUe4EC6zREfJUb4PA1jk",
+              "function": "Bash",
+              "arguments": {
+                "command": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+                "description": "Read core.example config value via luminosity CLI"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "8L7gmywkdbCY2EqxC8JUg6",
+          "content": "`core.example` resolves to **`team-v`**.\n\nConfiguration in this project (Lodestar) works as a two-level, dotted `section.key` store:\n\n- **Team level** — a shared, committed file everyone sees.\n- **Personal level** — a local, git-ignored file that overrides team for the same key.\n\nReads with no explicit level resolve personal-over-team; writes with no explicit level go to personal by default, so changes don't accidentally land in shared state. In this case, `core.example` came back as `team-v` — likely meaning it's only set at the team level (no personal override present).\n\nBeyond key/value config, the CLI also injects free-form Markdown context and instructions into skill prompts from files like `.luminosity/config.md` (team) and `.luminosity/config.local.md` (personal), plus skill-scoped variants under `.luminosity/skills/<skill-name>/`. Those bodies are edited directly by the user rather than through the CLI.",
+          "role": "assistant"
+        }
+      ],
+      "output": {
+        "model": "mockllm/model",
+        "choices": [],
+        "completion": ""
+      },
+      "scores": {
+        "instructions": {
+          "value": "C",
+          "metadata": {
+            "scenario": "behavioural"
+          },
+          "history": []
+        }
+      },
+      "metadata": {
+        "scenario": "behavioural",
+        "fixture": "instructions_skill_behavioural",
+        "sources": [
+          "skills/configure/instructions.md"
+        ],
+        "behavioural": true,
+        "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+        "sentinels": [
+          "Lodestar"
+        ],
+        "workdir": "<tmp>/luminosity-eval-iago3zy_",
+        "agent_stderr": "",
+        "claude_model": "claude-sonnet-5",
+        "claude_cli_version": "2.1.203"
+      },
+      "store": {},
+      "events": [
+        {
+          "uuid": "aWKT2h3LVfNLqpxWzKHqSB",
+          "span_id": "5uYsADAARgYHKFM7ivgwU3",
+          "timestamp": "2026-07-20T11:01:28.062785+00:00",
+          "working_start": 474352.730917291,
+          "event": "span_begin",
+          "id": "5uYsADAARgYHKFM7ivgwU3",
+          "type": "init",
+          "name": "init"
+        },
+        {
+          "uuid": "MbURwwPYYAQXt7oxdQ4Lk4",
+          "span_id": "5uYsADAARgYHKFM7ivgwU3",
+          "timestamp": "2026-07-20T11:01:28.062896+00:00",
+          "working_start": 474352.73102825,
+          "event": "sample_init",
+          "sample": {
+            "input": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+            "target": "",
+            "id": 1,
+            "metadata": {
+              "scenario": "behavioural",
+              "fixture": "instructions_skill_behavioural",
+              "sources": [
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+              "sentinels": [
+                "Lodestar"
+              ]
+            }
+          },
+          "state": {
+            "messages": [
+              {
+                "id": "AaMsM4vv8QeB9upZ3icJrb",
+                "content": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+                "source": "input",
+                "role": "user"
+              }
+            ],
+            "tools": [],
+            "tool_choice": null,
+            "store": {},
+            "output": {
+              "model": "mockllm/model",
+              "choices": [],
+              "completion": ""
+            },
+            "completed": false,
+            "metadata": {
+              "scenario": "behavioural",
+              "fixture": "instructions_skill_behavioural",
+              "sources": [
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "attachment://6ce522170ccf1005bf9830f1725c7a36",
+              "sentinels": [
+                "Lodestar"
+              ]
+            }
+          }
+        },
+        {
+          "uuid": "QxLyCoExkUHzgDjP4BtJ2j",
+          "span_id": "5uYsADAARgYHKFM7ivgwU3",
+          "timestamp": "2026-07-20T11:01:28.063153+00:00",
+          "working_start": 474352.731285958,
+          "event": "span_end",
+          "id": "5uYsADAARgYHKFM7ivgwU3"
+        },
+        {
+          "uuid": "CVxhMqmBjKPzYrymMYGEta",
+          "span_id": "Ue4x73duqPvyCendwXYjvR",
+          "timestamp": "2026-07-20T11:01:28.063479+00:00",
+          "working_start": 0.0002363339881412685,
+          "event": "span_begin",
+          "id": "Ue4x73duqPvyCendwXYjvR",
+          "type": "solvers",
+          "name": "solvers"
+        },
+        {
+          "uuid": "emhsovWbPhdcdkQz4mnvrJ",
+          "span_id": "7SR6JaBs23qgkzopSkEFZP",
+          "timestamp": "2026-07-20T11:01:28.063610+00:00",
+          "working_start": 0.0003670839942060411,
+          "event": "span_begin",
+          "id": "7SR6JaBs23qgkzopSkEFZP",
+          "parent_id": "Ue4x73duqPvyCendwXYjvR",
+          "type": "solver",
+          "name": "run_configure_agent"
+        },
+        {
+          "uuid": "jWNC4pGKV2CZRKhKLZGqTg",
+          "span_id": "7SR6JaBs23qgkzopSkEFZP",
+          "timestamp": "2026-07-20T11:01:50.601384+00:00",
+          "working_start": 22.53807174996473,
+          "event": "state",
+          "changes": [
+            {
+              "op": "add",
+              "path": "/messages/1",
+              "value": {
+                "id": "CzLkPEbsnURSgY2N3RauvG",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/2",
+              "value": {
+                "id": "JwT6wwsYSS4itdKkV59yzN",
+                "content": "I'll use the luminosity:configure skill to read that value.",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/3",
+              "value": {
+                "id": "ikASec7ZoNTsJBHTzoKXUQ",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_01RezUPvbMFRATu3te29A3nB",
+                    "function": "Skill",
+                    "arguments": {
+                      "skill": "luminosity:configure",
+                      "args": "get core.example"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/4",
+              "value": {
+                "id": "SdWCVnnJ4Xr2X2v3TjWJMc",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/5",
+              "value": {
+                "id": "NzNziXVzDTWhSnSHvN9F6v",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_01GDXUe4EC6zREfJUb4PA1jk",
+                    "function": "Bash",
+                    "arguments": {
+                      "command": "attachment://9aefa06343db3e8c74cbecc309b1919f",
+                      "description": "Read core.example config value via luminosity CLI"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/6",
+              "value": {
+                "id": "8L7gmywkdbCY2EqxC8JUg6",
+                "content": "attachment://0369513f335eccf60cb9162d9e87160b",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/metadata/agent_stderr",
+              "value": ""
+            },
+            {
+              "op": "add",
+              "path": "/metadata/workdir",
+              "value": "<tmp>/luminosity-eval-iago3zy_"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_model",
+              "value": "claude-sonnet-5"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_cli_version",
+              "value": "2.1.203"
+            }
+          ]
+        },
+        {
+          "uuid": "PrXS9khF7ZJY2X6sFqtgb8",
+          "span_id": "7SR6JaBs23qgkzopSkEFZP",
+          "timestamp": "2026-07-20T11:01:50.601778+00:00",
+          "working_start": 22.5384624999715,
+          "event": "span_end",
+          "id": "7SR6JaBs23qgkzopSkEFZP"
+        },
+        {
+          "uuid": "WoMLnDxQHr3JKKPWkKiok6",
+          "span_id": "Ue4x73duqPvyCendwXYjvR",
+          "timestamp": "2026-07-20T11:01:50.601934+00:00",
+          "working_start": 22.53861779201543,
+          "event": "span_end",
+          "id": "Ue4x73duqPvyCendwXYjvR"
+        },
+        {
+          "uuid": "QWzJ5NSGDmvWo9dresjCTg",
+          "span_id": "dZvgnfqBZLKgEsYqTYtKeG",
+          "timestamp": "2026-07-20T11:01:50.602298+00:00",
+          "working_start": 22.53898274997482,
+          "event": "span_begin",
+          "id": "dZvgnfqBZLKgEsYqTYtKeG",
+          "type": "scorers",
+          "name": "scorers"
+        },
+        {
+          "uuid": "WEgJ3ZGNFrFeQRSCxHWXkw",
+          "span_id": "PUzeJjkRekrxv9kAEtxBcQ",
+          "timestamp": "2026-07-20T11:01:50.602420+00:00",
+          "working_start": 22.539103791990783,
+          "event": "span_begin",
+          "id": "PUzeJjkRekrxv9kAEtxBcQ",
+          "parent_id": "dZvgnfqBZLKgEsYqTYtKeG",
+          "type": "scorer",
+          "name": "instructions"
+        },
+        {
+          "uuid": "FucFpUtfASFp86sJaYf4pk",
+          "span_id": "PUzeJjkRekrxv9kAEtxBcQ",
+          "timestamp": "2026-07-20T11:01:50.602549+00:00",
+          "working_start": 22.539233499963302,
+          "event": "score",
+          "score": {
+            "value": "C",
+            "metadata": {
+              "scenario": "behavioural"
+            },
+            "history": []
+          },
+          "target": "",
+          "intermediate": false,
+          "scorer": "instructions",
+          "scorer_args": {}
+        },
+        {
+          "uuid": "SXHX4TRavYeVmppJwSEW5c",
+          "span_id": "PUzeJjkRekrxv9kAEtxBcQ",
+          "timestamp": "2026-07-20T11:01:50.602676+00:00",
+          "working_start": 22.53936012496706,
+          "event": "span_end",
+          "id": "PUzeJjkRekrxv9kAEtxBcQ"
+        },
+        {
+          "uuid": "ZDLhibQGrjSfu6gN4fsmCj",
+          "span_id": "dZvgnfqBZLKgEsYqTYtKeG",
+          "timestamp": "2026-07-20T11:01:50.602769+00:00",
+          "working_start": 22.539452750002965,
+          "event": "span_end",
+          "id": "dZvgnfqBZLKgEsYqTYtKeG"
+        }
+      ],
+      "model_usage": {},
+      "role_usage": {},
+      "started_at": "2026-07-20T11:01:28.063247+00:00",
+      "completed_at": "2026-07-20T11:01:50.603269+00:00",
+      "total_time": 22.54,
+      "working_time": 22.54,
+      "uuid": "X3mEvCcDumeHazEs4p57PT",
+      "error_retries": [],
+      "attachments": {
+        "e4fe036fa713fbcd92e91ee28ada847a": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+        "6ce522170ccf1005bf9830f1725c7a36": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to the\nconfiguration subsystem as Lodestar.",
+        "9aefa06343db3e8c74cbecc309b1919f": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+        "0369513f335eccf60cb9162d9e87160b": "`core.example` resolves to **`team-v`**.\n\nConfiguration in this project (Lodestar) works as a two-level, dotted `section.key` store:\n\n- **Team level** — a shared, committed file everyone sees.\n- **Personal level** — a local, git-ignored file that overrides team for the same key.\n\nReads with no explicit level resolve personal-over-team; writes with no explicit level go to personal by default, so changes don't accidentally land in shared state. In this case, `core.example` came back as `team-v` — likely meaning it's only set at the team level (no personal override present).\n\nBeyond key/value config, the CLI also injects free-form Markdown context and instructions into skill prompts from files like `.luminosity/config.md` (team) and `.luminosity/config.local.md` (personal), plus skill-scoped variants under `.luminosity/skills/<skill-name>/`. Those bodies are edited directly by the user rather than through the CLI."
+      },
+      "events_data": {
+        "messages": [],
+        "calls": []
+      }
+    },
+    {
+      "id": 2,
+      "epoch": 3,
+      "input": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+      "target": "",
+      "messages": [
+        {
+          "id": "CgUpfyBMBNVmWzggaSdvyZ",
+          "content": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+          "source": "input",
+          "role": "user"
+        },
+        {
+          "id": "NhcbpCUXmofm433H4GSAJu",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "5rJ9WysR77eFNyXKAFzs3A",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_012bi7m58j9jPJTcxm8Niinc",
+              "function": "Skill",
+              "arguments": {
+                "skill": "luminosity:configure",
+                "args": "get core.example"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "eUPFzp4rF2NHQCsFh3mcpD",
+          "content": "",
+          "role": "assistant"
+        },
+        {
+          "id": "EpgThgc4LAYfjdYUjwr6r8",
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "toolu_01TYp1eVNuYx7i9EwYE5DCVQ",
+              "function": "Bash",
+              "arguments": {
+                "command": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+                "description": "Read luminosity config value core.example"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "id": "JtSGjEoaFZqPB42ovF4pZQ",
+          "content": "`core.example` resolves to **`team-v`** (from the team level).\n\nWaypoint (this project's configuration subsystem) resolves values as a tree of dotted `section.key` entries across two Markers:\n\n- **team** — shared, committed config, visible to everyone on the project.\n- **personal** — local, git-ignored config that overrides team for the same key.\n\nA plain `get` (no `--level`) resolves personal-over-team, which is why `core.example` came back as the team value `team-v` — no personal override exists for that key. Writes default to the personal Marker unless `--level team` is specified, so accidental changes never land in shared state by default.",
+          "role": "assistant"
+        }
+      ],
+      "output": {
+        "model": "mockllm/model",
+        "choices": [],
+        "completion": ""
+      },
+      "scores": {
+        "instructions": {
+          "value": "C",
+          "metadata": {
+            "scenario": "context_and_instructions_ordering"
+          },
+          "history": []
+        }
+      },
+      "metadata": {
+        "scenario": "context_and_instructions_ordering",
+        "fixture": "context_and_instructions_ordering",
+        "sources": [
+          "skills/configure/context.md",
+          "skills/configure/instructions.md"
+        ],
+        "behavioural": true,
+        "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+        "sentinels": [
+          "Waypoint",
+          "Marker"
+        ],
+        "workdir": "<tmp>/luminosity-eval-wew0louy",
+        "agent_stderr": "",
+        "claude_model": "claude-sonnet-5",
+        "claude_cli_version": "2.1.203"
+      },
+      "store": {},
+      "events": [
+        {
+          "uuid": "UyWeWskQpKtVenjwNyu25w",
+          "span_id": "iqpQYMVxBzJ9wKZPwGDz7V",
+          "timestamp": "2026-07-20T11:01:28.310313+00:00",
+          "working_start": 474352.978444208,
+          "event": "span_begin",
+          "id": "iqpQYMVxBzJ9wKZPwGDz7V",
+          "type": "init",
+          "name": "init"
+        },
+        {
+          "uuid": "4rGtdLfkVRDr9nFnD3pmJ5",
+          "span_id": "iqpQYMVxBzJ9wKZPwGDz7V",
+          "timestamp": "2026-07-20T11:01:28.310415+00:00",
+          "working_start": 474352.97854625,
+          "event": "sample_init",
+          "sample": {
+            "input": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+            "target": "",
+            "id": 2,
+            "metadata": {
+              "scenario": "context_and_instructions_ordering",
+              "fixture": "context_and_instructions_ordering",
+              "sources": [
+                "skills/configure/context.md",
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+              "sentinels": [
+                "Waypoint",
+                "Marker"
+              ]
+            }
+          },
+          "state": {
+            "messages": [
+              {
+                "id": "CgUpfyBMBNVmWzggaSdvyZ",
+                "content": "attachment://e4fe036fa713fbcd92e91ee28ada847a",
+                "source": "input",
+                "role": "user"
+              }
+            ],
+            "tools": [],
+            "tool_choice": null,
+            "store": {},
+            "output": {
+              "model": "mockllm/model",
+              "choices": [],
+              "completion": ""
+            },
+            "completed": false,
+            "metadata": {
+              "scenario": "context_and_instructions_ordering",
+              "fixture": "context_and_instructions_ordering",
+              "sources": [
+                "skills/configure/context.md",
+                "skills/configure/instructions.md"
+              ],
+              "behavioural": true,
+              "expected_block": "attachment://05f0678a18992cc232e9bd49107d20b2",
+              "sentinels": [
+                "Waypoint",
+                "Marker"
+              ]
+            }
+          }
+        },
+        {
+          "uuid": "AEuMRRt75ANKfs6dZXXLY2",
+          "span_id": "iqpQYMVxBzJ9wKZPwGDz7V",
+          "timestamp": "2026-07-20T11:01:28.310614+00:00",
+          "working_start": 474352.9787455,
+          "event": "span_end",
+          "id": "iqpQYMVxBzJ9wKZPwGDz7V"
+        },
+        {
+          "uuid": "Ca5xYaPMkdPsvqwyy5o9wH",
+          "span_id": "Xg8EZr6cRcPUDYLMnLmFTB",
+          "timestamp": "2026-07-20T11:01:28.310857+00:00",
+          "working_start": 0.0001687910407781601,
+          "event": "span_begin",
+          "id": "Xg8EZr6cRcPUDYLMnLmFTB",
+          "type": "solvers",
+          "name": "solvers"
+        },
+        {
+          "uuid": "BfPXfeWXJYa777sS4HCz3R",
+          "span_id": "Rkk86T2qecE35gvSeiF2Hz",
+          "timestamp": "2026-07-20T11:01:28.310941+00:00",
+          "working_start": 0.00025295803789049387,
+          "event": "span_begin",
+          "id": "Rkk86T2qecE35gvSeiF2Hz",
+          "parent_id": "Xg8EZr6cRcPUDYLMnLmFTB",
+          "type": "solver",
+          "name": "run_configure_agent"
+        },
+        {
+          "uuid": "BMZDQ4nktouUTdee8dfDTX",
+          "span_id": "Rkk86T2qecE35gvSeiF2Hz",
+          "timestamp": "2026-07-20T11:01:41.299959+00:00",
+          "working_start": 12.989231374987867,
+          "event": "state",
+          "changes": [
+            {
+              "op": "add",
+              "path": "/messages/1",
+              "value": {
+                "id": "NhcbpCUXmofm433H4GSAJu",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/2",
+              "value": {
+                "id": "5rJ9WysR77eFNyXKAFzs3A",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_012bi7m58j9jPJTcxm8Niinc",
+                    "function": "Skill",
+                    "arguments": {
+                      "skill": "luminosity:configure",
+                      "args": "get core.example"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/3",
+              "value": {
+                "id": "eUPFzp4rF2NHQCsFh3mcpD",
+                "content": "",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/4",
+              "value": {
+                "id": "EpgThgc4LAYfjdYUjwr6r8",
+                "content": "",
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "id": "toolu_01TYp1eVNuYx7i9EwYE5DCVQ",
+                    "function": "Bash",
+                    "arguments": {
+                      "command": "attachment://9aefa06343db3e8c74cbecc309b1919f",
+                      "description": "Read luminosity config value core.example"
+                    },
+                    "type": "function"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add",
+              "path": "/messages/5",
+              "value": {
+                "id": "JtSGjEoaFZqPB42ovF4pZQ",
+                "content": "attachment://79fec0a6dd4b571b00ae435143b71426",
+                "role": "assistant"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/metadata/agent_stderr",
+              "value": ""
+            },
+            {
+              "op": "add",
+              "path": "/metadata/workdir",
+              "value": "<tmp>/luminosity-eval-wew0louy"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_model",
+              "value": "claude-sonnet-5"
+            },
+            {
+              "op": "add",
+              "path": "/metadata/claude_cli_version",
+              "value": "2.1.203"
+            }
+          ]
+        },
+        {
+          "uuid": "GRprBc9FKwKShtainj2AV6",
+          "span_id": "Rkk86T2qecE35gvSeiF2Hz",
+          "timestamp": "2026-07-20T11:01:41.300212+00:00",
+          "working_start": 12.989481750002597,
+          "event": "span_end",
+          "id": "Rkk86T2qecE35gvSeiF2Hz"
+        },
+        {
+          "uuid": "o5MgQ5Xv9cjdCMhgHExE7R",
+          "span_id": "Xg8EZr6cRcPUDYLMnLmFTB",
+          "timestamp": "2026-07-20T11:01:41.300301+00:00",
+          "working_start": 12.98957012500614,
+          "event": "span_end",
+          "id": "Xg8EZr6cRcPUDYLMnLmFTB"
+        },
+        {
+          "uuid": "FF9iHGqqzDHdxpg3F3ty7q",
+          "span_id": "etT4zpB6u62VWnV84yFfxN",
+          "timestamp": "2026-07-20T11:01:41.300606+00:00",
+          "working_start": 12.989875125000253,
+          "event": "span_begin",
+          "id": "etT4zpB6u62VWnV84yFfxN",
+          "type": "scorers",
+          "name": "scorers"
+        },
+        {
+          "uuid": "ayzbfUQBxKySbZKrSzL6kk",
+          "span_id": "GcMroND4zsPpJo7fzqRjwY",
+          "timestamp": "2026-07-20T11:01:41.300675+00:00",
+          "working_start": 12.989943958004005,
+          "event": "span_begin",
+          "id": "GcMroND4zsPpJo7fzqRjwY",
+          "parent_id": "etT4zpB6u62VWnV84yFfxN",
+          "type": "scorer",
+          "name": "instructions"
+        },
+        {
+          "uuid": "7zVJ4hsfPHF6zMaQ2MtsLo",
+          "span_id": "GcMroND4zsPpJo7fzqRjwY",
+          "timestamp": "2026-07-20T11:01:41.300745+00:00",
+          "working_start": 12.990014458016958,
+          "event": "score",
+          "score": {
+            "value": "C",
+            "metadata": {
+              "scenario": "context_and_instructions_ordering"
+            },
+            "history": []
+          },
+          "target": "",
+          "intermediate": false,
+          "scorer": "instructions",
+          "scorer_args": {}
+        },
+        {
+          "uuid": "NEutRHAXsrKjTMDxRJmFSF",
+          "span_id": "GcMroND4zsPpJo7fzqRjwY",
+          "timestamp": "2026-07-20T11:01:41.300812+00:00",
+          "working_start": 12.990081374999136,
+          "event": "span_end",
+          "id": "GcMroND4zsPpJo7fzqRjwY"
+        },
+        {
+          "uuid": "GGiQBHMxVo5vGYxBFUV59y",
+          "span_id": "etT4zpB6u62VWnV84yFfxN",
+          "timestamp": "2026-07-20T11:01:41.300866+00:00",
+          "working_start": 12.990134833031334,
+          "event": "span_end",
+          "id": "etT4zpB6u62VWnV84yFfxN"
+        }
+      ],
+      "model_usage": {},
+      "role_usage": {},
+      "started_at": "2026-07-20T11:01:28.310693+00:00",
+      "completed_at": "2026-07-20T11:01:41.301162+00:00",
+      "total_time": 12.99,
+      "working_time": 12.99,
+      "uuid": "NLRio8weaVEDCC8G4qenL8",
+      "error_retries": [],
+      "attachments": {
+        "e4fe036fa713fbcd92e91ee28ada847a": "Read the luminosity config value core.example, then briefly describe how configuration works in this project.",
+        "05f0678a18992cc232e9bd49107d20b2": "## Additional Instructions\n\nThe following additional instructions have been provided for the\nconfigure skill. Follow these instructions in addition to all\ninstructions above.\n\nWhen you summarise or describe configuration work, refer to a\nconfiguration level as a Marker.",
+        "9aefa06343db3e8c74cbecc309b1919f": "./cli/target/eval-plugin/bin/luminosity config get core.example",
+        "79fec0a6dd4b571b00ae435143b71426": "`core.example` resolves to **`team-v`** (from the team level).\n\nWaypoint (this project's configuration subsystem) resolves values as a tree of dotted `section.key` entries across two Markers:\n\n- **team** — shared, committed config, visible to everyone on the project.\n- **personal** — local, git-ignored config that overrides team for the same key.\n\nA plain `get` (no `--level`) resolves personal-over-team, which is why `core.example` came back as the team value `team-v` — no personal override exists for that key. Writes default to the personal Marker unless `--level team` is specified, so accidental changes never land in shared state by default."
+      },
+      "events_data": {
+        "messages": [],
+        "calls": []
+      }
+    }
+  ],
+  "reductions": [
+    {
+      "scorer": "instructions",
+      "reducer": "pass_k_3",
+      "samples": [
+        {
+          "value": 1.0,
+          "metadata": {
+            "scenario": "behavioural"
+          },
+          "history": [],
+          "sample_id": 1
+        },
+        {
+          "value": 1.0,
+          "metadata": {
+            "scenario": "context_and_instructions_ordering"
+          },
+          "history": [],
+          "sample_id": 2
+        }
+      ]
+    }
+  ]
+}

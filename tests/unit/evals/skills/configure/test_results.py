@@ -25,11 +25,6 @@ _EVAL_DIR = Path(values_eval.__file__).parent
 _RESULTS = _EVAL_DIR / "results"
 _LOGS = sorted(_RESULTS.glob("*.json"))
 
-# Pending until the Phase 5 live run commits an instructions log. Strict: the
-# moment a log lands the arm xpasses, which xfail(strict=True) reports as a
-# failure — forcing this marker to be removed in the same change.
-_PENDING_LIVE_LOG = "pending the instructions capability's live run log"
-
 type Json = dict[str, Any]
 
 
@@ -99,10 +94,7 @@ class TestCommittedGate:
         [
             values_eval.CAPABILITY,
             context_eval.CAPABILITY,
-            pytest.param(
-                instructions_eval.CAPABILITY,
-                marks=pytest.mark.xfail(strict=True, reason=_PENDING_LIVE_LOG),
-            ),
+            instructions_eval.CAPABILITY,
         ],
     )
     def test_every_with_skill_arm_clears_the_floor(self, capability: str):
@@ -123,7 +115,6 @@ class TestCommittedGate:
         } == scenarios
         assert log["results"]["total_samples"] == len(scenarios) * TRIALS
 
-    @pytest.mark.xfail(strict=True, reason=_PENDING_LIVE_LOG)
     def test_the_committed_log_covers_the_instructions_dataset(self):
         log = self._arm(with_skill_arm(_SKILL, instructions_eval.CAPABILITY))
         scenarios = _behavioural_scenarios("instructions_dataset.json")

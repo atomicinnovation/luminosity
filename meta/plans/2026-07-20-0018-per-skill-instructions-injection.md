@@ -1058,21 +1058,25 @@ the proven-prompt shape 0017 landed on.
 
 #### Automated Verification
 
-- [ ] `mise run eval:skills:configure` exits 0 (every behavioural arm, including
-      the new instructions arms, clears the pass^k floor)
-- [ ] Phase 5 removes the `xfail(strict=True)` markers added in Phase 4 (the
+- [x] `mise run eval:skills:configure` exits 0 (every behavioural arm, including
+      the new instructions arms, clears the pass^k floor — all with-skill arms at
+      pass^k 1.000)
+- [x] Phase 5 removes the `xfail(strict=True)` markers added in Phase 4 (the
       committed log now exists, so those arms would xpass and strict xfail would
       fail); the now-enforcing committed-log assertions — including the new
       `instructions` dataset-coverage pin — pass: `mise run test:unit:evals`
-- [ ] No absolute host paths leak into the committed logs
+      (114 passed, 0 xfailed)
+- [x] No absolute host paths leak into the committed logs
 
 #### Manual Verification
 
-- [ ] The `context_and_instructions_ordering` transcript shows the agent applying
+- [x] The `context_and_instructions_ordering` transcript shows the agent applying
       **both** the context convention and the instructions directive — proving
-      both blocks landed, context above and instructions below.
-- [ ] Inspect the run in the log viewer:
-      `mise run eval:view -- --skill configure`
+      both blocks landed, context above and instructions below (Waypoint and
+      Marker both present across all three epochs).
+- [x] Inspect the run in the log viewer:
+      `mise run eval:view -- --skill configure` (verified equivalently by reading
+      the committed log's ordering samples directly).
 
 ---
 
