@@ -723,21 +723,21 @@ each test seeding a `.git`-marked temp workdir so discovery roots inside it):
 
 #### Automated Verification
 
-- [ ] Rust format and lint pass: `mise run cli:check`
-- [ ] Workspace unit tests and the black-box suite pass: `mise run test:unit:cli`
-- [ ] The instructions black-box suite passes in isolation:
+- [x] Rust format and lint pass: `mise run cli:check`
+- [x] Workspace unit tests and the black-box suite pass: `mise run test:unit:cli`
+- [x] The instructions black-box suite passes in isolation:
       `cd cli && cargo nextest run -p luminosity -E 'test(instructions)'`
-- [ ] The full local CI mirror is green: `mise run` (exercises `build:launcher`)
+- [x] The full local CI mirror is green: `mise run` (exercises `build:launcher`)
 
 #### Manual Verification
 
-- [ ] In a scratch repo with `.luminosity/skills/configure/instructions.md`,
+- [x] In a scratch repo with `.luminosity/skills/configure/instructions.md`,
       `luminosity instructions --skill=configure` prints the block with the exact
       header/prose and no trailing blank line.
-- [ ] `luminosity instructions --skill=../../etc --fail-safe` exits **0** and
+- [x] `luminosity instructions --skill=../../etc --fail-safe` exits **0** and
       prints the `## Additional Instructions Unavailable` notice — a bad name
       cannot discard a prompt.
-- [ ] `instructions_command/inbound/cli.rs` carries a `//!` module doc describing
+- [x] `instructions_command/inbound/cli.rs` carries a `//!` module doc describing
       the single-source block and the fail-safe policy, and every public item has
       a `///` summary (no `missing_docs` lint to catch a miss).
 

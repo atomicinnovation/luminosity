@@ -38,6 +38,24 @@ pub enum Command {
         #[arg(long)]
         fail_safe: bool,
     },
+    /// Print this skill's `## Additional Instructions` block, assembled from
+    /// `.luminosity/skills/<name>/instructions.md` and `instructions.local.md`.
+    /// Prints nothing when no block survives.
+    Instructions {
+        /// The skill whose instructions to assemble, named by its frontmatter
+        /// `name`. Instructions are always skill-scoped; without it, nothing
+        /// prints.
+        #[arg(long)]
+        skill: Option<String>,
+        /// Also print a per-level discovery diagnostic to stderr.
+        #[arg(long)]
+        explain: bool,
+        /// Never exit non-zero: render an unreadable file as a notice on stdout
+        /// instead. For callers that splice this command's stdout into a
+        /// prompt, where a non-zero exit would discard the whole prompt.
+        #[arg(long)]
+        fail_safe: bool,
+    },
     /// Any unknown subcommand + its args, forwarded verbatim. `Vec<OsString>`
     /// (not `Vec<String>`) preserves non-UTF-8 arguments through to the child.
     #[command(external_subcommand)]
@@ -113,7 +131,8 @@ mod tests {
             ),
             Command::Version
             | Command::Config { .. }
-            | Command::Context { .. } => {
+            | Command::Context { .. }
+            | Command::Instructions { .. } => {
                 return Err("routed away from External".into())
             }
         }

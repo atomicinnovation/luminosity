@@ -8,14 +8,24 @@ pub mod outbound;
 
 use config::{AssembleFragment, ConfigAccess};
 
+use crate::command_support::OnFailure;
 use crate::config_command::inbound::cli as config_cli;
 use crate::context_command::inbound::cli as context_cli;
+use crate::instructions_command::inbound::cli as instructions_cli;
 use crate::launch::core::{
     run_external, ExecBinary, ExternalCommand, ResolveBinary,
 };
 use crate::launch::inbound::cli::{Cli, Command};
 use crate::version::core::ReportVersion;
 use crate::version::inbound::cli as version_cli;
+
+const fn on_failure(fail_safe: bool) -> OnFailure {
+    if fail_safe {
+        OnFailure::Degrade
+    } else {
+        OnFailure::Fail
+    }
+}
 
 /// A successful external exec never returns (it replaces this process).
 ///
@@ -45,13 +55,21 @@ pub fn dispatch(
             let options = context_cli::Options {
                 skill: skill.clone(),
                 explain: *explain,
-                on_failure: if *fail_safe {
-                    context_cli::OnFailure::Degrade
-                } else {
-                    context_cli::OnFailure::Fail
-                },
+                on_failure: on_failure(*fail_safe),
             };
             Ok(context_cli::run(context, &options)?)
+        }
+        Command::Instructions {
+            skill,
+            explain,
+            fail_safe,
+        } => {
+            let options = instructions_cli::Options {
+                skill: skill.clone(),
+                explain: *explain,
+                on_failure: on_failure(*fail_safe),
+            };
+            Ok(instructions_cli::run(context, &options)?)
         }
         Command::External(raw) => {
             let command = ExternalCommand::from_raw(raw.clone())?;

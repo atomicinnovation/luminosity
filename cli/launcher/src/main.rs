@@ -144,7 +144,7 @@ fn is_root_help(error: &clap::Error) -> bool {
             .nth(1)
             .as_deref()
             .and_then(std::ffi::OsStr::to_str),
-        Some("version" | "config" | "context" | "help")
+        Some("version" | "config" | "context" | "instructions" | "help")
     )
 }
 
