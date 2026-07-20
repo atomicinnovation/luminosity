@@ -6,7 +6,7 @@ pub mod help;
 pub mod inbound;
 pub mod outbound;
 
-use config::{AssembleContext, ConfigAccess};
+use config::{AssembleFragment, ConfigAccess};
 
 use crate::config_command::inbound::cli as config_cli;
 use crate::context_command::inbound::cli as context_cli;
@@ -27,7 +27,7 @@ pub fn dispatch(
     cli: &Cli,
     reporter: &impl ReportVersion,
     config: &impl ConfigAccess,
-    context: &impl AssembleContext,
+    context: &impl AssembleFragment,
     resolver: &impl ResolveBinary,
     executor: &impl ExecBinary,
 ) -> Result<(), kernel::Error> {

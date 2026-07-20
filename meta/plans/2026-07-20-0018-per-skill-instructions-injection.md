@@ -337,18 +337,18 @@ a mistake.
 
 #### Automated Verification
 
-- [ ] Rust format and lint pass: `mise run cli:check`
-- [ ] Workspace unit tests and the black-box suite pass unchanged:
+- [x] Rust format and lint pass: `mise run cli:check`
+- [x] Workspace unit tests and the black-box suite pass unchanged:
       `mise run test:unit:cli`
-- [ ] `mise run deny:check` passes (no serde/YAML crate entered the `config`
+- [x] `mise run deny:check` passes (no serde/YAML crate entered the `config`
       core's closure through the rename)
-- [ ] The full local CI mirror is green: `mise run`
+- [x] The full local CI mirror is green: `mise run`
 
 #### Manual Verification
 
-- [ ] The diff is a pure rename: no expected-value change in any test, no
+- [x] The diff is a pure rename: no expected-value change in any test, no
       behaviour change, no new arm.
-- [ ] `cli/config/src/fragment.rs`'s `//!` doc establishes "prompt fragment" as
+- [x] `cli/config/src/fragment.rs`'s `//!` doc establishes "prompt fragment" as
       the neutral term; the launcher's `context_command` renderers and `## …`
       headers remain context-named.
 

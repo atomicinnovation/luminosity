@@ -1,14 +1,14 @@
 //! The filesystem store: it roots every `.luminosity` document at a discovered
 //! project directory and implements the core's read/write ports over `std::fs`.
 //!
-//! It owns the whole path rule — which file a `(ContextSource, Level)` pair
+//! It owns the whole path rule — which file a `(FragmentSource, Level)` pair
 //! names — so no caller ever composes `skills/<name>/<file>` itself, and the two
 //! rules that guard a `.luminosity` document:
 //!
 //! - **Containment**, applied to *every* read and write: a symlinked file or
 //!   directory component whose target escapes `.luminosity/` is refused, never
 //!   followed. One file therefore has one safety contract, whichever port
-//!   reaches it — a config read cannot be lured through a symlink that a context
+//!   reaches it — a config read cannot be lured through a symlink that a fragment
 //!   read would refuse, and a write cannot clobber its target.
 //! - **The mapping-only frontmatter strip**, applied to every document *body*: a
 //!   `---` fence is stripped only when it parses as a YAML mapping, so prose
@@ -23,8 +23,8 @@ use std::process;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use config::{
-    ConfigError, ContextSource, Level, LevelBody, Node, ReadConfigLevel,
-    ReadContextBody, SourceLocation, WriteConfigLevel,
+    ConfigError, FragmentSource, Level, LevelBody, Node, ReadConfigLevel,
+    ReadFragmentBody, SourceLocation, WriteConfigLevel,
 };
 
 use crate::document;
@@ -64,10 +64,10 @@ impl FileConfigStore {
             .join(format!("config{}.md", level.qualifier()))
     }
 
-    fn context_path(&self, source: &ContextSource, level: Level) -> PathBuf {
+    fn fragment_path(&self, source: &FragmentSource, level: Level) -> PathBuf {
         match source {
-            ContextSource::Project => self.config_path(level),
-            ContextSource::Skill(name) => self
+            FragmentSource::Project => self.config_path(level),
+            FragmentSource::Skill(name) => self
                 .config_dir()
                 .join("skills")
                 .join(name.as_str())
@@ -79,14 +79,14 @@ impl FileConfigStore {
         display(path.strip_prefix(&self.root).unwrap_or(path))
     }
 
-    /// Reads a free-form context body: the content below a frontmatter fence
+    /// Reads a free-form fragment body: the content below a frontmatter fence
     /// that parses as a YAML mapping, else the whole file.
     ///
     /// A terminated fence whose content is a non-mapping scalar (a prose
     /// thematic break, or malformed YAML) is body, not frontmatter — so the
     /// whole file is returned, byte-for-byte as read. Only an *unterminated*
     /// fence fails loud.
-    fn read_context_body(
+    fn read_fragment_body(
         &self,
         path: &Path,
     ) -> Result<Option<String>, ConfigError> {
@@ -171,27 +171,27 @@ impl ReadConfigLevel for FileConfigStore {
     }
 }
 
-impl ReadContextBody for FileConfigStore {
+impl ReadFragmentBody for FileConfigStore {
     fn read_body(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
         level: Level,
     ) -> Result<LevelBody, ConfigError> {
-        let path = self.context_path(source, level);
+        let path = self.fragment_path(source, level);
         Ok(LevelBody {
             path: self.relative(&path),
-            body: self.read_context_body(&path)?,
+            body: self.read_fragment_body(&path)?,
         })
     }
 
     fn locate(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
     ) -> Result<SourceLocation, ConfigError> {
         Ok(SourceLocation {
             root: display(&self.root),
             paths: [Level::Team, Level::Personal]
-                .map(|level| self.relative(&self.context_path(source, level))),
+                .map(|level| self.relative(&self.fragment_path(source, level))),
         })
     }
 }
@@ -282,8 +282,8 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use config::{
-        ConfigAccess, ConfigError, ConfigService, ContextSource, Key, Level,
-        Mapping, Node, ReadConfigLevel, ReadContextBody, Scalar, SkillName,
+        ConfigAccess, ConfigError, ConfigService, FragmentSource, Key, Level,
+        Mapping, Node, ReadConfigLevel, ReadFragmentBody, Scalar, SkillName,
         WriteConfigLevel,
     };
 
@@ -309,8 +309,8 @@ mod tests {
         Ok(())
     }
 
-    fn configure() -> Result<ContextSource, TestError> {
-        Ok(ContextSource::Skill(SkillName::parse("configure")?))
+    fn configure() -> Result<FragmentSource, TestError> {
+        Ok(FragmentSource::Skill(SkillName::parse("configure")?))
     }
 
     fn skill_dir(root: &Path) -> PathBuf {
@@ -342,7 +342,7 @@ mod tests {
         level: Level,
     ) -> Result<Option<String>, TestError> {
         Ok(FileConfigStore::rooted_at(root)
-            .read_body(&ContextSource::Project, level)?
+            .read_body(&FragmentSource::Project, level)?
             .body)
     }
 
@@ -901,7 +901,7 @@ mod tests {
     fn the_project_context_path_is_the_config_file() -> Result<(), TestError> {
         let store = FileConfigStore::rooted_at(tempdir()?);
         assert_eq!(
-            store.locate(&ContextSource::Project)?.paths,
+            store.locate(&FragmentSource::Project)?.paths,
             [
                 ".luminosity/config.md".to_owned(),
                 ".luminosity/config.local.md".to_owned(),
@@ -925,7 +925,7 @@ mod tests {
         let root = tempdir()?;
         assert_eq!(
             FileConfigStore::rooted_at(&root)
-                .locate(&ContextSource::Project)?
+                .locate(&FragmentSource::Project)?
                 .root,
             root.display().to_string()
         );

@@ -1,5 +1,5 @@
-//! Which two-level `.luminosity` document an assembly reads, and the validated
-//! skill name that identifies a per-skill one.
+//! Which document a fragment is assembled from, and the validated skill name
+//! that identifies a per-skill one.
 //!
 //! A skill name is parsed under an allow-list rather than a deny-list: a
 //! deny-list of the separators and traversal sequences known today invites the
@@ -51,9 +51,9 @@ impl Display for SkillName {
     }
 }
 
-/// Which two-level `.luminosity` document is being assembled.
+/// Which document a fragment is assembled from.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ContextSource {
+pub enum FragmentSource {
     Project,
     Skill(SkillName),
 }

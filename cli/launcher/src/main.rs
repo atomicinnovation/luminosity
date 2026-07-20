@@ -9,8 +9,9 @@ use clap::error::ErrorKind;
 use clap::{CommandFactory as _, Parser as _};
 
 use config::{
-    ConfigAccess, ConfigError, ConfigService, ContextAssembler, ContextSource,
-    Key, Level, LevelBody, ReadContextBody, Resolved, SourceLocation,
+    ConfigAccess, ConfigError, ConfigService, FragmentAssembler,
+    FragmentSource, Key, Level, LevelBody, ReadFragmentBody, Resolved,
+    SourceLocation,
 };
 use config_adapters::FileConfigStore;
 use luminosity::launch::core::{
@@ -86,12 +87,12 @@ impl ConfigAccess for LazyConfigAccess {
 
 /// Discovers the project root and builds the store lazily on the first
 /// `read_body`, mirroring [`LazyConfigAccess`].
-struct LazyContextBody;
+struct LazyFragmentBody;
 
-impl ReadContextBody for LazyContextBody {
+impl ReadFragmentBody for LazyFragmentBody {
     fn read_body(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
         level: Level,
     ) -> Result<LevelBody, ConfigError> {
         discover_store()?.read_body(source, level)
@@ -99,7 +100,7 @@ impl ReadContextBody for LazyContextBody {
 
     fn locate(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
     ) -> Result<SourceLocation, ConfigError> {
         discover_store()?.locate(source)
     }
@@ -160,7 +161,7 @@ fn render_augmented_help() -> ExitCode {
 fn run(cli: &Cli) -> Result<(), kernel::Error> {
     let reporter = VersionReporter::new(VergenBuildMetadata);
     let config = LazyConfigAccess;
-    let context = ContextAssembler::new(LazyContextBody);
+    let context = FragmentAssembler::new(LazyFragmentBody);
     let executor = UnixExec;
     if std::env::var_os(FIXTURE_ENV).is_some_and(|value| !value.is_empty()) {
         dispatch(

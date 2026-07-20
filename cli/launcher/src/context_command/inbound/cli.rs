@@ -1,5 +1,9 @@
 //! Maps the parsed `context` command onto the injected assembler.
 //!
+//! The kernel assembles each source into a neutral prompt *fragment*; this edge
+//! is where a fragment is wrapped as a *context* block, hence the deliberately
+//! context-named renderers and headers over `assembly.fragment`.
+//!
 //! It owns the byte-exact `## Project Context` and `## Skill-Specific Context`
 //! blocks and the fixed project-then-skill order they compose in, prints nothing
 //! when neither survives assembly, formats the `--explain` diagnostic to stderr
@@ -14,7 +18,7 @@
 //! `value_parser` that would exit before the boundary is reached.
 
 use config::{
-    AssembleContext, AssembledContext, ConfigError, ContextSource, Level,
+    AssembleFragment, ConfigError, Fragment, FragmentSource, Level,
     LevelContribution, SkillName,
 };
 
@@ -66,7 +70,7 @@ enum Outcome {
 /// outcome; `Unresolved` is a `--skill` name that never parsed — degraded under
 /// `--fail-safe` before any source, and so any path, could exist.
 enum Section {
-    Resolved(ContextSource, Outcome),
+    Resolved(FragmentSource, Outcome),
     Unresolved(ConfigError),
 }
 
@@ -86,12 +90,12 @@ context in addition to any project-wide context above."
 }
 
 #[must_use]
-pub fn render_project(context: &AssembledContext) -> String {
+pub fn render_project(context: &Fragment) -> String {
     format!("## Project Context\n\n{PROSE}\n\n{}", context.body)
 }
 
 #[must_use]
-pub fn render_skill(skill: &SkillName, context: &AssembledContext) -> String {
+pub fn render_skill(skill: &SkillName, context: &Fragment) -> String {
     let prose = skill_prose(skill);
     format!("## Skill-Specific Context\n\n{prose}\n\n{}", context.body)
 }
@@ -137,7 +141,7 @@ pub fn join_blocks(
 /// [`OnFailure::Degrade`] the same error is rendered to stdout as a notice for
 /// that source alone, and this succeeds.
 pub fn run(
-    assembler: &impl AssembleContext,
+    assembler: &impl AssembleFragment,
     options: &Options,
 ) -> Result<(), ConfigError> {
     let Resolution { project, skill } = resolve(assembler, options)?;
@@ -164,7 +168,7 @@ pub fn run(
 /// hole in the fail-safe boundary — the one error in `run` that still exits
 /// non-zero, discarding the prompt the flag was only meant to describe.
 fn diagnostic(
-    assembler: &impl AssembleContext,
+    assembler: &impl AssembleFragment,
     project: &Section,
     skill: Option<&Section>,
     options: &Options,
@@ -179,8 +183,8 @@ fn diagnostic(
 }
 
 fn assemble(
-    assembler: &impl AssembleContext,
-    source: &ContextSource,
+    assembler: &impl AssembleFragment,
+    source: &FragmentSource,
     options: &Options,
 ) -> Result<Outcome, ConfigError> {
     match assembler.assemble(source) {
@@ -193,7 +197,7 @@ fn assemble(
 }
 
 fn resolve(
-    assembler: &impl AssembleContext,
+    assembler: &impl AssembleFragment,
     options: &Options,
 ) -> Result<Resolution, ConfigError> {
     Ok(Resolution {
@@ -203,10 +207,10 @@ fn resolve(
 }
 
 fn resolve_project(
-    assembler: &impl AssembleContext,
+    assembler: &impl AssembleFragment,
     options: &Options,
 ) -> Result<Section, ConfigError> {
-    let source = ContextSource::Project;
+    let source = FragmentSource::Project;
     let outcome = assemble(assembler, &source, options)?;
     Ok(Section::Resolved(source, outcome))
 }
@@ -216,7 +220,7 @@ fn resolve_project(
 /// [`Section::Unresolved`] under `--fail-safe`. A parsed name then assembles
 /// through the same [`assemble`] path as the project.
 fn resolve_skill(
-    assembler: &impl AssembleContext,
+    assembler: &impl AssembleFragment,
     options: &Options,
 ) -> Result<Option<Section>, ConfigError> {
     let Some(raw) = options.skill.as_deref() else {
@@ -229,22 +233,22 @@ fn resolve_skill(
         }
         Err(error) => return Err(error),
     };
-    let source = ContextSource::Skill(name);
+    let source = FragmentSource::Skill(name);
     let outcome = assemble(assembler, &source, options)?;
     Ok(Some(Section::Resolved(source, outcome)))
 }
 
-fn block(source: &ContextSource, outcome: &Outcome) -> Option<String> {
+fn block(source: &FragmentSource, outcome: &Outcome) -> Option<String> {
     match outcome {
         Outcome::Assembled(assembly) => {
-            assembly.context.as_ref().map(|context| match source {
-                ContextSource::Project => render_project(context),
-                ContextSource::Skill(name) => render_skill(name, context),
+            assembly.fragment.as_ref().map(|context| match source {
+                FragmentSource::Project => render_project(context),
+                FragmentSource::Skill(name) => render_skill(name, context),
             })
         }
         Outcome::Degraded(error) => Some(match source {
-            ContextSource::Project => render_project_unavailable(error),
-            ContextSource::Skill(_) => render_skill_unavailable(error),
+            FragmentSource::Project => render_project_unavailable(error),
+            FragmentSource::Skill(_) => render_skill_unavailable(error),
         }),
     }
 }
@@ -257,11 +261,11 @@ fn section_block(section: &Section) -> Option<String> {
 }
 
 fn explain(
-    assembler: &impl AssembleContext,
+    assembler: &impl AssembleFragment,
     project: &Section,
     skill: Option<&Section>,
 ) -> Result<Vec<String>, ConfigError> {
-    let root = assembler.locate(&ContextSource::Project)?.root;
+    let root = assembler.locate(&FragmentSource::Project)?.root;
     let mut lines = vec![format!("root: {root}")];
     lines.extend(section_lines(assembler, project)?);
     if let Some(skill) = skill {
@@ -271,7 +275,7 @@ fn explain(
 }
 
 fn section_lines(
-    assembler: &impl AssembleContext,
+    assembler: &impl AssembleFragment,
     section: &Section,
 ) -> Result<Vec<String>, ConfigError> {
     match section {
@@ -290,8 +294,8 @@ fn invalid_skill_line(error: &ConfigError) -> String {
 }
 
 fn source_lines(
-    assembler: &impl AssembleContext,
-    source: &ContextSource,
+    assembler: &impl AssembleFragment,
+    source: &FragmentSource,
     outcome: &Outcome,
 ) -> Result<Vec<String>, ConfigError> {
     match outcome {
@@ -339,8 +343,8 @@ fn explain_line(contribution: &LevelContribution) -> String {
 #[cfg(test)]
 mod tests {
     use config::{
-        AssembleContext, AssembledContext, Assembly, ConfigError,
-        ContextSource, Level, LevelContribution, SkillName, SourceLocation,
+        AssembleFragment, Assembly, ConfigError, Fragment, FragmentSource,
+        Level, LevelContribution, SkillName, SourceLocation,
     };
 
     use super::{
@@ -358,8 +362,8 @@ mod tests {
         }
     }
 
-    fn context(body: &str) -> AssembledContext {
-        AssembledContext {
+    fn context(body: &str) -> Fragment {
+        Fragment {
             body: body.to_owned(),
         }
     }
@@ -521,17 +525,17 @@ mod tests {
         }
     }
 
-    impl AssembleContext for Unlocatable {
+    impl AssembleFragment for Unlocatable {
         fn assemble(
             &self,
-            _source: &ContextSource,
+            _source: &FragmentSource,
         ) -> Result<Assembly, ConfigError> {
             Err(Self::error())
         }
 
         fn locate(
             &self,
-            _source: &ContextSource,
+            _source: &FragmentSource,
         ) -> Result<SourceLocation, ConfigError> {
             Err(Self::error())
         }
