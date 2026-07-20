@@ -9,6 +9,7 @@ argument-hint: "[get <section.key> | set <section.key> <value>] [--level team|pe
 allowed-tools:
   - Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity config *)
   - Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity context*)
+  - Bash(${CLAUDE_PLUGIN_ROOT}/bin/luminosity instructions*)
 ---
 
 # Configure
@@ -92,6 +93,36 @@ To see the root and the exact paths the CLI read, run:
 ${CLAUDE_PLUGIN_ROOT}/bin/luminosity context --skill=configure --explain
 ```
 
+## Managing skill-specific instructions
+
+Distinct from context — information a skill *considers* — a skill can also carry
+**instructions**: directives it should *follow*. They are injected as a
+`## Additional Instructions` block at the **end** of the skill's prompt. The
+source files, and the diagnostic to check them, come first because a mistyped
+name is silent:
+
+- `.luminosity/skills/configure/instructions.md` — the shared, committed **team**
+  body.
+- `.luminosity/skills/configure/instructions.local.md` — the local, git-ignored
+  **personal** body.
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/bin/luminosity instructions --skill=configure --explain
+```
+
+That prints the root and, per level, whether each file was discovered and
+whether its body was non-empty. `context --explain` and `instructions --explain`
+are **separate** views — the first covers the project and skill-specific context
+blocks, the second the instructions block; run **both** to see everything a
+skill's prompt receives.
+
+Instructions are **appended after, and applied in addition to**, the skill's own
+instructions and any context — they simply land last (personal after team within
+the block), with no override or precedence over the skill's own guidance. As with
+context, editing these bodies is a **user** action, the `<skill-name>` is the name
+the skill is **invoked by**, a wrong or mistyped name emits **nothing**, and the
+same unterminated-`---` hazard named above applies to an instructions file too.
+
 ## Reading a value
 
 Run the CLI and report what it prints:
@@ -125,3 +156,5 @@ that message rather than working around it.
   running a `set`.
 - Report the command's stdout for a successful `get`, and its stderr message
   verbatim for any non-zero exit — do not reinterpret or infer around it.
+
+!`${CLAUDE_PLUGIN_ROOT}/bin/luminosity instructions --skill=configure --fail-safe`

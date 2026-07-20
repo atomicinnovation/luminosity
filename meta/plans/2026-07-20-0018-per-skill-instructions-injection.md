@@ -862,20 +862,20 @@ shape.
 
 #### Automated Verification
 
-- [ ] Skill-wiring tests pass: `mise run test:unit:skills`
-- [ ] A single test runs green:
+- [x] Skill-wiring tests pass: `mise run test:unit:skills`
+- [x] A single test runs green:
       `uv run pytest tests/unit/skills/test_instructions_injection.py -v`
-- [ ] `git check-ignore -v .luminosity/skills/x/instructions.local.md` reports
+- [x] `git check-ignore -v .luminosity/skills/x/instructions.local.md` reports
       the new rule, and does **not** match a fixture `instructions.local.md` nor
       any `instructions.md`
-- [ ] The full local CI mirror is green: `mise run`
+- [x] The full local CI mirror is green: `mise run`
 
 #### Manual Verification
 
-- [ ] The rendered `configure` skill reads coherently: project context, then
+- [x] The rendered `configure` skill reads coherently: project context, then
       skill-specific context, then the skill's own prose, then the
       `## Additional Instructions` block at the end.
-- [ ] The new surface section frames editing as a user action, distinguishes
+- [x] The new surface section frames editing as a user action, distinguishes
       instructions (directives to follow) from context (information to consider),
       and states that instructions land last and are applied *in addition to* the
       skill's own instructions — with no override/precedence promise, matching the
