@@ -195,6 +195,22 @@ class TestSeed:
             _FIXTURES / fixture / nested
         ).read_text()
 
+    def test_copies_a_personal_skill_instructions_file(self, tmp_path: Path):
+        fixture = "instructions_skill_both_levels"
+        workdir = tmp_path / "workdir"
+
+        _seed(workdir, fixture)
+
+        nested = (
+            Path(".luminosity")
+            / "skills"
+            / "configure"
+            / "instructions.local.md"
+        )
+        assert (workdir / nested).read_text() == (
+            _FIXTURES / fixture / nested
+        ).read_text()
+
     def test_marks_the_workdir_as_a_project_root(self, tmp_path: Path):
         # Without the .git marker the launcher's upward walk would escape the
         # fixture and root somewhere in the real working tree.

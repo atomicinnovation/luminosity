@@ -1,21 +1,23 @@
-//! Assembling any two-level `.luminosity` document's context block from its
-//! team and personal bodies.
+//! Assembling a two-level `.luminosity` document into a single prompt fragment
+//! from its team and personal bodies.
 //!
-//! The document is named by a [`ContextSource`]; the assembly rule is the same
-//! whichever one it is. The two bodies are trimmed independently, the empty ones
-//! dropped, and the survivors joined team-then-personal with a single blank
-//! line — so an empty combined result means no context at all. The assembler
-//! also reports what each level contributed in the same read pass, using the
-//! same trim predicate as the merge, so a level's `has_body` can never disagree
-//! with whether it appears in the block.
+//! A *prompt fragment* is a two-level-combined, frontmatter-stripped piece of
+//! userspace-authored content bound for a skill's prompt. The document is named
+//! by a [`FragmentSource`]; the assembly rule is the same whichever one it is.
+//! The two bodies are trimmed independently, the empty ones dropped, and the
+//! survivors joined team-then-personal with a single blank line — so an empty
+//! combined result means no fragment at all. The assembler also reports what each
+//! level contributed in the same read pass, using the same trim predicate as the
+//! merge, so a level's `has_body` can never disagree with whether it appears in
+//! the fragment.
 
 use crate::error::ConfigError;
 use crate::level::Level;
-use crate::source::ContextSource;
+use crate::source::FragmentSource;
 
 /// A trimmed, combined team-then-personal body ready to wrap in a block.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AssembledContext {
+pub struct Fragment {
     pub body: String,
 }
 
@@ -29,11 +31,11 @@ pub struct LevelContribution {
     pub has_body: bool,
 }
 
-/// The outcome of a single assembly pass: the optional combined context plus a
+/// The outcome of a single assembly pass: the optional combined fragment plus a
 /// per-level record, ordered `[team, personal]`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assembly {
-    pub context: Option<AssembledContext>,
+    pub fragment: Option<Fragment>,
     pub levels: [LevelContribution; 2],
 }
 
@@ -57,7 +59,7 @@ pub struct SourceLocation {
 }
 
 /// Reads a single level of a single document — a driven port.
-pub trait ReadContextBody {
+pub trait ReadFragmentBody {
     /// Returns `source`'s body at `level` (absent when the file is), and the
     /// path it read.
     ///
@@ -67,7 +69,7 @@ pub trait ReadContextBody {
     /// or resolves outside the `.luminosity` directory.
     fn read_body(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
         level: Level,
     ) -> Result<LevelBody, ConfigError>;
 
@@ -78,19 +80,21 @@ pub trait ReadContextBody {
     /// A [`ConfigError`] when the project root cannot be discovered.
     fn locate(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
     ) -> Result<SourceLocation, ConfigError>;
 }
 
 /// The operations the assembler offers callers — the driving port.
-pub trait AssembleContext {
+pub trait AssembleFragment {
     /// Reads both of `source`'s levels once and combines their bodies.
     ///
     /// # Errors
     ///
     /// A [`ConfigError`] when either level cannot be read.
-    fn assemble(&self, source: &ContextSource)
-        -> Result<Assembly, ConfigError>;
+    fn assemble(
+        &self,
+        source: &FragmentSource,
+    ) -> Result<Assembly, ConfigError>;
 
     /// Reports where `source`'s levels live, without reading them.
     ///
@@ -99,42 +103,42 @@ pub trait AssembleContext {
     /// A [`ConfigError`] when the project root cannot be discovered.
     fn locate(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
     ) -> Result<SourceLocation, ConfigError>;
 }
 
-/// The application service. Depends only on the [`ReadContextBody`] driven port.
-pub struct ContextAssembler<R> {
+/// The application service. Depends only on the [`ReadFragmentBody`] driven port.
+pub struct FragmentAssembler<R> {
     reader: R,
 }
 
-impl<R> ContextAssembler<R> {
+impl<R> FragmentAssembler<R> {
     pub const fn new(reader: R) -> Self {
         Self { reader }
     }
 }
 
-impl<R: ReadContextBody> AssembleContext for ContextAssembler<R> {
+impl<R: ReadFragmentBody> AssembleFragment for FragmentAssembler<R> {
     fn assemble(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
     ) -> Result<Assembly, ConfigError> {
         let team = self.reader.read_body(source, Level::Team)?;
         let personal = self.reader.read_body(source, Level::Personal)?;
         let team_body = team.body.as_deref().unwrap_or_default();
         let personal_body = personal.body.as_deref().unwrap_or_default();
-        let context = combine(team_body, personal_body)
-            .map(|body| AssembledContext { body });
+        let fragment =
+            combine(team_body, personal_body).map(|body| Fragment { body });
         let levels = [
             contribution(Level::Team, &team),
             contribution(Level::Personal, &personal),
         ];
-        Ok(Assembly { context, levels })
+        Ok(Assembly { fragment, levels })
     }
 
     fn locate(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
     ) -> Result<SourceLocation, ConfigError> {
         self.reader.locate(source)
     }
@@ -182,12 +186,12 @@ fn trim_blank_lines(body: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::{
-        AssembleContext, AssembledContext, Assembly, ContextAssembler,
-        LevelBody, LevelContribution, ReadContextBody, SourceLocation,
+        AssembleFragment, Assembly, Fragment, FragmentAssembler, LevelBody,
+        LevelContribution, ReadFragmentBody, SourceLocation,
     };
     use crate::error::ConfigError;
     use crate::level::Level;
-    use crate::source::{ContextSource, SkillName};
+    use crate::source::{FragmentSource, SkillName};
 
     enum BodyState {
         Missing,
@@ -206,20 +210,23 @@ mod tests {
         }
     }
 
-    fn path_of(source: &ContextSource, level: Level) -> String {
+    fn path_of(source: &FragmentSource, level: Level) -> String {
         let base = match source {
-            ContextSource::Project => ".luminosity/config".to_owned(),
-            ContextSource::Skill(name) => {
+            FragmentSource::ProjectContext => ".luminosity/config".to_owned(),
+            FragmentSource::SkillContext(name) => {
                 format!(".luminosity/skills/{name}/context")
+            }
+            FragmentSource::SkillInstructions(name) => {
+                format!(".luminosity/skills/{name}/instructions")
             }
         };
         format!("{base}{}.md", level.qualifier())
     }
 
-    impl ReadContextBody for FakeReader {
+    impl ReadFragmentBody for FakeReader {
         fn read_body(
             &self,
-            source: &ContextSource,
+            source: &FragmentSource,
             level: Level,
         ) -> Result<LevelBody, ConfigError> {
             let state = match level {
@@ -244,7 +251,7 @@ mod tests {
 
         fn locate(
             &self,
-            source: &ContextSource,
+            source: &FragmentSource,
         ) -> Result<SourceLocation, ConfigError> {
             Ok(SourceLocation {
                 root: "/root".to_owned(),
@@ -258,55 +265,61 @@ mod tests {
         BodyState::Present(body.to_owned())
     }
 
-    fn skill() -> Result<ContextSource, ConfigError> {
-        Ok(ContextSource::Skill(SkillName::parse("configure")?))
+    fn skill() -> Result<FragmentSource, ConfigError> {
+        Ok(FragmentSource::SkillContext(SkillName::parse("configure")?))
+    }
+
+    fn skill_instructions() -> Result<FragmentSource, ConfigError> {
+        Ok(FragmentSource::SkillInstructions(SkillName::parse(
+            "configure",
+        )?))
     }
 
     fn assemble_source(
-        source: &ContextSource,
+        source: &FragmentSource,
         team: BodyState,
         personal: BodyState,
     ) -> Result<Assembly, ConfigError> {
-        ContextAssembler::new(FakeReader::new(team, personal)).assemble(source)
+        FragmentAssembler::new(FakeReader::new(team, personal)).assemble(source)
     }
 
     fn assemble(
         team: BodyState,
         personal: BodyState,
     ) -> Result<Assembly, ConfigError> {
-        assemble_source(&ContextSource::Project, team, personal)
+        assemble_source(&FragmentSource::ProjectContext, team, personal)
     }
 
-    fn context(
+    fn fragment(
         team: BodyState,
         personal: BodyState,
-    ) -> Result<Option<AssembledContext>, ConfigError> {
-        Ok(assemble(team, personal)?.context)
+    ) -> Result<Option<Fragment>, ConfigError> {
+        Ok(assemble(team, personal)?.fragment)
     }
 
     #[test]
-    fn both_levels_absent_is_no_context() -> Result<(), ConfigError> {
-        assert_eq!(context(BodyState::Missing, BodyState::Missing)?, None);
+    fn both_levels_absent_is_no_fragment() -> Result<(), ConfigError> {
+        assert_eq!(fragment(BodyState::Missing, BodyState::Missing)?, None);
         Ok(())
     }
 
     #[test]
-    fn both_levels_empty_is_no_context() -> Result<(), ConfigError> {
-        assert_eq!(context(present(""), present(""))?, None);
+    fn both_levels_empty_is_no_fragment() -> Result<(), ConfigError> {
+        assert_eq!(fragment(present(""), present(""))?, None);
         Ok(())
     }
 
     #[test]
-    fn a_whitespace_only_level_is_no_context() -> Result<(), ConfigError> {
-        assert_eq!(context(present("  \n\t\n \n"), BodyState::Missing)?, None);
+    fn a_whitespace_only_level_is_no_fragment() -> Result<(), ConfigError> {
+        assert_eq!(fragment(present("  \n\t\n \n"), BodyState::Missing)?, None);
         Ok(())
     }
 
     #[test]
     fn team_only_yields_the_team_body() -> Result<(), ConfigError> {
         assert_eq!(
-            context(present("team stuff\n"), BodyState::Missing)?,
-            Some(AssembledContext {
+            fragment(present("team stuff\n"), BodyState::Missing)?,
+            Some(Fragment {
                 body: "team stuff".to_owned()
             })
         );
@@ -316,8 +329,8 @@ mod tests {
     #[test]
     fn personal_only_yields_the_personal_body() -> Result<(), ConfigError> {
         assert_eq!(
-            context(BodyState::Missing, present("personal stuff\n"))?,
-            Some(AssembledContext {
+            fragment(BodyState::Missing, present("personal stuff\n"))?,
+            Some(Fragment {
                 body: "personal stuff".to_owned()
             })
         );
@@ -328,8 +341,8 @@ mod tests {
     fn both_levels_join_team_first_with_one_blank_line(
     ) -> Result<(), ConfigError> {
         assert_eq!(
-            context(present("\nteam\n\n"), present("\n\npersonal\n"))?,
-            Some(AssembledContext {
+            fragment(present("\nteam\n\n"), present("\n\npersonal\n"))?,
+            Some(Fragment {
                 body: "team\n\npersonal".to_owned()
             })
         );
@@ -339,8 +352,8 @@ mod tests {
     #[test]
     fn surrounding_blank_lines_are_trimmed() -> Result<(), ConfigError> {
         assert_eq!(
-            context(present("\n\n  hello\n"), BodyState::Missing)?,
-            Some(AssembledContext {
+            fragment(present("\n\n  hello\n"), BodyState::Missing)?,
+            Some(Fragment {
                 body: "  hello".to_owned()
             })
         );
@@ -351,8 +364,8 @@ mod tests {
     fn interior_blank_lines_and_indentation_are_preserved(
     ) -> Result<(), ConfigError> {
         assert_eq!(
-            context(present("\n  a\n\n    b\n\n"), BodyState::Missing)?,
-            Some(AssembledContext {
+            fragment(present("\n  a\n\n    b\n\n"), BodyState::Missing)?,
+            Some(Fragment {
                 body: "  a\n\n    b".to_owned()
             })
         );
@@ -363,8 +376,8 @@ mod tests {
     fn a_crlf_body_strips_its_terminator_and_keeps_interiors(
     ) -> Result<(), ConfigError> {
         assert_eq!(
-            context(present("line1\r\nline2\r\n"), BodyState::Missing)?,
-            Some(AssembledContext {
+            fragment(present("line1\r\nline2\r\n"), BodyState::Missing)?,
+            Some(Fragment {
                 body: "line1\r\nline2".to_owned()
             })
         );
@@ -374,8 +387,8 @@ mod tests {
     #[test]
     fn joining_crlf_bodies_uses_an_lf_separator() -> Result<(), ConfigError> {
         assert_eq!(
-            context(present("t1\r\nt2\r\n"), present("p1\r\np2\r\n"))?,
-            Some(AssembledContext {
+            fragment(present("t1\r\nt2\r\n"), present("p1\r\np2\r\n"))?,
+            Some(Fragment {
                 body: "t1\r\nt2\n\np1\r\np2".to_owned()
             })
         );
@@ -385,11 +398,11 @@ mod tests {
     #[test]
     fn the_combined_body_ends_without_a_terminator() -> Result<(), ConfigError>
     {
-        let AssembledContext { body } =
-            context(present("team\n"), present("personal\n"))?.ok_or_else(
+        let Fragment { body } =
+            fragment(present("team\n"), present("personal\n"))?.ok_or_else(
                 || ConfigError::Io {
                     path: "test".to_owned(),
-                    detail: "expected a context".to_owned(),
+                    detail: "expected a fragment".to_owned(),
                 },
             )?;
         assert!(!body.ends_with('\n'));
@@ -445,8 +458,8 @@ mod tests {
     ) -> Result<(), ConfigError> {
         let assembly = assemble(present("team\n"), present("   \n"))?;
         assert_eq!(
-            assembly.context,
-            Some(AssembledContext {
+            assembly.fragment,
+            Some(Fragment {
                 body: "team".to_owned()
             })
         );
@@ -465,15 +478,15 @@ mod tests {
     #[test]
     fn assembles_a_skill_source_identically_to_a_project_source(
     ) -> Result<(), ConfigError> {
-        for source in [ContextSource::Project, skill()?] {
+        for source in [FragmentSource::ProjectContext, skill()?] {
             let assembly = assemble_source(
                 &source,
                 present("\nteam\n\n"),
                 present("\n\npersonal\n"),
             )?;
             assert_eq!(
-                assembly.context,
-                Some(AssembledContext {
+                assembly.fragment,
+                Some(Fragment {
                     body: "team\n\npersonal".to_owned()
                 })
             );
@@ -486,7 +499,7 @@ mod tests {
     #[test]
     fn locating_a_source_reports_its_root_and_both_paths(
     ) -> Result<(), ConfigError> {
-        let assembler = ContextAssembler::new(FakeReader::new(
+        let assembler = FragmentAssembler::new(FakeReader::new(
             BodyState::Missing,
             BodyState::Missing,
         ));
@@ -514,6 +527,44 @@ mod tests {
         assert_eq!(
             assembly.levels[1].path,
             ".luminosity/skills/configure/context.local.md"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn assembles_a_skill_instructions_source_identically_to_a_skill_context_source(
+    ) -> Result<(), ConfigError> {
+        for source in [skill()?, skill_instructions()?] {
+            let assembly = assemble_source(
+                &source,
+                present("\nteam\n\n"),
+                present("\n\npersonal\n"),
+            )?;
+            assert_eq!(
+                assembly.fragment,
+                Some(Fragment {
+                    body: "team\n\npersonal".to_owned()
+                })
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn reports_the_instructions_paths_for_a_skill_instructions_source(
+    ) -> Result<(), ConfigError> {
+        let assembly = assemble_source(
+            &skill_instructions()?,
+            present("team\n"),
+            BodyState::Missing,
+        )?;
+        assert_eq!(
+            assembly.levels[0].path,
+            ".luminosity/skills/configure/instructions.md"
+        );
+        assert_eq!(
+            assembly.levels[1].path,
+            ".luminosity/skills/configure/instructions.local.md"
         );
         Ok(())
     }

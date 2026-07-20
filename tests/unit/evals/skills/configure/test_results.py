@@ -13,7 +13,11 @@ from common.eval import (
 )
 from tasks.shared.eval.gate import PASS_K_FLOOR
 from tasks.shared.eval.readback import HOST_PATH_PATTERN
-from tests.evals.skills.configure import context_eval, values_eval
+from tests.evals.skills.configure import (
+    context_eval,
+    instructions_eval,
+    values_eval,
+)
 from tests.evals.skills.configure.solvers import CLAUDE_MODEL
 
 _SKILL = values_eval.SKILL
@@ -24,8 +28,10 @@ _LOGS = sorted(_RESULTS.glob("*.json"))
 type Json = dict[str, Any]
 
 
-def _behavioural_scenarios() -> set[str]:
-    dataset = json.loads((_EVAL_DIR / "context_dataset.json").read_text())
+def _behavioural_scenarios(
+    dataset_name: str = "context_dataset.json",
+) -> set[str]:
+    dataset = json.loads((_EVAL_DIR / dataset_name).read_text())
     return {record["metadata"]["scenario"] for record in dataset}
 
 
@@ -84,7 +90,12 @@ class TestCommittedGate:
         return logs[0]
 
     @pytest.mark.parametrize(
-        "capability", [values_eval.CAPABILITY, context_eval.CAPABILITY]
+        "capability",
+        [
+            values_eval.CAPABILITY,
+            context_eval.CAPABILITY,
+            instructions_eval.CAPABILITY,
+        ],
     )
     def test_every_with_skill_arm_clears_the_floor(self, capability: str):
         metrics = _reducer_metrics(
@@ -99,6 +110,14 @@ class TestCommittedGate:
         # turns this red rather than leaving stale evidence looking green.
         log = self._arm(with_skill_arm(_SKILL, context_eval.CAPABILITY))
         scenarios = _behavioural_scenarios()
+        assert {
+            sample["metadata"]["scenario"] for sample in log["samples"]
+        } == scenarios
+        assert log["results"]["total_samples"] == len(scenarios) * TRIALS
+
+    def test_the_committed_log_covers_the_instructions_dataset(self):
+        log = self._arm(with_skill_arm(_SKILL, instructions_eval.CAPABILITY))
+        scenarios = _behavioural_scenarios("instructions_dataset.json")
         assert {
             sample["metadata"]["scenario"] for sample in log["samples"]
         } == scenarios

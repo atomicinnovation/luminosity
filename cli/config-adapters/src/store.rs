@@ -1,14 +1,14 @@
 //! The filesystem store: it roots every `.luminosity` document at a discovered
 //! project directory and implements the core's read/write ports over `std::fs`.
 //!
-//! It owns the whole path rule — which file a `(ContextSource, Level)` pair
+//! It owns the whole path rule — which file a `(FragmentSource, Level)` pair
 //! names — so no caller ever composes `skills/<name>/<file>` itself, and the two
 //! rules that guard a `.luminosity` document:
 //!
 //! - **Containment**, applied to *every* read and write: a symlinked file or
 //!   directory component whose target escapes `.luminosity/` is refused, never
 //!   followed. One file therefore has one safety contract, whichever port
-//!   reaches it — a config read cannot be lured through a symlink that a context
+//!   reaches it — a config read cannot be lured through a symlink that a fragment
 //!   read would refuse, and a write cannot clobber its target.
 //! - **The mapping-only frontmatter strip**, applied to every document *body*: a
 //!   `---` fence is stripped only when it parses as a YAML mapping, so prose
@@ -23,8 +23,8 @@ use std::process;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use config::{
-    ConfigError, ContextSource, Level, LevelBody, Node, ReadConfigLevel,
-    ReadContextBody, SourceLocation, WriteConfigLevel,
+    ConfigError, FragmentSource, Level, LevelBody, Node, ReadConfigLevel,
+    ReadFragmentBody, SkillName, SourceLocation, WriteConfigLevel,
 };
 
 use crate::document;
@@ -64,14 +64,19 @@ impl FileConfigStore {
             .join(format!("config{}.md", level.qualifier()))
     }
 
-    fn context_path(&self, source: &ContextSource, level: Level) -> PathBuf {
+    fn skill_dir(&self, name: &SkillName) -> PathBuf {
+        self.config_dir().join("skills").join(name.as_str())
+    }
+
+    fn fragment_path(&self, source: &FragmentSource, level: Level) -> PathBuf {
         match source {
-            ContextSource::Project => self.config_path(level),
-            ContextSource::Skill(name) => self
-                .config_dir()
-                .join("skills")
-                .join(name.as_str())
+            FragmentSource::ProjectContext => self.config_path(level),
+            FragmentSource::SkillContext(name) => self
+                .skill_dir(name)
                 .join(format!("context{}.md", level.qualifier())),
+            FragmentSource::SkillInstructions(name) => self
+                .skill_dir(name)
+                .join(format!("instructions{}.md", level.qualifier())),
         }
     }
 
@@ -79,14 +84,14 @@ impl FileConfigStore {
         display(path.strip_prefix(&self.root).unwrap_or(path))
     }
 
-    /// Reads a free-form context body: the content below a frontmatter fence
+    /// Reads a free-form fragment body: the content below a frontmatter fence
     /// that parses as a YAML mapping, else the whole file.
     ///
     /// A terminated fence whose content is a non-mapping scalar (a prose
     /// thematic break, or malformed YAML) is body, not frontmatter — so the
     /// whole file is returned, byte-for-byte as read. Only an *unterminated*
     /// fence fails loud.
-    fn read_context_body(
+    fn read_fragment_body(
         &self,
         path: &Path,
     ) -> Result<Option<String>, ConfigError> {
@@ -171,27 +176,27 @@ impl ReadConfigLevel for FileConfigStore {
     }
 }
 
-impl ReadContextBody for FileConfigStore {
+impl ReadFragmentBody for FileConfigStore {
     fn read_body(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
         level: Level,
     ) -> Result<LevelBody, ConfigError> {
-        let path = self.context_path(source, level);
+        let path = self.fragment_path(source, level);
         Ok(LevelBody {
             path: self.relative(&path),
-            body: self.read_context_body(&path)?,
+            body: self.read_fragment_body(&path)?,
         })
     }
 
     fn locate(
         &self,
-        source: &ContextSource,
+        source: &FragmentSource,
     ) -> Result<SourceLocation, ConfigError> {
         Ok(SourceLocation {
             root: display(&self.root),
             paths: [Level::Team, Level::Personal]
-                .map(|level| self.relative(&self.context_path(source, level))),
+                .map(|level| self.relative(&self.fragment_path(source, level))),
         })
     }
 }
@@ -282,8 +287,8 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use config::{
-        ConfigAccess, ConfigError, ConfigService, ContextSource, Key, Level,
-        Mapping, Node, ReadConfigLevel, ReadContextBody, Scalar, SkillName,
+        ConfigAccess, ConfigError, ConfigService, FragmentSource, Key, Level,
+        Mapping, Node, ReadConfigLevel, ReadFragmentBody, Scalar, SkillName,
         WriteConfigLevel,
     };
 
@@ -309,8 +314,14 @@ mod tests {
         Ok(())
     }
 
-    fn configure() -> Result<ContextSource, TestError> {
-        Ok(ContextSource::Skill(SkillName::parse("configure")?))
+    fn configure() -> Result<FragmentSource, TestError> {
+        Ok(FragmentSource::SkillContext(SkillName::parse("configure")?))
+    }
+
+    fn configure_instructions() -> Result<FragmentSource, TestError> {
+        Ok(FragmentSource::SkillInstructions(SkillName::parse(
+            "configure",
+        )?))
     }
 
     fn skill_dir(root: &Path) -> PathBuf {
@@ -337,12 +348,21 @@ mod tests {
             .body)
     }
 
+    fn skill_instructions_body(
+        root: &Path,
+        level: Level,
+    ) -> Result<Option<String>, TestError> {
+        Ok(FileConfigStore::rooted_at(root)
+            .read_body(&configure_instructions()?, level)?
+            .body)
+    }
+
     fn project_body(
         root: &Path,
         level: Level,
     ) -> Result<Option<String>, TestError> {
         Ok(FileConfigStore::rooted_at(root)
-            .read_body(&ContextSource::Project, level)?
+            .read_body(&FragmentSource::ProjectContext, level)?
             .body)
     }
 
@@ -901,7 +921,7 @@ mod tests {
     fn the_project_context_path_is_the_config_file() -> Result<(), TestError> {
         let store = FileConfigStore::rooted_at(tempdir()?);
         assert_eq!(
-            store.locate(&ContextSource::Project)?.paths,
+            store.locate(&FragmentSource::ProjectContext)?.paths,
             [
                 ".luminosity/config.md".to_owned(),
                 ".luminosity/config.local.md".to_owned(),
@@ -921,11 +941,144 @@ mod tests {
     }
 
     #[test]
+    fn an_absent_skill_instructions_reads_as_none() -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed(&root, "config.md", "---\ncore: v\n---\nteam\n")?;
+        assert!(skill_instructions_body(&root, Level::Team)?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn a_team_skill_instructions_reads_its_body() -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed_skill(&root, "instructions.md", "skill team\n")?;
+        assert_eq!(
+            skill_instructions_body(&root, Level::Team)?,
+            Some("skill team\n".to_owned())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_personal_skill_instructions_reads_its_body() -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed_skill(&root, "instructions.local.md", "skill personal\n")?;
+        assert_eq!(
+            skill_instructions_body(&root, Level::Personal)?,
+            Some("skill personal\n".to_owned())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_skill_instructions_body_strips_its_frontmatter_mapping(
+    ) -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed_skill(&root, "instructions.md", "---\ntitle: x\n---\nthe body\n")?;
+        assert_eq!(
+            skill_instructions_body(&root, Level::Team)?,
+            Some("the body\n".to_owned())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_skill_instructions_without_frontmatter_returns_the_whole_content(
+    ) -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed_skill(&root, "instructions.md", "just prose\n")?;
+        assert_eq!(
+            skill_instructions_body(&root, Level::Team)?,
+            Some("just prose\n".to_owned())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_skill_instructions_opening_with_a_thematic_break_is_preserved(
+    ) -> Result<(), TestError> {
+        let root = tempdir()?;
+        let content = "---\nSection A\n---\nSection B\n";
+        seed_skill(&root, "instructions.md", content)?;
+        assert_eq!(
+            skill_instructions_body(&root, Level::Team)?,
+            Some(content.to_owned())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_malformed_skill_instructions_fails_loud_naming_the_path(
+    ) -> Result<(), TestError> {
+        let root = tempdir()?;
+        seed_skill(&root, "instructions.md", "---\nkey: value\n")?;
+        assert!(matches!(
+            skill_instructions_body(&root, Level::Team),
+            Err(error) if matches!(
+                error.downcast_ref::<ConfigError>(),
+                Some(ConfigError::MalformedFrontmatter { path, .. })
+                    if path.contains("skills/configure/instructions.md")
+            )
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn a_symlinked_skill_instructions_file_pointing_outside_is_refused(
+    ) -> Result<(), TestError> {
+        let root = tempdir()?;
+        let outside = root.join("outside.md");
+        fs::write(&outside, "secrets\n")?;
+        fs::create_dir_all(skill_dir(&root))?;
+        std::os::unix::fs::symlink(
+            &outside,
+            skill_dir(&root).join("instructions.md"),
+        )?;
+
+        assert!(matches!(
+            skill_instructions_body(&root, Level::Team),
+            Err(error) if matches!(
+                error.downcast_ref::<ConfigError>(),
+                Some(ConfigError::UnsafePath { .. })
+            )
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn the_skill_instructions_path_nests_under_skills() -> Result<(), TestError>
+    {
+        let store = FileConfigStore::rooted_at(tempdir()?);
+        assert_eq!(
+            store.locate(&configure_instructions()?)?.paths,
+            [
+                ".luminosity/skills/configure/instructions.md".to_owned(),
+                ".luminosity/skills/configure/instructions.local.md".to_owned(),
+            ]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn read_body_reports_the_instructions_path_it_read() -> Result<(), TestError>
+    {
+        let root = tempdir()?;
+        seed_skill(&root, "instructions.local.md", "personal\n")?;
+        let read = FileConfigStore::rooted_at(&root)
+            .read_body(&configure_instructions()?, Level::Personal)?;
+        assert_eq!(
+            read.path,
+            ".luminosity/skills/configure/instructions.local.md"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn locate_reports_the_discovered_project_root() -> Result<(), TestError> {
         let root = tempdir()?;
         assert_eq!(
             FileConfigStore::rooted_at(&root)
-                .locate(&ContextSource::Project)?
+                .locate(&FragmentSource::ProjectContext)?
                 .root,
             root.display().to_string()
         );

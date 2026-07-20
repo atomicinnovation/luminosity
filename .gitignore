@@ -23,6 +23,11 @@
 # team-then-personal combination.
 **/.luminosity/skills/**/context.local.md
 !tests/evals/skills/configure/fixtures/**/context.local.md
+# The same pair for per-skill personal instructions; the team `instructions.md`
+# stays tracked, and the eval fixtures commit a personal one to exercise the
+# team-then-personal combination.
+**/.luminosity/skills/**/instructions.local.md
+!tests/evals/skills/configure/fixtures/**/instructions.local.md
 .claude/settings.local.json
 # Local mise overrides may carry secrets (e.g. ANTHROPIC_API_KEY for the eval
 # tier's live run) — never commit them.

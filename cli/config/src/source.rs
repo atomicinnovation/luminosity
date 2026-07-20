@@ -1,5 +1,5 @@
-//! Which two-level `.luminosity` document an assembly reads, and the validated
-//! skill name that identifies a per-skill one.
+//! Which document a fragment is assembled from, and the validated skill name
+//! that identifies a per-skill one.
 //!
 //! A skill name is parsed under an allow-list rather than a deny-list: a
 //! deny-list of the separators and traversal sequences known today invites the
@@ -51,11 +51,15 @@ impl Display for SkillName {
     }
 }
 
-/// Which two-level `.luminosity` document is being assembled.
+/// Which document a fragment is assembled from.
+///
+/// Instructions are always skill-scoped, so there is no project-instructions
+/// arm — a project-global instructions state is unrepresentable by construction.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ContextSource {
-    Project,
-    Skill(SkillName),
+pub enum FragmentSource {
+    ProjectContext,
+    SkillContext(SkillName),
+    SkillInstructions(SkillName),
 }
 
 #[cfg(test)]
