@@ -1092,15 +1092,15 @@ phase.
 
 #### Automated Verification
 
-- [ ] `mise run fix` applies cleanly (formatters and safe lint fixes)
-- [ ] `mise run check` exits 0 (format + lint + types across all components, plus
+- [x] `mise run fix` applies cleanly (formatters and safe lint fixes)
+- [x] `mise run check` exits 0 (format + lint + types across all components, plus
       `deny:check` / `pup:check`)
-- [ ] `mise run` exits 0 end-to-end — the full local CI mirror, including
+- [x] `mise run` exits 0 end-to-end — the full local CI mirror, including
       `build:launcher` and the whole test suite with coverage
 
 #### Manual Verification
 
-- [ ] No stray comments explaining what the code already says (the repo's
+- [x] No stray comments explaining what the code already says (the repo's
       standing bar).
 
 ---
