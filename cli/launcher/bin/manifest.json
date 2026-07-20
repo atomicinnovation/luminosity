@@ -1,25 +1,25 @@
 {
   "schema_version": 1,
-  "version": "0.3.0-pre.5",
+  "version": "0.3.0-pre.6",
   "binaries": {
     "luminosity": {
       "description": "The luminosity launcher",
       "platforms": {
         "darwin-arm64": {
-          "sha256": "4439f9a07920c9689e7520965b0f8365ae7a6ba8f4a98dd4090930e0b02acf7a",
-          "signature": "untrusted comment: signature from minisign secret key\nRURz7HpAmWzNqqbYP2449qFkuxYU+Lqo6vDgRQaj1KrBu61KotDlYnDRUBuc81yQZGzRblvO9H8ojmZNT9RoQ0k23a+J/XnH7Qc=\ntrusted comment: timestamp:1784470635\tfile:luminosity-darwin-arm64\thashed\nEM4EYopxBp+8TlnhUk11EJVgo/J/2XlNwuPayRhMmmefz4H0Upwi1tZNPacRhu3E4CzSI4M6POD6o/0xsfqUBQ==\n"
+          "sha256": "f3b4f8c32c1591c35de6dadbcf49406cb1fe4e83405f87dce52a10b63da7c13c",
+          "signature": "untrusted comment: signature from minisign secret key\nRURz7HpAmWzNqssiBnllybSyFPx8gIJc7cGM7G6ubuG5rJgsLQBqRCBcWWb2um1rZ3Bkqn/+ufPoPYCwcipdI0VobRgE0wiwQAc=\ntrusted comment: timestamp:1784560445\tfile:luminosity-darwin-arm64\thashed\nkKNt2mp5FXMc7kdRVeJDeSu8GTrCAZzEu3vo+IDtSDXZ9A9nRSGHlxxfM80XwGbAFnsMLd8r8gR4IozvRhx1DA==\n"
         },
         "darwin-x64": {
-          "sha256": "e26b0fcbddcdcba5e0dfd6d0917269192d2446d199e33a587e50979237301a53",
-          "signature": "untrusted comment: signature from minisign secret key\nRURz7HpAmWzNqt1ibDMLl7udLUEijXmFzjl0oyUjCbH+sqE8JjJbOnAV5MGWeLBG7kObKvuWJP8od6kdNBjKqnmXG/XdctHVEAw=\ntrusted comment: timestamp:1784470635\tfile:luminosity-darwin-x64\thashed\ngU0lWZYJZWYQBdpwkQ/Ao6Y71hI6I+IcywHSo6z9BWo1dEh00NMjwfHHY8ltyza7NubxJvAvhrnN/0CidJVPBw==\n"
+          "sha256": "e1bce9ba76ceee5c797daee7ecbfe7eb1f7c0d1cae0b8617bd20941c86edc758",
+          "signature": "untrusted comment: signature from minisign secret key\nRURz7HpAmWzNqgUKo8tfMbtPJDXu2ar/GJzjLOhfAKlLpQnp9GcHsSDcPiqW4XPiyAwyrjNwaqNt9ch7qwwUUzYMvQuzjLPhEg8=\ntrusted comment: timestamp:1784560445\tfile:luminosity-darwin-x64\thashed\n0ImYWqPmgr3JzFzWK9POKqHGY4zaqcjcy30b/LcHspIsI+rZXXJLcd44lhrN52aKHZgHGHJ6++HUqcCdaWjWAA==\n"
         },
         "linux-arm64": {
-          "sha256": "c67dcd1dcbe2f6d6c86e0a5816aebd44251fcc643d9c199283eaff3369f6a362",
-          "signature": "untrusted comment: signature from minisign secret key\nRURz7HpAmWzNqgQ0oJpT43CO4o6TLBYcbGfcRpioRtwnJfp2ibRdu0XqVsIzv2kW70x+4cdsLmhYfuoQFOB5NuHgPm/svZ9lOgo=\ntrusted comment: timestamp:1784470635\tfile:luminosity-linux-arm64\thashed\ntEYqr2g9uETjMCDrz9PMXcQOBbT51rJxNq3hh0R2ayIPHNNTaRQ+gXDdM53yYMYsm8ZYIo0+McrEVcQImQCwAQ==\n"
+          "sha256": "f52ac9bc958c126e436774534806c6abf680bee9ca0425bf2eecd402b04aba0a",
+          "signature": "untrusted comment: signature from minisign secret key\nRURz7HpAmWzNqoCDk53Nxj0yvXjGtAyEsxyACDgsJ9gudD3c7JHPbJPWIhRkmlB2rgt13jYV70Cy6bRbxwSi/rwkFyOeZep6YQ4=\ntrusted comment: timestamp:1784560445\tfile:luminosity-linux-arm64\thashed\n7Lfqy6XbPzMdSGOpB9eUQoKGb6s2vr51nl9NFExohHUwfCEifED41qQJd1VaFUvahXpam6kUC42aBLRp7Hv/Bw==\n"
         },
         "linux-x64": {
-          "sha256": "0e78a64a405222ccfd129f3f6196ec1062ea3d098b487238224a9e8ff7ef7ec2",
-          "signature": "untrusted comment: signature from minisign secret key\nRURz7HpAmWzNqpkoTlQX+ySqC0Mye0FT2ZlCyz4yr16EcgAga904gdqfxNUOnCXl7w+69gWARGc5lXLZH5xANBnWX7T0lXQKmAM=\ntrusted comment: timestamp:1784470635\tfile:luminosity-linux-x64\thashed\niOuxRcSJSIsfLxZjpeMPYQV4KefJNc32qehH1r9UBbfIsDDZUEEdRaDmnb0QjBsGyg6Vnu/TzMz7pvd+Ieu4Dg==\n"
+          "sha256": "f2dd2ce95f9187e1fbd7385365bf86e9df6640e23c3f468490dae183b330ed04",
+          "signature": "untrusted comment: signature from minisign secret key\nRURz7HpAmWzNqkP/AInnAug74p/Njay2AqGr5zOZy7T9YDrDnqXlnkJELUd6ZhUvwFmre2zcykz7den0Lp0y3oFihgocppfLJAI=\ntrusted comment: timestamp:1784560445\tfile:luminosity-linux-x64\thashed\nK2kqliK3C8J0R95BV8nQJ8pG3y6RgcnEPrzNZBhG/lTzEl0HkEJue4Ymgs/Ekd8dcXiCHmNiSj7roggVW9V9Bw==\n"
         }
       }
     }
